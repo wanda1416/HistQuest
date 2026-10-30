@@ -1,7 +1,8 @@
 import type { State } from './store.ts';
-import { normalizeQuestion } from './store.ts';
+import { loadVaultSecret, normalizeQuestion } from './store.ts';
 import type { RecordView } from '../shared/protocol.ts';
 import { WORLD_ERAS } from '../shared/domain.ts';
+import { encodeManagementKey, keyFromBase64 } from './vault.ts';
 
 const esc = (s: unknown): string =>
   String(s ?? '').replace(/[&<>"']/g, (c) =>
@@ -48,6 +49,53 @@ function shell(s: State, body: string): string {
 }
 
 /* ---------------- 设置 / 引导 ---------------- */
+
+function syncPanel(s: State): string {
+  const keyB64 = loadVaultSecret();
+  const key = keyB64 ? keyFromBase64(keyB64) : null;
+  const code = key ? encodeManagementKey(key) : '';
+
+  const online = `
+    <div class="field">
+      <label class="field-label" for="syncCode">管理密钥</label>
+      <input class="input" id="syncCode" value="${esc(code)}" spellcheck="false" autocomplete="off" />
+      <p class="field-hint">管理密钥只用于认证与恢复，设置另用一把数据密钥加密（它随密钥包裹上传，可轮换管理密钥而不重新加密数据）。丢失后云端数据无法恢复。</p>
+    </div>
+    <div class="field">
+      <label class="field-label" for="syncEndpoint">同步地址</label>
+      <input class="input" id="syncEndpoint" name="syncEndpoint" value="${esc(s.syncEndpoint)}"
+        placeholder="留空表示当前这台服务" autocomplete="off" spellcheck="false" />
+      <p class="field-hint">换设备时填同一台服务的地址，例如 http://127.0.0.1:3000。</p>
+    </div>
+    ${s.syncMessage ? `<p class="testline ${s.syncError ? 'fail' : 'ok'}">${esc(s.syncMessage)}</p>` : ''}
+    <div class="actions">
+      <button type="button" class="btn btn-ghost" data-action="vault-generate">生成新管理密钥</button>
+      <button type="button" class="btn btn-ghost" data-action="vault-import">使用这段密钥</button>
+      <button type="button" class="btn btn-ghost" data-action="vault-push" ${s.syncBusy ? 'disabled' : ''}>上传到云端</button>
+      <button type="button" class="btn btn-ghost" data-action="vault-pull" ${s.syncBusy ? 'disabled' : ''}>从云端恢复</button>
+    </div>
+    <p class="field-hint">最后同步：${s.syncAt ? new Date(s.syncAt).toLocaleString('zh-CN') : '从未'}</p>
+  `;
+
+  return `
+  <div class="panel sync-panel">
+    <div class="field">
+      <span class="field-label">设置存储</span>
+      <div class="chips">
+        <button type="button" class="chip-select chip-sm ${s.syncMode === 'local' ? 'is-active' : ''}"
+          data-action="pick-sync-mode" data-value="local">本地</button>
+        <button type="button" class="chip-select chip-sm ${s.syncMode === 'online' ? 'is-active' : ''}"
+          data-action="pick-sync-mode" data-value="online">在线</button>
+      </div>
+      <p class="field-hint">${
+        s.syncMode === 'local'
+          ? '设置只保存在这台设备的浏览器里，不上传任何数据。'
+          : '设置在本机加密后上传；服务端只存密文，没有管理密钥无法解密。'
+      }</p>
+    </div>
+    ${s.syncMode === 'online' ? online : ''}
+  </div>`;
+}
 
 function setupView(s: State): string {
   const c = s.config;
@@ -109,6 +157,8 @@ function setupView(s: State): string {
             ${isFirst ? '' : '<button type="button" class="btn btn-text" data-action="back">返回</button>'}
           </div>
         </form>
+
+        ${syncPanel(s)}
 
         <p class="footnote">人物库 ${s.meta?.characterCount ?? 0} 位，均为已故历史人物。判定只依据索引里的人工资讯，模型不负责编事实。</p>
       </div>

@@ -9,7 +9,7 @@ import { DatabaseSync } from 'node:sqlite';
  * 代价是要求宿主 Node ≥ 23.4（22.x 需 --experimental-sqlite）。
  */
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export interface OpenOptions {
   file: string;
@@ -112,6 +112,16 @@ export function migrate(db: DatabaseSync): void {
       );
 
       INSERT INTO schema_migrations (version, applied_at) VALUES (1, ${Date.now()});
+    `);
+  }
+
+  if (current < 2) {
+    // 管理密钥与数据密钥分离：
+    // auth_hash 用于校验请求身份，wrapped_dek 是经 KEK 包裹的数据密钥
+    db.exec(`
+      ALTER TABLE settings_vault ADD COLUMN auth_hash TEXT NOT NULL DEFAULT '';
+      ALTER TABLE settings_vault ADD COLUMN wrapped_dek TEXT NOT NULL DEFAULT '';
+      INSERT INTO schema_migrations (version, applied_at) VALUES (2, ${Date.now()});
     `);
   }
 }

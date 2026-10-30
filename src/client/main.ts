@@ -6,15 +6,22 @@ import {
   loadGameId,
   loadPrefs,
   loadQuestions,
+  loadDataKey,
+  loadVaultSecret,
   normalizeQuestion,
   saveConfig,
   saveGameId,
+  saveDataKey,
   savePrefs,
   saveQuestions,
+  saveSync,
+  saveVaultSecret,
   setState,
   setStateSilent,
   subscribe,
 } from './store.ts';
+import { decodeManagementKey, generateKey, keyFromBase64, keyToBase64 } from './vault.ts';
+import { applyPayload, normalizeEndpoint, pullVault, pushVault } from './sync.ts';
 import { renderApp } from './views.ts';
 import { transcriptForGame, transcriptForReview } from './format.ts';
 
@@ -181,6 +188,92 @@ async function doReveal(): Promise<void> {
   }
 }
 
+/* ---------------- 设置同步 ---------------- */
+
+function currentSecret(): Uint8Array | null {
+  const raw = loadVaultSecret();
+  return raw ? keyFromBase64(raw) : null;
+}
+
+function currentDataKey(): Uint8Array | null {
+  const raw = loadDataKey();
+  return raw ? keyFromBase64(raw) : null;
+}
+
+function syncEndpoint(): string {
+  const input = root.querySelector<HTMLInputElement>('#syncEndpoint');
+  return normalizeEndpoint(input?.value ?? getState().syncEndpoint);
+}
+
+async function doVaultPush(): Promise<void> {
+  const s = getState();
+  const secret = currentSecret();
+  if (!secret) {
+    setState({ syncMessage: '先在「在线」模式下生成管理密钥', syncError: true });
+    return;
+  }
+
+  const endpoint = syncEndpoint();
+  setState({ syncBusy: true, syncMessage: null, syncError: false });
+  const result = await pushVault(endpoint, secret, s.syncVersion, currentDataKey());
+
+  // 首次上传会新建数据密钥，必须落到本地
+  if (result.dataKey) saveDataKey(keyToBase64(result.dataKey));
+
+  if (!result.ok) {
+    setState({ syncBusy: false, syncMessage: result.message ?? '上传失败', syncError: true });
+    return;
+  }
+
+  const at = Date.now();
+  const version = result.version ?? s.syncVersion;
+  saveSync({ endpoint, version, at });
+  setState({
+    syncBusy: false,
+    syncEndpoint: endpoint,
+    syncVersion: version,
+    syncAt: at,
+    syncMessage: `已加密上传（版本 ${version}）`,
+    syncError: false,
+  });
+}
+
+async function doVaultPull(): Promise<void> {
+  const secret = currentSecret();
+  if (!secret) {
+    setState({ syncMessage: '先输入管理密钥，或在本机生成一个', syncError: true });
+    return;
+  }
+
+  const endpoint = syncEndpoint();
+  setState({ syncBusy: true, syncMessage: null, syncError: false });
+  const result = await pullVault(endpoint, secret);
+
+  if (!result.ok || !result.payload) {
+    setState({ syncBusy: false, syncMessage: result.message ?? '恢复失败', syncError: true });
+    return;
+  }
+
+  if (result.dataKey) saveDataKey(keyToBase64(result.dataKey));
+  applyPayload(result.payload);
+  const prefs = loadPrefs();
+  const at = Date.now();
+  const version = result.version ?? 0;
+  saveSync({ endpoint, version, at });
+  setState({
+    syncBusy: false,
+    syncEndpoint: endpoint,
+    syncVersion: version,
+    syncAt: at,
+    config: loadConfig(),
+    pronoun: prefs.pronoun,
+    turns: prefs.turns,
+    saved: loadQuestions(),
+    syncMessage: '已从云端恢复并覆盖本机设置',
+    syncError: false,
+  });
+}
+
 /** 剪贴板：优先 Clipboard API，非安全上下文回落 execCommand */
 async function copyText(text: string): Promise<boolean> {
   try {
@@ -307,6 +400,52 @@ root.addEventListener('click', (event) => {
     case 'new-game':
       saveGameId(null);
       setState({ view: 'lobby', session: null, reveal: null, notice: null });
+      break;
+    case 'pick-sync-mode': {
+      const mode = el.dataset.value === 'online' ? 'online' : 'local';
+      if (mode === 'online' && !currentSecret()) {
+        saveVaultSecret(keyToBase64(generateKey()));
+        saveSync({ version: 0, at: 0 });
+      }
+      saveSync({ mode });
+      setState({ syncMode: mode, syncMessage: null, syncError: false });
+      break;
+    }
+    case 'vault-generate': {
+      // 轮换管理密钥：保留数据密钥，新密钥会重新包裹它
+      saveVaultSecret(keyToBase64(generateKey()));
+      saveSync({ version: 0, at: 0 });
+      setState({
+        syncVersion: 0,
+        syncAt: 0,
+        syncMessage: '已生成新的管理密钥；数据密钥不变，重新上传即可',
+        syncError: false,
+      });
+      break;
+    }
+    case 'vault-import': {
+      const input = root.querySelector<HTMLInputElement>('#syncCode');
+      const secret = decodeManagementKey(input?.value ?? '');
+      if (!secret) {
+        setState({ syncMessage: '管理密钥格式不对，请从另一台设备完整复制', syncError: true });
+        break;
+      }
+      saveVaultSecret(keyToBase64(secret));
+      saveDataKey(null); // 数据密钥要从云端解包，本地旧值作废
+      saveSync({ version: 0, at: 0 });
+      setState({
+        syncVersion: 0,
+        syncAt: 0,
+        syncMessage: '已切换到这段管理密钥，现在可以「从云端恢复」',
+        syncError: false,
+      });
+      break;
+    }
+    case 'vault-push':
+      void doVaultPush();
+      break;
+    case 'vault-pull':
+      void doVaultPull();
       break;
     case 'fill-example': {
       const input = root.querySelector<HTMLInputElement>('[data-role="ask-input"]');

@@ -36,12 +36,94 @@ export interface State {
   pronoun: PronounStyle;
   /** 本局提问轮次；null = 跟随服务端默认 */
   turns: number | null;
+  /** 设置存储方式：本地 / 在线 */
+  syncMode: 'local' | 'online';
+  syncEndpoint: string;
+  syncVersion: number;
+  syncAt: number;
+  syncBusy: boolean;
+  syncMessage: string | null;
+  syncError: boolean;
 }
 
 const CONFIG_KEY = 'hq.aiConfig';
 const PREFS_KEY = 'hq.prefs';
 const QUESTIONS_KEY = 'hq.questions';
 const GAME_KEY = 'hq.gameId';
+const SYNC_KEY = 'hq.sync';
+const SECRET_KEY = 'hq.vaultSecret';
+const DEK_KEY = 'hq.dataKey';
+
+export interface SyncPrefs {
+  mode: 'local' | 'online';
+  endpoint: string;
+  version: number;
+  at: number;
+}
+
+export function loadSync(): SyncPrefs {
+  try {
+    const raw = localStorage.getItem(SYNC_KEY);
+    if (raw) {
+      const p = JSON.parse(raw) as Partial<SyncPrefs>;
+      return {
+        mode: p.mode === 'online' ? 'online' : 'local',
+        endpoint: typeof p.endpoint === 'string' ? p.endpoint : '',
+        version: Number.isFinite(Number(p.version)) ? Number(p.version) : 0,
+        at: Number.isFinite(Number(p.at)) ? Number(p.at) : 0,
+      };
+    }
+  } catch {
+    /* 隐私模式下不可读 */
+  }
+  return { mode: 'local', endpoint: '', version: 0, at: 0 };
+}
+
+export function saveSync(patch: Partial<SyncPrefs>): SyncPrefs {
+  const next = { ...loadSync(), ...patch };
+  try {
+    localStorage.setItem(SYNC_KEY, JSON.stringify(next));
+  } catch {
+    /* ignore */
+  }
+  return next;
+}
+
+/** 管理密钥（Base64）：只存在本机，只派生出 authKey 与 KEK */
+export function loadVaultSecret(): string | null {
+  try {
+    return localStorage.getItem(SECRET_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function saveVaultSecret(value: string | null): void {
+  try {
+    if (!value) localStorage.removeItem(SECRET_KEY);
+    else localStorage.setItem(SECRET_KEY, value);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** 数据密钥（Base64）：真正加密设置，换管理密钥时保留它 */
+export function loadDataKey(): string | null {
+  try {
+    return localStorage.getItem(DEK_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function saveDataKey(value: string | null): void {
+  try {
+    if (!value) localStorage.removeItem(DEK_KEY);
+    else localStorage.setItem(DEK_KEY, value);
+  } catch {
+    /* ignore */
+  }
+}
 
 export function loadConfig(): AiConfig | null {
   try {
@@ -81,6 +163,22 @@ export function saveGameId(id: string | null): void {
   }
 }
 
+function initialSyncState(): Pick<
+  State,
+  'syncMode' | 'syncEndpoint' | 'syncVersion' | 'syncAt' | 'syncBusy' | 'syncMessage' | 'syncError'
+> {
+  const sync = loadSync();
+  return {
+    syncMode: sync.mode,
+    syncEndpoint: sync.endpoint,
+    syncVersion: sync.version,
+    syncAt: sync.at,
+    syncBusy: false,
+    syncMessage: null,
+    syncError: false,
+  };
+}
+
 let state: State = {
   ready: false,
   meta: null,
@@ -104,6 +202,7 @@ let state: State = {
   mode: 'strict',
   pronoun: 'neutral',
   turns: null,
+  ...initialSyncState(),
 };
 
 type Listener = (s: State) => void;

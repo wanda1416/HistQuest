@@ -11,6 +11,7 @@ import { SqliteCharacterStore, importCharacters } from './characters-sqlite.ts';
 import { createAdminRoutes } from './admin.ts';
 import { integrityCheck, openDatabase, tableCount } from './db.ts';
 import { createRoutes } from './routes.ts';
+import { createSettingsRoutes } from './settings.ts';
 import { SoloStore } from './solo.ts';
 import { log } from './util.ts';
 
@@ -85,6 +86,7 @@ export function createApp(options: AppOptions = {}): CreatedApp {
   app.use(express.json({ limit: '64kb' }));
 
   app.use('/api/admin', createAdminRoutes({ store, solo, token: config.admin.token }));
+  app.use('/api/settings', createSettingsRoutes({ db }));
   app.use('/api', createRoutes({ getIndex: () => store.index, solo }));
 
   app.get('/admin', (_req: Request, res: Response) => {
