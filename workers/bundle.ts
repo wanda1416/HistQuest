@@ -115,7 +115,13 @@ function initRuntime(env: Env): Promise<Runtime> {
   return runtime;
 }
 
-function json(status: number, body: unknown): Response {
+/**
+ * 只接受"已经解析好的值"。传 Promise 会让 JSON.stringify 得到一个空对象 `{}`，
+ * 客户端拿到空响应后表现为"点了没反应"，很难查。用类型把它挡在编译期。
+ */
+type Resolved<T> = T extends Promise<unknown> ? never : T;
+
+function json<T>(status: number, body: Resolved<T>): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: { 'content-type': 'application/json; charset=utf-8' },
@@ -330,7 +336,10 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
       const name = String(body.name ?? '').trim();
       if (!name) return fail(400, 'EMPTY_GUESS', '请输入你猜的人物名');
       try {
-        return json(200, rt.solo.guess(id, name));
+        // SoloStore 的写方法都是 async：不 await 会把 Promise 序列化成 {}，
+        // 客户端拿不到 correct / turnsLeft，表现为"点了没反应"
+        const result = await rt.solo.guess(id, name);
+        return json(200, result);
       } catch (err) {
         return errorResponse(err);
       }
@@ -338,7 +347,8 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
 
     if (action === 'reveal' && req.method === 'POST') {
       try {
-        return json(200, rt.solo.reveal(id));
+        const result = await rt.solo.reveal(id);
+        return json(200, result);
       } catch (err) {
         return errorResponse(err);
       }
