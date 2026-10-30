@@ -1,11 +1,12 @@
 import { DYNASTIES, REGIONS, REGION_LABELS, type Region } from '../src/shared/domain.ts';
 import type { AiCredential } from '../src/shared/domain.ts';
-import type { AiConfig, MetaRes } from '../src/shared/protocol.ts';
+import type { MetaRes } from '../src/shared/protocol.ts';
 import { CharacterIndex } from '../src/core/index.ts';
 import { SoloStore, SoloError } from '../src/server/solo.ts';
 import { projectSession } from '../src/server/dto.ts';
 import { AiError, testConnection } from '../src/ai/client.ts';
 import { D1Database, D1SessionPersistence, loadCharactersFromD1, seedCharactersIntoD1 } from './d1.ts';
+import { D1CharacterStore } from './d1-characters.ts';
 import { handleVault } from './vault.ts';
 
 /**
@@ -35,6 +36,7 @@ const MAX_TURNS_DEFAULT = 50;
 
 interface Runtime {
   index: CharacterIndex;
+  store: D1CharacterStore;
   solo: SoloStore;
   env: Env;
   maxTurns: number;
@@ -46,15 +48,12 @@ let runtime: Promise<Runtime> | null = null;
 function initRuntime(env: Env): Promise<Runtime> {
   if (!runtime) {
     runtime = (async () => {
-      let list = await loadCharactersFromD1(env.DB);
-      if (list.length === 0) {
-        // 首次部署：从打包种子导入（构建脚本会把 data/characters.json 内联进来）
+      const store = new D1CharacterStore({ db: env.DB });
+      {
         const seed = await import('./seed.ts');
-        const imported = await seedCharactersIntoD1(env.DB, seed.SEED_CHARACTERS);
-        if (imported > 0) console.log('d1.seeded', { characters: imported });
-        list = await loadCharactersFromD1(env.DB);
+        await store.init(seed.SEED_CHARACTERS);
       }
-      const index = new CharacterIndex(list);
+      const index = store.index;
       const persistence = new D1SessionPersistence(env.DB);
       const sessions = await persistence.load();
       const solo = new SoloStore(index, {
@@ -64,7 +63,7 @@ function initRuntime(env: Env): Promise<Runtime> {
         newId: () => crypto.randomUUID().replace(/-/g, ''),
       });
       const maxTurns = Number(env.SOLO_TURNS) || MAX_TURNS_DEFAULT;
-      return { index, solo, env, maxTurns };
+      return { index, store, solo, env, maxTurns };
     })().catch((err) => {
       runtime = null; // 失败后允许重试
       throw err;
@@ -231,6 +230,116 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
   return fail(404, 'NOT_FOUND', '接口不存在');
 }
 
+// ---------- 管理后台（Workers 版：一律要求 Bearer ADMIN_TOKEN） ----------
+
+function sameToken(given: string, expected: string): boolean {
+  if (given.length !== expected.length) return false;
+  let diff = 0;
+  for (let i = 0; i < given.length; i++) diff |= given.charCodeAt(i) ^ expected.charCodeAt(i);
+  return diff === 0;
+}
+
+async function handleAdmin(req: Request, url: URL, rt: Runtime): Promise<Response> {
+  const token = rt.env.ADMIN_TOKEN ?? '';
+  if (!token) return fail(503, 'ADMIN_DISABLED', '未配置 ADMIN_TOKEN，管理接口未开放');
+  const matched = /^Bearer\s+(.+)$/i.exec(req.headers.get('authorization') ?? '');
+  if (!matched || !sameToken(matched[1]!.trim(), token)) {
+    return fail(403, 'ADMIN_FORBIDDEN', '令牌无效');
+  }
+  if (req.headers.get('x-hq-admin') !== '1') {
+    return fail(403, 'ADMIN_HEADER_REQUIRED', '缺少管理请求标识 X-HQ-Admin');
+  }
+
+  const path = url.pathname.replace(/^\/api\/admin/, '');
+  const body = req.method === 'POST' || req.method === 'PUT' ? await readBody(req) : {};
+
+  if (path === '/meta' && req.method === 'GET') {
+    const vocab = rt.store.vocab();
+    return json(200, {
+      dynasties: [...DYNASTIES],
+      difficulties: DIFFICULTIES,
+      roles: vocab.roles,
+      provinces: vocab.provinces,
+      polities: vocab.polities,
+      regions: REGIONS.map((value) => ({ value, label: REGION_LABELS[value] })),
+      total: rt.store.total,
+      active: rt.store.activeCount,
+      tokenRequired: true,
+    });
+  }
+
+  if (path === '/characters' && req.method === 'GET') {
+    const params = url.searchParams;
+    const q = (params.get('q') ?? '').trim().toLowerCase();
+    const polity = (params.get('polity') ?? '').trim();
+    const region = (params.get('region') ?? '').trim();
+    const difficulty = Number(params.get('difficulty'));
+    const retired = params.get('retired') ?? '';
+
+    let items = rt.store.list();
+    if (q) items = items.filter((c) => [c.id, c.name, ...c.aliases].some((v) => v.toLowerCase().includes(q)));
+    if (polity) items = items.filter((c) => c.polity === polity || (c.polityAlt ?? []).includes(polity));
+    if (region) items = items.filter((c) => c.region === region);
+    if ([1, 2, 3].includes(difficulty)) items = items.filter((c) => c.difficulty === difficulty);
+    if (retired === '1') items = items.filter((c) => c.retired);
+    if (retired === '0') items = items.filter((c) => !c.retired);
+    items.sort((a, b) => a.name.localeCompare(b.name, 'zh'));
+    return json(200, { total: items.length, items });
+  }
+
+  const byId = path.match(/^\/characters\/([A-Za-z0-9_-]+)$/);
+  if (byId) {
+    const id = byId[1]!;
+    if (req.method === 'GET') {
+      const character = rt.store.find(id);
+      if (!character) return fail(404, 'NOT_FOUND', '找不到这个人物');
+      return json(200, { character });
+    }
+    if (req.method === 'PUT') {
+      const result = await rt.store.update(id, body);
+      if (!result.ok) return json(400, { error: 'VALIDATION_FAILED', message: '校验未通过，未写入', issues: result.issues });
+      rt.solo.reloadIndex(result.index ?? rt.store.index);
+      return json(200, { character: result.character, issues: result.issues });
+    }
+  }
+
+  if (path === '/characters' && req.method === 'POST') {
+    const result = await rt.store.create(body);
+    if (!result.ok) return json(400, { error: 'VALIDATION_FAILED', message: '校验未通过，未写入', issues: result.issues });
+    rt.solo.reloadIndex(result.index ?? rt.store.index);
+    return json(201, { character: result.character, issues: result.issues });
+  }
+
+  const retire = path.match(/^\/characters\/([A-Za-z0-9_-]+)\/retire$/);
+  if (retire && req.method === 'POST') {
+    const result = await rt.store.setRetired(retire[1]!, Boolean(body.retired));
+    if (!result.ok) return json(400, { error: 'VALIDATION_FAILED', message: '操作失败', issues: result.issues });
+    rt.solo.reloadIndex(result.index ?? rt.store.index);
+    return json(200, { character: result.character });
+  }
+
+  if (path === '/validate' && req.method === 'POST') {
+    const idToUpdate = typeof body.id === 'string' && body.id ? body.id : null;
+    const { character, issues } = rt.store.check(body.character ?? body, idToUpdate);
+    return json(200, { ok: !issues.some((i) => i.level === 'error'), character, issues });
+  }
+
+  if (path === '/health' && req.method === 'GET') {
+    return json(200, rt.store.health());
+  }
+
+  if (path === '/export' && req.method === 'GET') {
+    return new Response(rt.store.exportText(), {
+      headers: {
+        'content-type': 'application/json; charset=utf-8',
+        'content-disposition': 'attachment; filename="characters.json"',
+      },
+    });
+  }
+
+  return fail(404, 'NOT_FOUND', '接口不存在');
+}
+
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
@@ -240,6 +349,9 @@ export default {
         const rt = await initRuntime(env);
         if (url.pathname.startsWith('/api/settings/vault')) {
           return handleVault(env.DB, req);
+        }
+        if (url.pathname.startsWith('/api/admin')) {
+          return handleAdmin(req, url, rt);
         }
         return await handleApi(req, url, rt);
       } catch (err) {
