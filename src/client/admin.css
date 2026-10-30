@@ -76,6 +76,12 @@
   color: var(--paper);
 }
 
+.a-tab.a-link {
+  border-style: dashed;
+  background: transparent;
+  text-decoration: none;
+}
+
 .a-token {
   display: flex;
   align-items: center;

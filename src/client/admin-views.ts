@@ -81,6 +81,7 @@ function shell(s: AdminState, body: string): string {
     <nav class="a-tabs">
       <button class="a-tab ${s.view === 'list' ? 'is-active' : ''}" data-action="go-list">人物</button>
       <button class="a-tab ${s.view === 'health' ? 'is-active' : ''}" data-action="go-health">数据健康</button>
+      <a class="a-tab a-link" href="/">返回游戏</a>
     </nav>
     ${
       meta?.tokenRequired
