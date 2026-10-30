@@ -1,5 +1,5 @@
 /** REST 契约：前端与后端共用，避免字段漂移。 */
-import type { AnswerMode, AnswerRecord, Character, SessionStatus, Verdict } from './domain.ts';
+import type { AnswerMode, AnswerRecord, Character, PronounStyle, SessionStatus, Verdict } from './domain.ts';
 
 export interface AiConfig {
   baseURL: string;
@@ -20,6 +20,7 @@ export interface StartSoloReq {
   difficulty: number;
   dynasty: string | null;
   mode: AnswerMode;
+  pronoun: PronounStyle;
   aiConfig: AiConfig;
 }
 
@@ -84,6 +85,7 @@ export interface SessionView {
   difficulty: number;
   dynasty: string | null;
   mode: AnswerMode;
+  pronoun: PronounStyle;
   history: RecordView[];
 }
 

@@ -71,12 +71,13 @@ export function createRoutes(deps: { index: CharacterIndex; solo: SoloStore }): 
     const cfg = readAiConfig(req.body);
     if (!cfg) return fail(res, 400, 'MODEL_NOT_CONFIGURED', '没有模型配置就无法开局');
 
-    const body = req.body as { difficulty?: unknown; dynasty?: unknown; mode?: unknown };
+    const body = req.body as { difficulty?: unknown; dynasty?: unknown; mode?: unknown; pronoun?: unknown };
     const difficulty = Math.min(3, Math.max(1, Number(body?.difficulty) || 1));
     const dynasty = typeof body?.dynasty === 'string' && body.dynasty ? body.dynasty : null;
     const mode = body?.mode === 'guided' ? 'guided' : 'strict';
+    const pronoun = body?.pronoun === 'neutral' ? 'neutral' : 'normal';
 
-    const session = deps.solo.create({ difficulty, dynasty, mode });
+    const session = deps.solo.create({ difficulty, dynasty, mode, pronoun });
     res.status(201).json(projectSession(session));
   });
 

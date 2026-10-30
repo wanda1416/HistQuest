@@ -65,7 +65,7 @@ function setupView(s: State): string {
         <div class="setup-intro">
           <p class="eyebrow">${isFirst ? '开始之前' : '设置'}</p>
           <h2>${isFirst ? '先接上你的模型' : '模型与连接'}</h2>
-          <p class="lede">这个游戏靠模型把你的问题翻译成"可判定的事实提问"，所以没有模型就无法开局。密钥只保存在本机浏览器里，只发给你自己运行的这服务。</p>
+          <p class="lede">模型用自己的历史知识回答你的问题，人物资料只用来校对。所以没有模型就无法开局。密钥只保存在本机浏览器里，只发给你自己运行的这服务。</p>
         </div>
 
         <form class="panel" data-role="config-form">
@@ -98,6 +98,14 @@ function setupView(s: State): string {
 
           ${testLine}
 
+          <label class="switch-row">
+            <input type="checkbox" name="neutralPronoun" ${s.pronoun === 'neutral' ? 'checked' : ''} />
+            <span class="switch-text">
+              <b>用「TA」代替他 / 她</b>
+              <small>回答里不出现"他/她"，避免一个字就把性别卖了。只影响新开的局。</small>
+            </span>
+          </label>
+
           <div class="actions">
             <button type="button" class="btn btn-ghost" data-action="test-ai">测试连接</button>
             <button type="submit" class="btn btn-primary">保存并进入</button>
@@ -110,7 +118,7 @@ function setupView(s: State): string {
 
       <aside class="aside-card">
         <h3>为什么必须先接模型</h3>
-        <p>索引只提供"事实"。把一句中文问法翻译成"朝代 / 身份 / 籍贯"这类可判定字段，是模型在做的事——它不认识目标人物，只做翻译。</p>
+        <p>判定靠模型的历史知识：问"他杀过韩信吗"，它得知道韩信是谁杀的。人物资料只是校对依据，模型拿不准时才以资料为准。</p>
         <h3>密钥去了哪里</h3>
         <ul>
           <li>只存在这台设备的浏览器</li>

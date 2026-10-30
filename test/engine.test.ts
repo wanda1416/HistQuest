@@ -160,3 +160,21 @@ test('解说模式下知识回答保留模型的原话', async () => {
   assert.equal(record.basis, 'knowledge');
   assert.ok(record.text.length > 2);
 });
+
+test('解说模式：模型把没被问到的资料说出来时，弃用原话退回模板', async () => {
+  const qingzhao = list.find((c) => c.name === '李清照')!;
+  const { record } = await ask('朝代越界：他是唐朝之前吗', { target: qingzhao, mode: 'guided' });
+  assert.equal(record.verdict, 'no');
+  assert.equal(/北宋|南宋|她/.test(record.text), false, `回答越界了：${record.text}`);
+});
+
+test('性别词中性化：开启后回答里不再出现他/她', async () => {
+  const { record } = await ask('代词：他当过官吗', { mode: 'guided', pronoun: 'neutral' });
+  assert.equal(/[他她]/.test(record.text), false, `仍然出现性别词：${record.text}`);
+  assert.ok(record.text.includes('TA'), record.text);
+});
+
+test('性别词中性化：关闭时保持原样', async () => {
+  const { record } = await ask('代词：他当过官吗', { mode: 'guided', pronoun: 'normal' });
+  assert.ok(record.text.includes('她'), record.text);
+});

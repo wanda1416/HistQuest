@@ -96,6 +96,29 @@ function decide(messages: Array<{ role: string; content: string }>): { content: 
         delayMs: 0,
       };
     }
+    // 真实事故复现：问"是唐朝之前吗"，模型答"不是，她是北宋至南宋时期的人物"
+    if (question.includes('朝代越界')) {
+      return {
+        content: JSON.stringify({
+          attr: 'eraBefore',
+          value: '唐',
+          verdict: 'no',
+          text: '不是，她是北宋至南宋时期的人物。',
+        }),
+        delayMs: 0,
+      };
+    }
+    if (question.includes('代词')) {
+      return {
+        content: JSON.stringify({
+          attr: 'other',
+          value: null,
+          verdict: 'yes',
+          text: '是的，她确实做过这件事。',
+        }),
+        delayMs: 0,
+      };
+    }
     const bare = question.replace(/公元前|公元/g, '');
     const rel = /(之前|以前)/.test(bare) ? 'eraBefore' : /(之后|以后)/.test(bare) ? 'eraAfter' : null;
     if (rel) {

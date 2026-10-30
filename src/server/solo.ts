@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
-import type { AiCredential, AnswerMode, AnswerRecord, SoloSession } from '../shared/domain.ts';
+import type { AiCredential, AnswerMode, AnswerRecord, PronounStyle, SoloSession } from '../shared/domain.ts';
 import type { AskRes, GuessRes, RevealRes } from '../shared/protocol.ts';
 import type { CharacterIndex } from '../core/index.ts';
 import { guessMatches } from '../core/judge.ts';
@@ -30,6 +30,7 @@ export interface CreateInput {
   difficulty: number;
   dynasty: string | null;
   mode?: AnswerMode;
+  pronoun?: PronounStyle;
   rng?: () => number;
 }
 
@@ -62,6 +63,7 @@ export class SoloStore {
       difficulty: input.difficulty,
       dynasty: input.dynasty,
       mode: input.mode ?? 'strict',
+      pronoun: input.pronoun ?? 'normal',
       turnsLeft: this.opts.turns,
       status: 'playing',
       history: [],
@@ -107,6 +109,7 @@ export class SoloStore {
       credential,
       seq: session.history.length + 1,
       mode: session.mode,
+      pronoun: session.pronoun,
       timeoutMs: options.timeoutMs,
     });
 

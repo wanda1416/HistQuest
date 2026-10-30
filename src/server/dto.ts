@@ -30,6 +30,7 @@ export function projectSession(s: SoloSession): SessionView {
     difficulty: s.difficulty,
     dynasty: s.dynasty,
     mode: s.mode,
+    pronoun: s.pronoun,
     history: projectHistory(s.history),
   };
 }

@@ -4,8 +4,10 @@ import {
   getState,
   loadConfig,
   loadGameId,
+  loadPrefs,
   saveConfig,
   saveGameId,
+  savePrefs,
   setState,
   subscribe,
 } from './store.ts';
@@ -95,6 +97,7 @@ async function startGame(): Promise<void> {
       difficulty: s.difficulty,
       dynasty: s.dynasty,
       mode: s.mode,
+      pronoun: s.pronoun,
       aiConfig: s.config,
     });
     saveGameId(session.gameId);
@@ -254,9 +257,13 @@ root.addEventListener('submit', (event) => {
       return;
     }
     saveConfig(cfg);
+    const neutral = root.querySelector<HTMLInputElement>('[name="neutralPronoun"]')?.checked ?? true;
+    const pronoun = neutral ? 'neutral' : 'normal';
+    savePrefs({ pronoun });
     setState({
       config: cfg,
       verified: true,
+      pronoun,
       view: getState().session ? 'game' : 'lobby',
       notice: null,
     });
@@ -297,6 +304,8 @@ async function boot(): Promise<void> {
   }
 
   const config = loadConfig();
+  const prefs = loadPrefs();
+  setState({ pronoun: prefs.pronoun });
   if (config) setState({ config, verified: true });
 
   const gameId = loadGameId();

@@ -61,6 +61,9 @@ export type Verdict = 'yes' | 'no' | 'unknown';
  */
 export type AnswerMode = 'strict' | 'guided';
 
+/** 性别词风格：normal=保留他/她；neutral=统一替换为 TA，避免一个字暴露性别 */
+export type PronounStyle = 'normal' | 'neutral';
+
 export type CompareOp = 'eq' | 'gte' | 'lte';
 
 export interface ParsedQuery {
@@ -117,6 +120,7 @@ export interface SoloSession {
   difficulty: number;
   dynasty: string | null;
   mode: AnswerMode;
+  pronoun: PronounStyle;
   turnsLeft: number;
   status: SessionStatus;
   history: AnswerRecord[];

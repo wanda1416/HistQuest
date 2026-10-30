@@ -1,5 +1,5 @@
 import type { AiConfig, AiTestRes, MetaRes, RevealRes, SessionView } from '../shared/protocol.ts';
-import type { AnswerMode } from '../shared/domain.ts';
+import type { AnswerMode, PronounStyle } from '../shared/domain.ts';
 
 export type ViewName = 'setup' | 'lobby' | 'game' | 'reveal';
 
@@ -24,9 +24,11 @@ export interface State {
   difficulty: number;
   dynasty: string | null;
   mode: AnswerMode;
+  pronoun: PronounStyle;
 }
 
 const CONFIG_KEY = 'hq.aiConfig';
+const PREFS_KEY = 'hq.prefs';
 const GAME_KEY = 'hq.gameId';
 
 export function loadConfig(): AiConfig | null {
@@ -83,6 +85,7 @@ let state: State = {
   difficulty: 2,
   dynasty: null,
   mode: 'strict',
+  pronoun: 'neutral',
 };
 
 type Listener = (s: State) => void;
@@ -100,4 +103,26 @@ export function setState(patch: Partial<State>): void {
 export function subscribe(fn: Listener): () => void {
   listeners.add(fn);
   return () => listeners.delete(fn);
+}
+
+/** 问答偏好：只影响新开的局 */
+export function loadPrefs(): { pronoun: PronounStyle } {
+  try {
+    const raw = localStorage.getItem(PREFS_KEY);
+    if (raw) {
+      const p = JSON.parse(raw) as { pronoun?: string };
+      return { pronoun: p.pronoun === 'normal' ? 'normal' : 'neutral' };
+    }
+  } catch {
+    /* 隐私模式下不可读，用默认值 */
+  }
+  return { pronoun: 'neutral' };
+}
+
+export function savePrefs(prefs: { pronoun: PronounStyle }): void {
+  try {
+    localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+  } catch {
+    /* ignore */
+  }
 }

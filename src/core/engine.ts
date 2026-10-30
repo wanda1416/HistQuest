@@ -5,6 +5,7 @@ import type {
   Basis,
   Character,
   ParsedQuery,
+  PronounStyle,
   Verdict,
 } from '../shared/domain.ts';
 import type { CharacterIndex } from './index.ts';
@@ -13,6 +14,7 @@ import { judgeByIndex } from './judge.ts';
 import { clarify, phrase, PARSE_FAILED_TEXT } from './phraser.ts';
 import { extractDynasty } from './dynasty.ts';
 import { modelAnswer, toQuery } from './answerer.ts';
+import { leaksProfile, neutralizePronoun } from './scrub.ts';
 import { AiError } from '../ai/client.ts';
 
 export interface AskParams {
@@ -23,6 +25,8 @@ export interface AskParams {
   seq: number;
   /** 回答模式，默认精确 */
   mode?: AnswerMode;
+  /** 性别词风格，neutral 时他/她统一替换为 TA */
+  pronoun?: PronounStyle;
   timeoutMs?: number;
   rng?: () => number;
 }
@@ -62,8 +66,10 @@ export async function runAsk(params: AskParams): Promise<AskOutcome> {
     question,
     query: partial.query ?? null,
     verdict: partial.verdict,
-    text: partial.text,
-    ...(partial.hint ? { hint: partial.hint } : {}),
+    text: neutralizePronoun(partial.text, params.pronoun ?? 'normal'),
+    ...(partial.hint
+      ? { hint: neutralizePronoun(partial.hint, params.pronoun ?? 'normal') }
+      : {}),
     basis: partial.basis,
     calls: partial.calls,
     ms: Date.now() - startedAt,
@@ -169,8 +175,15 @@ export async function runAsk(params: AskParams): Promise<AskOutcome> {
       // 结论被索引改写过，模型那句话可能与结论矛盾，改用模板
       text = phrase(verdict, 'normal', rng);
     } else if (params.mode === 'guided' && answer.text) {
-      text = answer.text;
-      if (verdict === 'unknown') hint = hintFor(query, verdict);
+      // 模型爱把话说满：问"是唐朝之前吗"会答"不是，她是北宋至南宋时期的人物"，
+      // 等于把没被问到的维度直接报出来。命中资料就弃用原话，改用模板 + 判法口径。
+      if (leaksProfile(answer.text, params.target)) {
+        text = phrase(verdict, 'normal', rng);
+        hint = hintFor(query, verdict);
+      } else {
+        text = answer.text;
+        if (verdict === 'unknown') hint = hintFor(query, verdict);
+      }
     } else {
       text = phrase(verdict, 'normal', rng);
     }
