@@ -75,18 +75,27 @@ if (afterReload !== gameHash) problems.push(`刷新后 hash 变了：${gameHash}
 if (turnsAfterReload < 1) problems.push('刷新后对局记录丢了');
 await step('after-reload');
 
-await page.click('[data-action="go-setup"]');
+// 顶栏：设置收在用户菜单里（不再是一排平级按钮）
+if ((await page.locator('.topbar [data-action="go-setup"]').count()) > 0) {
+  problems.push('设置仍然直接露在顶栏，没有收进用户菜单');
+}
+await page.click('[data-action="toggle-menu"]');
+await page.waitForSelector('.menu-panel');
+console.log('6) 打开用户菜单，菜单项 =', (await page.locator('.menu-item').allInnerTexts()).join(' / '));
+await step('menu');
+await page.click('.menu-item:has-text("我的设置")');
 await page.waitForSelector('[data-role="config-form"]');
-console.log('6) 进入设置页，hash =', JSON.stringify(hash()));
+console.log('6b) 从菜单进入设置页，hash =', JSON.stringify(hash()));
 await step('setup');
 
-const homeBtn = page.locator('[data-action="go-home"]').first();
-if ((await homeBtn.count()) === 0) {
-  problems.push('设置页没有「首页」按钮');
+// 品牌区就是首页入口
+const brand = page.locator('a.brand-link[data-action="go-home"]');
+if ((await brand.count()) === 0) {
+  problems.push('品牌区不是首页链接');
 } else {
-  await homeBtn.click();
+  await brand.click();
   await page.waitForSelector('[data-action="start-game"]');
-  console.log('7) 点「首页」回到首页，hash =', JSON.stringify(hash()));
+  console.log('7) 点品牌「猜历史」回到首页，hash =', JSON.stringify(hash()));
   await step('home');
 }
 

@@ -22,9 +22,11 @@ import {
 } from './store.ts';
 import { decodeManagementKey, generateKey, keyFromBase64, keyToBase64 } from './vault.ts';
 import { applyPayload, normalizeEndpoint, pullVault, pushVault } from './sync.ts';
-import { renderApp } from './views.ts';
+import { closeMenu, isMenuOpen, renderApp, toggleMenu } from './views.ts';
+import { renderRoomApp } from './room-views.ts';
+import { attachRoomApp } from './room-app.ts';
 import { transcriptForGame, transcriptForReview } from './format.ts';
-import { isShowing, parseRoute, routeHash, type Route } from './route.ts';
+import { isRoomRoute, isShowing, parseRoute, routeHash, type Route } from './route.ts';
 
 const root = document.getElementById('app')!;
 
@@ -33,10 +35,31 @@ const msg = (err: unknown): string =>
 
 function render(): void {
   const s = getState();
-  const hadFocus = document.activeElement?.getAttribute('data-role') === 'ask-input';
+  const hadFocus =
+    document.activeElement?.getAttribute('data-role') === 'ask-input' ||
+    document.activeElement?.getAttribute('data-role') === 'race-ask-input';
   const draft = root.querySelector<HTMLInputElement>('[data-role="ask-input"]')?.value ?? '';
+  const raceDraft = root.querySelector<HTMLInputElement>('[data-role="race-ask-input"]')?.value ?? '';
 
-  root.innerHTML = renderApp(s);
+  root.innerHTML = isRoomRoute(currentRoute()) || s.view === 'rooms' ? renderRoomApp(s) : renderApp(s);
+
+  if (s.view === 'race') {
+    const log = root.querySelector<HTMLElement>('.race-log');
+    if (log) {
+      log.style.scrollBehavior = 'auto';
+      log.scrollTop = log.scrollHeight;
+      log.style.scrollBehavior = '';
+    }
+    const input = root.querySelector<HTMLInputElement>('[data-role="race-ask-input"]');
+    if (input && !input.disabled) {
+      if (raceDraft) input.value = raceDraft;
+      if (hadFocus) input.focus();
+    }
+  }
+
+  if (s.raceGuessOpen) {
+    root.querySelector<HTMLInputElement>('[data-role="race-guess-input"]')?.focus();
+  }
 
   if (s.view === 'game') {
     const log = root.querySelector<HTMLElement>('[data-role="log"]');
@@ -267,6 +290,12 @@ function go(route: Route, opts: { replace?: boolean } = {}): void {
 }
 
 /**
+ * 对战四屏的交互与实时通道。它自己不渲染，只在路由进出时启停通道，
+ * 并把快照写回 store（渲染统一由 subscribe(render) 触发）。
+ */
+const roomApp = attachRoomApp(root, { go, currentRoute });
+
+/**
  * 把界面状态对齐到地址栏。
  * 刷新、前进后退、粘贴链接、从历史里续局，全都汇聚到这里，
  * 所以在任何入口都不需要重复写"加载这一局"的代码。
@@ -287,8 +316,14 @@ async function applyRoute(force = false): Promise<void> {
       view: s.view,
       gameId: s.session?.gameId ?? null,
       historyId: s.historyDetail?.id ?? null,
+      roomCode: s.roomCode,
     });
     if (!force && showing) return;
+
+    // 对战路由：界面由房间快照驱动（进 lobby/playing/finished 自动切屏），
+    // 这里只负责把实时通道挂上/拆掉，并把 view 先切过去让壳子先渲染出来。
+    roomApp.onRoute(route);
+    if (isRoomRoute(route)) return;
 
     switch (route.view) {
       case 'game':
@@ -351,6 +386,15 @@ async function applyRoute(force = false): Promise<void> {
 
 window.addEventListener('popstate', () => void applyRoute());
 window.addEventListener('hashchange', () => void applyRoute());
+
+// 用户菜单：点面板以外的地方关闭（面板内的点击由各自的 data-action 处理）
+document.addEventListener('click', (event) => {
+  if (!isMenuOpen()) return;
+  const el = event.target as HTMLElement | null;
+  if (el?.closest('.menu')) return;
+  closeMenu();
+  render();
+});
 
 /* ---------------- 设置同步 ---------------- */
 
@@ -506,13 +550,28 @@ root.addEventListener('click', (event) => {
       setState({ authMode: getState().authMode === 'login' ? 'register' : 'login', authError: null });
       break;
     case 'logout':
+      closeMenu();
       void doLogout();
       break;
+    case 'toggle-menu':
+      toggleMenu();
+      render();
+      break;
+    case 'close-menu':
+      closeMenu();
+      render();
+      break;
+    case 'go-auth':
+      closeMenu();
+      go({ view: 'auth' });
+      break;
     case 'go-setup':
+      closeMenu();
       setState({ testResult: null, notice: null, guessOpen: false });
       go({ view: 'setup' });
       break;
     case 'go-home':
+      closeMenu();
       setState({ notice: null, guessOpen: false });
       go({ view: 'lobby' });
       break;
@@ -526,6 +585,7 @@ root.addEventListener('click', (event) => {
       break;
     }
     case 'go-history':
+      closeMenu();
       go({ view: 'history', id: null });
       break;
     case 'open-history':
@@ -762,6 +822,12 @@ root.addEventListener('input', (event) => {
 
 root.addEventListener('keydown', (event) => {
   const target = event.target as HTMLElement;
+  // 用户菜单：Esc 关闭
+  if (event.key === 'Escape' && isMenuOpen()) {
+    closeMenu();
+    render();
+    return;
+  }
   if (event.key !== 'Enter') return;
   if (target.getAttribute('data-role') === 'guess-input') {
     event.preventDefault();
@@ -806,6 +872,15 @@ async function boot(): Promise<void> {
     if (view === 'game' || view === 'reveal' || view === 'history') return;
   }
 
+  // 1b) 房间里/大厅：同样以地址栏为准（朋友发来的 `#/room/<code>` 直接进）
+  if (route && (isRoomRoute(route) || route.view === 'rooms')) {
+    await applyRoute(true);
+    const view = getState().view;
+    if (isRoomRoute(currentRoute()) || view === 'rooms' || view === 'room' || view === 'race' || view === 'review') {
+      return;
+    }
+  }
+
   // 2) 地址栏**完全没写页面**（裸域名）时，才退回上次那一局。
   //    `#/` 是用户明确点过「首页」的结果，刷新就该留在首页，不能又被拽回旧对局。
   //    这里以前还多了个 `config` 条件，导致用站方 Key 的登录用户刷新就丢局。
@@ -816,6 +891,14 @@ async function boot(): Promise<void> {
     await applyRoute(true);
     const view = getState().view;
     if (view === 'game' || view === 'reveal') return;
+  }
+
+  // 2b) 上次停在某个房间里：裸域名进来直接回那张牌桌
+  const lastRoom = bareHash ? getState().roomCode : null;
+  if (lastRoom && !lastId) {
+    syncUrl({ view: 'room', code: lastRoom }, { replace: true });
+    await applyRoute(true);
+    if (getState().view === 'room' || getState().view === 'race' || getState().view === 'review') return;
   }
 
   // 3) 默认落点

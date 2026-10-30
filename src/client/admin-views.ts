@@ -621,6 +621,21 @@ const RESULT_TEXT: Record<string, string> = {
   playing: '进行中',
 };
 
+/** 对战局的结局文案：结果用名次表达，"放弃"这个词在对战里没有意义 */
+function raceResultText(g: HistorySummary): string {
+  const rank = typeof g.finishRank === 'number' ? `第 ${g.finishRank} 名` : '';
+  const reason = g.result === 'won' ? '猜中' : '未猜中';
+  return rank ? `${reason} · ${rank}` : reason;
+}
+
+function resultCell(g: HistorySummary): string {
+  if (g.roomId) {
+    const cls = g.result === 'won' ? 'is-ok' : '';
+    return `<span class="a-pill ${cls}">对战 · ${esc(raceResultText(g))}</span>`;
+  }
+  return `<span class="a-pill ${g.result === 'won' ? 'is-ok' : g.result === 'lost' ? 'is-bad' : ''}">${esc(RESULT_TEXT[g.result] ?? g.result)}</span>`;
+}
+
 /** 归属展示：登录玩家 / 明确游客 / 迁移回填查不到归属的三者不能混为一谈 */
 function ownerLabel(g: HistorySummary): string {
   if (g.userName) return g.userName;
@@ -663,7 +678,7 @@ function historyDetailPane(d: HistoryDetail): string {
     <p class="a-muted">
       ${esc(new Date(d.startedAt).toLocaleString('zh-CN'))}
       · 玩家 ${esc(ownerLabel(d))}
-      · ${esc(RESULT_TEXT[d.result] ?? d.result)}
+      · ${esc(d.roomId ? `对战 · ${raceResultText(d)}` : (RESULT_TEXT[d.result] ?? d.result))}
       · 用了 ${d.turnsUsed} / ${d.turnsTotal} 问
       · 难度 ${d.difficulty}
       ${d.target ? ` · 目标 <b>${esc(d.target.name)}</b>（${esc(d.target.polity)}）` : ' · 目标未揭晓（进行中）'}
@@ -683,7 +698,7 @@ function historyView(s: AdminState): string {
       (g) => `<tr>
         <td>${esc(new Date(g.startedAt).toLocaleString('zh-CN'))}</td>
         <td>${g.userName ? esc(g.userName) : ownerCell(g)}</td>
-        <td><span class="a-pill ${g.result === 'won' ? 'is-ok' : g.result === 'lost' ? 'is-bad' : ''}">${esc(RESULT_TEXT[g.result] ?? g.result)}</span></td>
+        <td>${resultCell(g)}</td>
         <td>${g.target ? esc(g.target.name) : '<span class="a-muted">—</span>'}</td>
         <td>${g.turnsUsed} / ${g.turnsTotal}</td>
         <td>${g.difficulty}</td>

@@ -16,37 +16,103 @@ function fmtYear(year: number | null): string {
   return year < 0 ? `公元前 ${Math.abs(year)} 年` : `${year} 年`;
 }
 
-function topbar(s: State): string {
-  const model = s.config?.model;
+/**
+ * 顶栏用户菜单的开合。
+ * 放在模块里而不是 store：这是纯 UI 瞬时状态，进 store 会污染领域状态，
+ * 也会和并行开发中的房间状态互相踩。
+ */
+let menuOpen = false;
+
+export function toggleMenu(): void {
+  menuOpen = !menuOpen;
+}
+
+export function closeMenu(): void {
+  menuOpen = false;
+}
+
+export function isMenuOpen(): boolean {
+  return menuOpen;
+}
+
+/** 对局上下文：只在局中/揭晓时出现，让顶栏有信息而不是一排按钮 */
+function topbarContext(s: State): string {
+  const session = s.session;
+  if (!session) return '';
+  if (s.view !== 'game' && s.view !== 'reveal') return '';
+
+  const parts: string[] = [];
+  parts.push(s.view === 'reveal' ? '已揭晓' : `剩 ${session.turnsLeft} 问`);
+  parts.push(session.mode === 'guided' ? '解说' : '精确');
+  const scope = session.polity ?? session.worldEra;
+  if (scope) parts.push(scope);
+
+  return `<span class="topbar-context">${parts
+    .map((p) => `<span>${esc(p)}</span>`)
+    .join('<i class="dot"></i>')}</span>`;
+}
+
+function userMenu(s: State): string {
   const user = s.meta?.user;
+  if (!user) return '';
+  const model = s.config?.model;
+  const admin = user.role === 'admin';
+
   return `
-  <header class="topbar">
-    <div class="brand">
-      <span class="seal">猜</span>
-      <div>
-        <h1 class="brand-title">猜历史</h1>
-        <p class="brand-sub">二十问 · 猜人物</p>
-      </div>
-    </div>
-    <div class="topbar-actions">
+    <div class="menu">
+      <button class="btn btn-ghost menu-trigger" data-action="toggle-menu"
+        aria-haspopup="menu" aria-expanded="${menuOpen ? 'true' : 'false'}">
+        <span class="chip-dot"></span>
+        <span class="chip-label">${esc(user.username)}</span>
+        <span class="menu-caret" aria-hidden="true">▾</span>
+      </button>
       ${
-        user
-          ? `<span class="chip"><i class="chip-dot"></i><span class="chip-label">${esc(user.username)}</span>${user.role === 'admin' ? '<span class="chip-badge" title="管理员">管</span>' : ''}</span>`
-          : model
-            ? `<span class="chip"><i class="chip-dot"></i>${esc(model)}</span>`
-            : `<span class="chip chip-off"><i class="chip-dot"></i>未接模型</span>`
-      }
-      ${
-        // 任何非首页的页面都要有一条明确的路回去，别让人只能靠刷新
-        (user || !s.meta?.authEnabled) && s.view !== 'lobby'
-          ? `<button class="btn btn-ghost" data-action="go-home">首页</button>`
+        menuOpen
+          ? `<div class="menu-panel" role="menu">
+               <p class="menu-head">
+                 ${esc(user.username)}
+                 ${admin ? '<span class="menu-role">管理员</span>' : ''}
+                 ${model ? `<small>模型 ${esc(model)}</small>` : ''}
+               </p>
+               <button class="menu-item" role="menuitem" data-action="go-setup">我的设置</button>
+               ${
+                 admin
+                   ? `<a class="menu-item" role="menuitem" href="/admin.html" target="_blank" rel="noopener">
+                        管理后台<small>新窗口打开</small>
+                      </a>`
+                   : ''
+               }
+               <div class="menu-sep"></div>
+               <button class="menu-item is-danger" role="menuitem" data-action="logout">登出</button>
+             </div>`
           : ''
       }
-      ${user ? `<button class="btn btn-ghost" data-action="logout">登出</button>` : ''}
-      ${user ? `<button class="btn btn-ghost" data-action="go-history">历史</button>` : ''}
-      <a class="btn btn-ghost" href="/admin.html" target="_blank" rel="noopener">管理</a>
-      ${user || !s.meta?.authEnabled ? `<button class="btn btn-ghost" data-action="go-setup">设置</button>` : ''}
-    </div>
+    </div>`;
+}
+
+function topbar(s: State): string {
+  const user = s.meta?.user;
+  const authEnabled = Boolean(s.meta?.authEnabled);
+
+  // 右侧只留两个锚点：历史（常用）+ 用户菜单（低频操作收进二级）。
+  // 未登录时仅一个「登录」；单机 JSON 模式没有账号，保留「设置」。
+  const actions = user
+    ? `<button class="btn btn-ghost" data-action="go-rooms">对战</button><button class="btn btn-ghost" data-action="go-history">历史</button>${userMenu(s)}`
+    : authEnabled
+      ? `<button class="btn btn-ghost" data-action="go-auth">登录</button>`
+      : `<button class="btn btn-ghost" data-action="go-setup">设置</button>`;
+
+  return `
+  <header class="topbar">
+    <a class="brand brand-link" href="#/" data-action="go-home" title="回到首页">
+      <span class="seal">猜</span>
+      <span class="brand-text">
+        <span class="brand-title">猜历史</span>
+        <span class="brand-sub">是/否提问 · 猜人物</span>
+      </span>
+    </a>
+    ${topbarContext(s)}
+    <div class="topbar-actions">${actions}</div>
   </header>`;
 }
 
@@ -165,12 +231,6 @@ function setupView(s: State): string {
           <div class="actions">
             <button type="button" class="btn btn-ghost" data-action="test-ai">测试连接</button>
             <button type="submit" class="btn btn-primary">保存并进入</button>
-            ${
-              // 设置页必须能直接回首页：登录用户没有本地 BYOK 时以前一个返回按钮都没有
-              s.meta?.user || s.meta?.serverModelReady || s.session
-                ? '<button type="button" class="btn btn-text" data-action="go-home">首页</button>'
-                : ''
-            }
           </div>
         </form>
 
@@ -325,6 +385,7 @@ function lobbyView(s: State): string {
           <button class="btn btn-primary btn-lg" data-action="start-game" ${s.pending ? 'disabled' : ''}>
             ${s.pending ? '正在开局…' : '开局'}
           </button>
+          <button class="btn btn-ghost" data-action="go-rooms">找人开局（对战）</button>
           <span class="muted">本局 ${turns} 问，上限 ${maxTurns}</span>
         </div>
       </div>
@@ -339,6 +400,8 @@ function lobbyView(s: State): string {
         </ol>
         <h3>小技巧</h3>
         <p>先定时期和性别，再收窄到身份，最后一问确认代表作——通常够用。</p>
+        <h3>对战怎么玩</h3>
+        <p>同一个目标人物，各问各的、互不可见，谁先猜中谁赢；没人猜中就过半投票揭晓，结束后全员公开问答供复盘。</p>
       </aside>
     </section>`,
   );
@@ -510,7 +573,6 @@ function revealView(s: State): string {
          <p class="muted">刷新页面，或到「历史」里找到这一局查看完整问答。</p>
          <div class="actions">
            <button class="btn btn-primary" data-action="go-history">打开历史</button>
-           <button class="btn btn-ghost" data-action="go-home">首页</button>
          </div>
        </section>`,
     );
@@ -595,15 +657,27 @@ function fmtTime(ts: number | null): string {
 function historyRow(g: HistorySummary): string {
   const scope = g.polity ?? g.worldEra ?? (g.region ? REGION_LABEL_CLIENT[g.region] ?? g.region : '不限');
   const target = g.target ? `目标 · ${esc(g.target.name)}（${esc(g.target.polity)}）` : '目标未揭晓';
+
+  // 对战局：结局标签换成"对战"语义，结果用名次表达（第 1 名 = 赢）
+  const isRace = Boolean(g.roomId);
+  const resultTag = isRace
+    ? `<span class="verdict history-result is-race">对战</span>`
+    : `<span class="verdict history-result is-${esc(g.result)}">${esc(RESULT_LABEL[g.result] ?? g.result)}</span>`;
+  const raceBadge =
+    isRace && typeof g.finishRank === 'number'
+      ? `<span class="verdict history-result ${g.finishRank === 1 ? 'is-won' : 'is-race'}">第 ${g.finishRank} 名</span>`
+      : '';
+
   const action =
-    g.result === 'playing'
+    g.result === 'playing' && !isRace
       ? `<button class="btn btn-ghost" data-action="resume-history" data-id="${esc(g.id)}">继续这局</button>`
       : `<button class="btn btn-ghost" data-action="open-history" data-id="${esc(g.id)}">查看</button>`;
   return `
     <li class="history-item">
       <div class="history-main">
         <div class="history-head">
-          <span class="verdict history-result is-${esc(g.result)}">${esc(RESULT_LABEL[g.result] ?? g.result)}</span>
+          ${resultTag}
+          ${raceBadge}
           <span class="history-target">${target}</span>
         </div>
         <div class="history-meta">
