@@ -91,21 +91,44 @@ const VERDICT_LABEL: Record<Verdict, string> = { yes: '是', no: '否', unknown:
 
 /* ---------------- 外壳 ---------------- */
 
-function shell(s: AdminState, body: string): string {
+/** 各视图的标题与副标题：与当前标签保持一致 */
+function headerFor(s: AdminState): { title: string; sub: string } {
   const meta = s.meta;
-  const stats = meta ? `人物库 ${meta.total} 位 · 在库 ${meta.active} 位` : '加载中';
+  const stats = meta ? `人物 ${meta.total} 位 · 在库 ${meta.active} 位` : '加载中';
+  switch (s.view) {
+    case 'users':
+      return { title: '管理后台', sub: `用户 ${s.users.length} 位` };
+    case 'invites':
+      return {
+        title: '管理后台',
+        sub: `邀请码 ${s.invites.length} 个 · 未用 ${s.invites.filter((i) => !i.usedAt).length} 个`,
+      };
+    case 'settings':
+      return { title: '管理后台', sub: '账号与站方模型' };
+    case 'health':
+      return { title: '管理后台', sub: '数据健康' };
+    case 'edit':
+      return { title: '管理后台', sub: s.originalId ? `编辑：${s.draft?.name ?? ''}` : '新建人物' };
+    default:
+      return { title: '管理后台', sub: stats };
+  }
+}
+
+function shell(s: AdminState, body: string): string {
+  const head = headerFor(s);
+  const meta = s.meta;
 
   return `
   <header class="a-top">
     <div class="a-brand">
       <span class="a-seal">管</span>
       <div>
-        <h1 class="a-title">人物库后台</h1>
-        <p class="a-sub">${esc(stats)}</p>
+        <h1 class="a-title">${esc(head.title)}</h1>
+        <p class="a-sub">${esc(head.sub)}</p>
       </div>
     </div>
     <nav class="a-tabs">
-      <button class="a-tab ${s.view === 'list' ? 'is-active' : ''}" data-action="go-list">人物</button>
+      <button class="a-tab ${s.view === 'list' || s.view === 'edit' ? 'is-active' : ''}" data-action="go-list">人物</button>
       <button class="a-tab ${s.view === 'health' ? 'is-active' : ''}" data-action="go-health">数据健康</button>
       <button class="a-tab ${s.view === 'users' ? 'is-active' : ''}" data-action="go-users">用户</button>
       <button class="a-tab ${s.view === 'invites' ? 'is-active' : ''}" data-action="go-invites">邀请码</button>
@@ -583,13 +606,13 @@ function healthView(s: AdminState): string {
 export function renderAdmin(s: AdminState): string {
   if (!s.ready) {
     return `<div class="a-top"><div class="a-brand"><span class="a-seal">管</span>
-      <div><h1 class="a-title">人物库后台</h1><p class="a-sub">正在载入…</p></div></div></div>`;
+      <div><h1 class="a-title">管理后台</h1><p class="a-sub">正在载入…</p></div></div></div>`;
   }
 
   // meta 未就绪（如远程访问未带令牌被 403）：给出可操作的引导，而不是死转
   if (!s.meta) {
     return `<div class="a-top"><div class="a-brand"><span class="a-seal">管</span>
-      <div><h1 class="a-title">人物库后台</h1><p class="a-sub">${esc(s.error ?? '未能加载')}</p></div></div>
+      <div><h1 class="a-title">管理后台</h1><p class="a-sub">${esc(s.error ?? '未能加载')}</p></div></div>
       <div class="a-token">
         <input type="password" data-field="token" placeholder="ADMIN_TOKEN" value="${esc(s.token)}" />
         <button class="a-btn" data-action="save-token">连接</button>
@@ -621,27 +644,30 @@ function usersView(s: AdminState): string {
     return `<section class="a-panel"><p class="a-muted">正在加载用户…</p></section>`;
   }
   const rows = s.users
-    .map(
-      (u) => `
-    <tr>
-      <td>${esc(u.username)}${u.role === 'admin' ? ' <span class="a-tag">管理员</span>' : ''}</td>
-      <td>${u.asksToday}</td>
-      <td>
-        <input class="a-input a-input-sm" type="number" min="-1" max="10000"
-          value="${u.dailyQuota ?? -1}" data-field="user-quota" data-id="${esc(u.id)}"
-          title="-1=默认500，0=禁用，>0=自定义" />
-      </td>
-      <td>${u.allowServerKey ? '允许' : '禁止'}</td>
-      <td>
+    .map((u) => {
+      const isAdmin = u.role === 'admin';
+      const actions = isAdmin
+        ? '<span class="a-muted">管理员不受限</span>'
+        : `
         <button class="a-btn a-btn-sm" data-action="user-server-key" data-id="${esc(u.id)}" data-on="${u.allowServerKey ? '0' : '1'}">
           ${u.allowServerKey ? '关闭' : '开启'}
         </button>
         <button class="a-btn a-btn-sm" data-action="user-ban" data-id="${esc(u.id)}" data-on="${u.banned ? '0' : '1'}">
           ${u.banned ? '解封' : '封禁'}
-        </button>
-      </td>
-    </tr>`,
-    )
+        </button>`;
+      const quotaCell = isAdmin ? '∞' : `
+        <input class="a-input a-input-sm" type="number" min="-1" max="10000"
+          value="${u.dailyQuota ?? -1}" data-field="user-quota" data-id="${esc(u.id)}"
+          title="-1=默认500，0=禁用，>0=自定义" />`;
+      return `
+    <tr>
+      <td>${esc(u.username)}${isAdmin ? ' <span class="a-tag">管理员</span>' : ''}</td>
+      <td>${u.asksToday}</td>
+      <td>${quotaCell}</td>
+      <td>${isAdmin ? '—' : u.allowServerKey ? '允许' : '禁止'}</td>
+      <td>${actions}</td>
+    </tr>`;
+    })
     .join('');
 
   return `

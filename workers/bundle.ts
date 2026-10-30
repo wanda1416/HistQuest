@@ -265,8 +265,11 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
         if (user.role !== 'admin' && !user.allowServerKey) {
           return fail(403, 'BYOK_REQUIRED', '管理员为本账号关闭了站方模型，请在设置里填写自己的模型');
         }
-        const quota = await takeUserQuota(rt.env.DB, user);
-        if (!quota.ok) return fail(429, 'QUOTA_EXCEEDED', quota.message ?? '今日额度已用完');
+        // 管理员不限量
+        if (user.role !== 'admin') {
+          const quota = await takeUserQuota(rt.env.DB, user);
+          if (!quota.ok) return fail(429, 'QUOTA_EXCEEDED', quota.message ?? '今日额度已用完');
+        }
         cred = serverCred;
       }
       if (!cred) return fail(400, 'MODEL_NOT_CONFIGURED', '没有模型配置就无法判定');
@@ -445,14 +448,27 @@ async function handleAdmin(req: Request, url: URL, rt: Runtime): Promise<Respons
     const id = userToggle[1]!;
     const what = userToggle[2]!;
     const on = Boolean(body.on);
+
+    // 保护管理员：不允许对 admin 角色做封禁/关停/配额清零（防自锁）
+    const target = await rt.env.DB
+      .prepare('SELECT role FROM users WHERE id = ?')
+      .bind(id)
+      .first<{ role: string }>();
+    if (target?.role === 'admin' && what !== 'quota') {
+      return fail(403, 'ADMIN_PROTECTED', '不能对管理员执行封禁或关闭站方模型');
+    }
+    if (target?.role === 'admin' && what === 'quota') {
+      return fail(403, 'ADMIN_PROTECTED', '管理员配额不受限制（无限）');
+    }
+
     if (what === 'server-key') {
       await rt.env.DB
         .prepare('UPDATE users SET allow_server_key = ?, updated_at = ? WHERE id = ?')
         .bind(on ? 1 : 0, Date.now(), id)
         .run();
     } else if (what === 'quota') {
-      // 每日提问配额：0 = 禁用；默认值见 quota.ts（存 -1 表示用全局默认）
-      const q = Math.max(0, Math.round(Number(body.quota)));
+      // 每日提问配额：0 = 禁用；-1 = 用全局默认
+      const q = Math.max(-1, Math.round(Number(body.quota)));
       await rt.env.DB
         .prepare('UPDATE users SET daily_quota = ?, updated_at = ? WHERE id = ?')
         .bind(Number.isFinite(q) ? q : -1, Date.now(), id)
