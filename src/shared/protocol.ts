@@ -45,7 +45,7 @@ export interface AskRes {
   hint?: string;
   turnsLeft: number;
   status: SessionStatus;
-  invalid?: 'suspicious' | 'format';
+  invalid?: 'format';
 }
 
 export interface GuessReq {
@@ -74,7 +74,7 @@ export interface RecordView {
   verdict: Verdict;
   text: string;
   hint?: string;
-  invalid?: 'suspicious' | 'format';
+  invalid?: 'format';
 }
 
 export interface SessionView {

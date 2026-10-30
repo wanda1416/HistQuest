@@ -55,7 +55,7 @@ export async function runAsk(params: AskParams): Promise<AskOutcome> {
     query?: ParsedQuery | null;
     hint?: string;
     calls: number;
-    invalid?: 'suspicious' | 'format';
+    invalid?: 'format';
     transient?: boolean;
   }): AnswerRecord => ({
     seq,
@@ -84,8 +84,7 @@ export async function runAsk(params: AskParams): Promise<AskOutcome> {
     return names.some((n) => hint.includes(n)) ? undefined : hint;
   };
 
-  // ---------- 规则前置：只处理形式，不做"作弊审查" ----------
-  // 这是自我挑战游戏，绕过规则只坑自己；真正的约束是玩家会复盘自己的问答记录。
+  // ---------- 形式检查：只拦"压根不是问题"（空 / 超长），不做意图审查 ----------
   const pre = precheck(question);
   let calls = 0;
 
@@ -96,7 +95,7 @@ export async function runAsk(params: AskParams): Promise<AskOutcome> {
         text: phrase('unknown', 'invalid', rng),
         basis: 'fallback',
         calls,
-        invalid: 'suspicious',
+        invalid: 'format',
       }),
     };
   }

@@ -11,7 +11,7 @@ const UNKNOWN = [
 ];
 
 export const SUBJECTIVE_TEXT = '无法判断，请提问客观事实。';
-export const INVALID_TEXT = '这个问题不符合规则，已忽略（不扣次数）。';
+export const INVALID_TEXT = '问题为空或太长，换个简短的是/否问法吧（不扣次数）。';
 export const PARSE_FAILED_TEXT = '这个问题我没听明白，换个说法再问一次？';
 
 function pickFrom(list: string[], rng: () => number): string {

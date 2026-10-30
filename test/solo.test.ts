@@ -74,7 +74,7 @@ test('有效提问扣次数，无效提问不扣', async () => {
 
   const long = await store.ask(s.id, '他'.repeat(220), cred);
   assert.equal(long.accepted, false);
-  assert.equal(long.invalid, 'suspicious');
+  assert.equal(long.invalid, 'format');
   assert.equal(long.turnsLeft, 19, '无效问不应扣次数');
 });
 

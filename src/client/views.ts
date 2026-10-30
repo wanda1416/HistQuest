@@ -218,14 +218,13 @@ function lobbyView(s: State): string {
 /* ---------------- 对局 ---------------- */
 
 function turnView(r: RecordView): string {
-  const isFormat = r.invalid === 'format';
-  const cls = r.invalid ? (isFormat ? 'v-format' : 'v-invalid') : `v-${r.verdict}`;
-  const label = r.invalid ? (isFormat ? '改问法' : '无效') : (VERDICT_LABEL[r.verdict] ?? '');
+  const isFormat = Boolean(r.invalid);
+  const cls = isFormat ? 'v-format' : `v-${r.verdict}`;
+  const label = isFormat ? '改问法' : (VERDICT_LABEL[r.verdict] ?? '');
   const hint = r.hint ? `<span class="hint">${esc(r.hint)}</span>` : '';
-  const variant = isFormat ? 'is-format' : r.invalid ? 'is-invalid' : '';
   return `
     <div class="turn turn-q"><p>${esc(r.question)}</p></div>
-    <div class="turn turn-a ${variant}">
+    <div class="turn turn-a ${isFormat ? 'is-format' : ''}">
       <span class="verdict ${cls}">${esc(label)}</span>
       <p>${esc(r.text)}${hint}</p>
     </div>`;
@@ -349,9 +348,8 @@ function revealView(s: State): string {
   const review = r.history.length
     ? r.history
         .map((h) => {
-          const isFormat = h.invalid === 'format';
-          const cls = h.invalid ? (isFormat ? 'v-format' : 'v-invalid') : `v-${h.verdict}`;
-          const label = h.invalid ? (isFormat ? '改问法' : '无效') : VERDICT_LABEL[h.verdict];
+          const cls = h.invalid ? 'v-format' : `v-${h.verdict}`;
+          const label = h.invalid ? '改问法' : VERDICT_LABEL[h.verdict];
           return `
         <li>
           <span class="review-q">${esc(h.question)}</span>

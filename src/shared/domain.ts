@@ -102,8 +102,8 @@ export interface AnswerRecord {
   basis: Basis;
   calls: number;
   ms: number;
-  /** 被判无效的问题：不扣次数、不换回合。suspicious=疑似作弊，format=问法不是是/否 */
-  invalid?: 'suspicious' | 'format';
+  /** 问法不是有效的是/否问题：不扣次数、不换回合 */
+  invalid?: 'format';
   /** 基础设施故障（超时/网络）：不算次数，可重试 */
   transient?: boolean;
 }
