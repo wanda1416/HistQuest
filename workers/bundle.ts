@@ -48,6 +48,29 @@ interface Runtime {
   solo: SoloStore;
   env: Env;
   maxTurns: number;
+  /** 后台可改的 LLM 覆盖配置（D1 app_settings.llm）；优先于 env */
+  llmOverride: { baseURL: string; model: string; apiKey?: string } | null;
+}
+
+/** 读 D1 的 LLM 覆盖配置 */
+async function readLlmOverride(db: D1Database): Promise<Runtime['llmOverride'] | null> {
+  const row = await db
+    .prepare("SELECT v FROM app_settings WHERE k = 'llm'")
+    .bind()
+    .first<{ v: string }>();
+  if (!row) return null;
+  try {
+    const parsed = JSON.parse(row.v) as { baseURL?: string; model?: string; apiKey?: string };
+    if (!parsed.baseURL || !parsed.model) return null;
+    return { baseURL: parsed.baseURL, model: parsed.model, ...(parsed.apiKey ? { apiKey: parsed.apiKey } : {}) };
+  } catch {
+    return null;
+  }
+}
+
+/** LLM 设置更新后刷新运行时（本 isolate 立即生效；其他 isolate 下次启动生效） */
+async function refreshLlmOverride(rt: Runtime): Promise<void> {
+  rt.llmOverride = await readLlmOverride(rt.env.DB);
 }
 
 let runtime: Promise<Runtime> | null = null;
@@ -78,7 +101,7 @@ function initRuntime(env: Env): Promise<Runtime> {
         await ensureAdmin(env.DB, env.ADMIN_USER, env.ADMIN_PASSWORD);
       }
 
-      return { index, store, solo, env, maxTurns };
+      return { index, store, solo, env, maxTurns, llmOverride: await readLlmOverride(env.DB) };
     })().catch((err) => {
       runtime = null; // 失败后允许重试
       throw err;
@@ -99,7 +122,14 @@ function fail(status: number, error: string, message: string): Response {
 }
 
 /** 服务端模型凭据：未配置时返回 null，前端回落 BYOK */
-function serverCredential(env: Env): AiCredential | null {
+function serverCredential(env: Env, override?: Runtime['llmOverride']): AiCredential | null {
+  // 后台覆盖配置优先（D1），回落部署时的 env secret
+  if (override?.apiKey) {
+    return { kind: 'byok', baseURL: override.baseURL, apiKey: override.apiKey, model: override.model, temperature: 0.1 };
+  }
+  if (override && env.AI_API_KEY) {
+    return { kind: 'byok', baseURL: override.baseURL, apiKey: env.AI_API_KEY, model: override.model, temperature: 0.1 };
+  }
   if (!env.AI_BASE_URL || !env.AI_API_KEY || !env.AI_MODEL) return null;
   return {
     kind: 'byok',
@@ -151,7 +181,7 @@ function errorResponse(err: unknown): Response {
 async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response> {
   const path = url.pathname.replace(/^\/api/, '');
   const body = req.method === 'POST' ? await readBody(req) : {};
-  const serverCred = serverCredential(rt.env);
+  const serverCred = serverCredential(rt.env, rt.llmOverride);
 
   // ---------- meta ----------
   if (path === '/meta' && req.method === 'GET') {
@@ -390,9 +420,7 @@ async function handleAdmin(req: Request, url: URL, rt: Runtime): Promise<Respons
     const rows = await rt.env.DB
       .prepare(
         `SELECT u.id, u.username, u.role, u.allow_server_key, u.banned, u.created_at,
-                u.asks_today, u.quota_day,
-                (SELECT COUNT(*) FROM sessions s WHERE s.target_id IS NOT NULL AND s.id IN
-                  (SELECT id FROM sessions)) AS dummy
+                u.asks_today, u.quota_day, u.daily_quota
          FROM users u ORDER BY u.created_at DESC LIMIT 500`,
       )
       .bind()
@@ -407,11 +435,12 @@ async function handleAdmin(req: Request, url: URL, rt: Runtime): Promise<Respons
       banned: Boolean(r.banned),
       createdAt: r.created_at,
       asksToday: Number(r.quota_day) === dayNow ? r.asks_today : 0,
+      dailyQuota: typeof r.daily_quota === 'number' ? r.daily_quota : null,
     }));
     return json(200, { total: users.length, users });
   }
 
-  const userToggle = path.match(/^\/users\/([A-Za-z0-9-]+)\/(server-key|ban)$/);
+  const userToggle = path.match(/^\/users\/([A-Za-z0-9-]+)\/(server-key|ban|quota)$/);
   if (userToggle && req.method === 'POST') {
     const id = userToggle[1]!;
     const what = userToggle[2]!;
@@ -421,12 +450,69 @@ async function handleAdmin(req: Request, url: URL, rt: Runtime): Promise<Respons
         .prepare('UPDATE users SET allow_server_key = ?, updated_at = ? WHERE id = ?')
         .bind(on ? 1 : 0, Date.now(), id)
         .run();
+    } else if (what === 'quota') {
+      // 每日提问配额：0 = 禁用；默认值见 quota.ts（存 -1 表示用全局默认）
+      const q = Math.max(0, Math.round(Number(body.quota)));
+      await rt.env.DB
+        .prepare('UPDATE users SET daily_quota = ?, updated_at = ? WHERE id = ?')
+        .bind(Number.isFinite(q) ? q : -1, Date.now(), id)
+        .run();
     } else {
       await rt.env.DB
         .prepare('UPDATE users SET banned = ?, updated_at = ? WHERE id = ?')
         .bind(on ? 1 : 0, Date.now(), id)
         .run();
     }
+    return json(200, { ok: true });
+  }
+
+  // ---------- 管理员改密 ----------
+  if (path === '/change-password' && req.method === 'POST') {
+    const me = rt.env.SESSION_SECRET
+      ? await currentUser(rt.env.DB, req, rt.env.SESSION_SECRET)
+      : null;
+    if (!me) return fail(403, 'ADMIN_FORBIDDEN', '修改密码需要管理员会话登录（token 通道不可用）');
+    const { hashPassword } = await import('../src/core/password.ts');
+    const current = String(body.current ?? '');
+    const next = String(body.next ?? '');
+    if (next.length < 8) return fail(400, 'BAD_PASSWORD', '新密码至少 8 位');
+    const row = await rt.env.DB.prepare('SELECT password_hash FROM users WHERE id = ?').bind(me.id).first<{ password_hash: string }>();
+    const { verifyPassword } = await import('../src/core/password.ts');
+    if (!row || !(await verifyPassword(current, row.password_hash))) {
+      return fail(401, 'BAD_CREDENTIALS', '当前密码不对');
+    }
+    await rt.env.DB
+      .prepare('UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?')
+      .bind(await hashPassword(next), Date.now(), me.id)
+      .run();
+    return json(200, { ok: true });
+  }
+
+  // ---------- LLM 服务商设置 ----------
+  if (path === '/llm' && req.method === 'GET') {
+    return json(200, {
+      baseURL: rt.env.AI_BASE_URL ?? '',
+      model: rt.env.AI_MODEL ?? '',
+      hasKey: Boolean(rt.env.AI_API_KEY),
+      maxTurns: rt.maxTurns,
+    });
+  }
+
+  if (path === '/llm' && req.method === 'POST') {
+    // 说明：Workers 的 env 是不可变的；这里落 D1 的 kv 表，启动时 D1 覆盖 env（见 initRuntime）
+    const baseURL = String(body.baseURL ?? '').trim();
+    const model = String(body.model ?? '').trim();
+    const apiKey = String(body.apiKey ?? '').trim();
+    if (!baseURL || !model) return fail(400, 'BAD_LLM_CONFIG', '地址和模型名不能为空');
+    await rt.env.DB
+      .prepare(
+        `INSERT INTO app_settings (k, v, updated_at) VALUES ('llm', ?, ?)
+         ON CONFLICT(k) DO UPDATE SET v = excluded.v, updated_at = excluded.updated_at`,
+      )
+      .bind(JSON.stringify({ baseURL, model, ...(apiKey ? { apiKey } : {}) }), Date.now())
+      .run();
+    // 立即生效：刷新运行时持有的配置
+    await refreshLlmOverride(rt);
     return json(200, { ok: true });
   }
 

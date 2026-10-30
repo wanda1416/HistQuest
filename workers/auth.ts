@@ -23,6 +23,7 @@ export interface UserRow {
   allow_server_key: number;
   banned: number;
   created_at: number;
+  daily_quota?: number;
 }
 
 export interface AuthUser {
@@ -30,6 +31,8 @@ export interface AuthUser {
   username: string;
   role: 'user' | 'admin';
   allowServerKey: boolean;
+  /** 每日配额：-1 跟随全局默认；0 禁用；>0 自定义 */
+  dailyQuota?: number | null;
 }
 
 function rowToUser(r: UserRow): AuthUser {
@@ -38,6 +41,7 @@ function rowToUser(r: UserRow): AuthUser {
     username: r.username,
     role: r.role,
     allowServerKey: Boolean(r.allow_server_key),
+    ...(typeof r.daily_quota === 'number' ? { dailyQuota: r.daily_quota } : {}),
   };
 }
 

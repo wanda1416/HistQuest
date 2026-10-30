@@ -119,6 +119,12 @@ input {
   max-width: 220px;
   overflow: hidden;
   white-space: nowrap;
+}
+
+/* flex 容器上 text-overflow 不生效：文本套一层可收缩的 span */
+.chip .chip-label {
+  overflow: hidden;
+  min-width: 0;
   text-overflow: ellipsis;
 }
 

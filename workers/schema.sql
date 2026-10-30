@@ -85,3 +85,13 @@ CREATE TABLE IF NOT EXISTS invites (
   created_at INTEGER NOT NULL
 );
 
+
+-- v4：按用户配额 + 后台可改的 LLM 配置
+-- daily_quota: -1=跟随全局默认(500)，0=禁用服务端Key，>0=自定义每日上限
+ALTER TABLE users ADD COLUMN daily_quota INTEGER NOT NULL DEFAULT -1;
+
+CREATE TABLE IF NOT EXISTS app_settings (
+  k          TEXT PRIMARY KEY,
+  v          TEXT NOT NULL,
+  updated_at INTEGER NOT NULL
+);

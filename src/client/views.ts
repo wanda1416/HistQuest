@@ -31,7 +31,7 @@ function topbar(s: State): string {
     <div class="topbar-actions">
       ${
         user
-          ? `<span class="chip"><i class="chip-dot"></i>${esc(user.username)}${user.role === 'admin' ? ' · 管理员' : ''}</span>`
+          ? `<span class="chip"><i class="chip-dot"></i><span class="chip-label">${esc(user.username)}${user.role === 'admin' ? ' · 管理员' : ''}</span></span>`
           : model
             ? `<span class="chip"><i class="chip-dot"></i>${esc(model)}</span>`
             : `<span class="chip chip-off"><i class="chip-dot"></i>未接模型</span>`

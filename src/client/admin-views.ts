@@ -49,7 +49,7 @@ export interface AdminState {
   list: Character[];
   total: number;
   filters: { q: string; polity: string; region: string; difficulty: string; retired: string };
-  view: 'list' | 'edit' | 'health';
+  view: 'list' | 'edit' | 'health' | 'users' | 'invites' | 'settings';
   draft: Character | null;
   /** 正在编辑的原始 id；新建时为 null */
   originalId: string | null;
@@ -57,6 +57,29 @@ export interface AdminState {
   health: HealthReport | null;
   token: string;
   saving: boolean;
+  users: AdminUserRow[];
+  invites: AdminInviteRow[];
+  llm: { baseURL: string; model: string; hasKey: boolean; maxTurns: number } | null;
+  pwBusy: boolean;
+  llmBusy: boolean;
+}
+
+export interface AdminUserRow {
+  id: string;
+  username: string;
+  role: string;
+  allowServerKey: boolean;
+  banned: boolean;
+  createdAt: number;
+  asksToday: number;
+  dailyQuota?: number | null;
+}
+
+export interface AdminInviteRow {
+  code: string;
+  createdAt: number;
+  usedAt: number | null;
+  usedByName: string | null;
 }
 
 const esc = (value: unknown): string =>
@@ -84,6 +107,9 @@ function shell(s: AdminState, body: string): string {
     <nav class="a-tabs">
       <button class="a-tab ${s.view === 'list' ? 'is-active' : ''}" data-action="go-list">人物</button>
       <button class="a-tab ${s.view === 'health' ? 'is-active' : ''}" data-action="go-health">数据健康</button>
+      <button class="a-tab ${s.view === 'users' ? 'is-active' : ''}" data-action="go-users">用户</button>
+      <button class="a-tab ${s.view === 'invites' ? 'is-active' : ''}" data-action="go-invites">邀请码</button>
+      <button class="a-tab ${s.view === 'settings' ? 'is-active' : ''}" data-action="go-settings">系统</button>
       <a class="a-tab a-link" href="/">返回游戏</a>
     </nav>
     ${
@@ -571,9 +597,114 @@ export function renderAdmin(s: AdminState): string {
   }
 
   const body =
-    s.view === 'edit' && s.draft ? editView(s) : s.view === 'health' ? healthView(s) : listView(s);
+    s.view === 'edit' && s.draft
+      ? editView(s)
+      : s.view === 'health'
+        ? healthView(s)
+        : s.view === 'users'
+          ? usersView(s)
+          : s.view === 'invites'
+            ? invitesView(s)
+            : s.view === 'settings'
+              ? settingsView(s)
+              : listView(s);
 
   return shell(s, body);
 }
 
 export { charLen };
+
+/* ---------------- 用户管理 ---------------- */
+
+function usersView(s: AdminState): string {
+  if (!s.users.length && s.ready) {
+    return `<section class="a-panel"><p class="a-muted">正在加载用户…</p></section>`;
+  }
+  const rows = s.users
+    .map(
+      (u) => `
+    <tr>
+      <td>${esc(u.username)}${u.role === 'admin' ? ' <span class="a-tag">管理员</span>' : ''}</td>
+      <td>${u.asksToday}</td>
+      <td>
+        <input class="a-input a-input-sm" type="number" min="-1" max="10000"
+          value="${u.dailyQuota ?? -1}" data-field="user-quota" data-id="${esc(u.id)}"
+          title="-1=默认500，0=禁用，>0=自定义" />
+      </td>
+      <td>${u.allowServerKey ? '允许' : '禁止'}</td>
+      <td>
+        <button class="a-btn a-btn-sm" data-action="user-server-key" data-id="${esc(u.id)}" data-on="${u.allowServerKey ? '0' : '1'}">
+          ${u.allowServerKey ? '关闭' : '开启'}
+        </button>
+        <button class="a-btn a-btn-sm" data-action="user-ban" data-id="${esc(u.id)}" data-on="${u.banned ? '0' : '1'}">
+          ${u.banned ? '解封' : '封禁'}
+        </button>
+      </td>
+    </tr>`,
+    )
+    .join('');
+
+  return `
+  <section class="a-panel">
+    <h2 class="a-h2">用户（${s.users.length}）</h2>
+    <p class="a-muted">配额：-1 = 跟随默认（500/天），0 = 禁用站方模型，&gt;0 = 每日上限。只对站方 Key 计数，BYOK 不限。</p>
+    <table class="a-table">
+      <thead><tr><th>用户名</th><th>今日已问</th><th>每日配额</th><th>站方模型</th><th>操作</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </section>`;
+}
+
+/* ---------------- 邀请码 ---------------- */
+
+function invitesView(s: AdminState): string {
+  const rows = s.invites
+    .map(
+      (i) => `
+    <tr>
+      <td><code>${esc(i.code)}</code></td>
+      <td>${i.usedAt ? `已被 ${esc(i.usedByName ?? '?')} 使用` : '<span class="a-ok">未使用</span>'}</td>
+      <td>${new Date(i.createdAt).toLocaleString('zh-CN')}</td>
+    </tr>`,
+    )
+    .join('');
+
+  return `
+  <section class="a-panel">
+    <h2 class="a-h2">邀请码</h2>
+    <div class="a-row">
+      <button class="a-btn" data-action="invite-create" data-count="1">生成 1 个</button>
+      <button class="a-btn" data-action="invite-create" data-count="5">生成 5 个</button>
+    </div>
+    <table class="a-table">
+      <thead><tr><th>邀请码</th><th>状态</th><th>创建时间</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="3" class="a-muted">还没有邀请码</td></tr>'}</tbody>
+    </table>
+  </section>`;
+}
+
+/* ---------------- 系统设置 ---------------- */
+
+function settingsView(s: AdminState): string {
+  const llm = s.llm;
+  return `
+  <section class="a-panel">
+    <h2 class="a-h2">修改管理员密码</h2>
+    <form data-role="admin-pw-form" class="a-form">
+      <label class="a-label">当前密码 <input class="a-input" type="password" name="current" required /></label>
+      <label class="a-label">新密码（至少 8 位） <input class="a-input" type="password" name="next" required minlength="8" /></label>
+      <button class="a-btn" type="submit" ${s.pwBusy ? 'disabled' : ''}>${s.pwBusy ? '提交中…' : '修改密码'}</button>
+    </form>
+  </section>
+
+  <section class="a-panel">
+    <h2 class="a-h2">LLM 服务商（站方模型）</h2>
+    <p class="a-muted">修改后立即生效（新配置存 D1）。API Key 留空 = 沿用部署时的 secret，不会回显。</p>
+    <form data-role="admin-llm-form" class="a-form">
+      <label class="a-label">API 地址 <input class="a-input" name="baseURL" placeholder="https://api.deepseek.com/v1" value="${esc(llm?.baseURL ?? '')}" required /></label>
+      <label class="a-label">模型名 <input class="a-input" name="model" placeholder="deepseek-flash" value="${esc(llm?.model ?? '')}" required /></label>
+      <label class="a-label">API Key（留空不改） <input class="a-input" type="password" name="apiKey" placeholder="${llm?.hasKey ? '已配置（不回显）' : '未配置'}" /></label>
+      <button class="a-btn" type="submit" ${s.llmBusy ? 'disabled' : ''}>${s.llmBusy ? '保存中…' : '保存'}</button>
+    </form>
+  </section>`;
+}

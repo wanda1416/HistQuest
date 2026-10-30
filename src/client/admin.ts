@@ -1,7 +1,7 @@
 import type { Character } from '../shared/domain.ts';
 import type { Issue } from '../core/schema.ts';
 import { renderAdmin } from './admin-views.ts';
-import type { AdminMeta, AdminState, HealthReport } from './admin-views.ts';
+import type { AdminMeta, AdminState, AdminUserRow, AdminInviteRow, HealthReport } from './admin-views.ts';
 
 const root = document.getElementById('admin')!;
 const TOKEN_KEY = 'hq.adminToken';
@@ -21,6 +21,11 @@ let state: AdminState = {
   health: null,
   token: '',
   saving: false,
+  users: [],
+  invites: [],
+  llm: null,
+  pwBusy: false,
+  llmBusy: false,
 };
 
 function render(): void {
@@ -68,6 +73,21 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 async function loadMeta(): Promise<void> {
   const meta = await request<AdminMeta>('/api/admin/meta');
   setState({ meta });
+}
+
+async function loadUsers(): Promise<void> {
+  const res = await request<{ total: number; users: AdminUserRow[] }>('/api/admin/users');
+  setState({ users: res.users });
+}
+
+async function loadInvites(): Promise<void> {
+  const res = await request<{ total: number; invites: AdminInviteRow[] }>('/api/admin/invites');
+  setState({ invites: res.invites });
+}
+
+async function loadLlm(): Promise<void> {
+  const res = await request<{ baseURL: string; model: string; hasKey: boolean; maxTurns: number }>('/api/admin/llm');
+  setState({ llm: res });
 }
 
 async function loadList(): Promise<void> {
@@ -162,6 +182,22 @@ function handleField(el: HTMLElement): void {
 
   if (field === 'token') {
     state.token = (el as HTMLInputElement).value.trim();
+    return;
+  }
+  if (field === 'user-quota') {
+    // 失焦（change 事件）时保存
+    const id = el.getAttribute('data-id');
+    const value = Number((el as HTMLInputElement).value);
+    if (!id || !Number.isFinite(value)) return;
+    void request(`/api/admin/users/${id}/quota`, {
+      method: 'POST',
+      body: JSON.stringify({ quota: Math.max(-1, Math.round(value)) }),
+    })
+      .then(() => {
+        setState({ notice: { kind: 'ok', text: '配额已更新' } });
+        void loadUsers();
+      })
+      .catch((err: Error) => setState({ notice: { kind: 'err', text: err.message } }));
     return;
   }
   if (field === 'q') {
@@ -309,7 +345,7 @@ async function exportJson(): Promise<void> {
 
 /* ---------------- 事件 ---------------- */
 
-root.addEventListener('click', (event) => {
+root.addEventListener('click', async (event) => {
   const el = (event.target as HTMLElement).closest<HTMLElement>('[data-action]');
   if (!el) return;
   const action = el.dataset.action;
@@ -319,6 +355,35 @@ root.addEventListener('click', (event) => {
       setState({ view: 'list', draft: null, originalId: null, issues: [], notice: null });
       void loadList();
       break;
+    case 'go-users':
+      await loadUsers();
+      setState({ view: 'users' });
+      break;
+    case 'go-invites':
+      await loadInvites();
+      setState({ view: 'invites' });
+      break;
+    case 'go-settings':
+      await loadLlm();
+      setState({ view: 'settings' });
+      break;
+    case 'user-server-key':
+    case 'user-ban': {
+      const id = el.dataset.id ?? '';
+      const on = el.dataset.on === '1';
+      const kind = action === 'user-server-key' ? 'server-key' : 'ban';
+      await request(`/api/admin/users/${id}/${kind}`, { method: 'POST', body: JSON.stringify({ on }) });
+      await loadUsers();
+      setState({ view: 'users', notice: { kind: 'ok', text: kind === 'ban' ? (on ? '已封禁' : '已解封') : (on ? '已开启站方模型' : '已关闭站方模型') } });
+      break;
+    }
+    case 'invite-create': {
+      const count = Number(el.dataset.count) || 1;
+      const res = await request<{ codes: string[] }>('/api/admin/invites', { method: 'POST', body: JSON.stringify({ count }) });
+      await loadInvites();
+      setState({ view: 'invites', notice: { kind: 'ok', text: `已生成：${res.codes.join('、')}` } });
+      break;
+    }
     case 'go-health':
       void loadHealth();
       break;
@@ -401,8 +466,54 @@ root.addEventListener('keydown', (event) => {
 
 root.addEventListener('submit', (event) => {
   event.preventDefault();
+  const form = event.target as HTMLFormElement;
+  const role = form.dataset.role;
+  if (role === 'admin-pw-form') {
+    void changePassword(
+      (form.querySelector('[name=current]') as HTMLInputElement)?.value ?? '',
+      (form.querySelector('[name=next]') as HTMLInputElement)?.value ?? '',
+    );
+    return;
+  }
+  if (role === 'admin-llm-form') {
+    void saveLlm(
+      (form.querySelector('[name=baseURL]') as HTMLInputElement)?.value?.trim() ?? '',
+      (form.querySelector('[name=model]') as HTMLInputElement)?.value?.trim() ?? '',
+      (form.querySelector('[name=apiKey]') as HTMLInputElement)?.value ?? '',
+    );
+    return;
+  }
   void saveDraft();
 });
+
+/* 系统设置：改密与 LLM 配置 */
+async function changePassword(current: string, next: string): Promise<void> {
+  if (next.length < 8) {
+    setState({ notice: { kind: 'err', text: '新密码至少 8 位' } });
+    return;
+  }
+  setState({ pwBusy: true, notice: null });
+  try {
+    await request('/api/admin/change-password', { method: 'POST', body: JSON.stringify({ current, next }) });
+    setState({ pwBusy: false, notice: { kind: 'ok', text: '密码已修改，下次登录用新密码' } });
+  } catch (err) {
+    setState({ pwBusy: false, notice: { kind: 'err', text: (err as Error).message } });
+  }
+}
+
+async function saveLlm(baseURL: string, model: string, apiKey: string): Promise<void> {
+  setState({ llmBusy: true, notice: null });
+  try {
+    await request('/api/admin/llm', {
+      method: 'POST',
+      body: JSON.stringify({ baseURL, model, ...(apiKey.trim() ? { apiKey: apiKey.trim() } : {}) }),
+    });
+    await loadLlm();
+    setState({ llmBusy: false, notice: { kind: 'ok', text: 'LLM 配置已保存并生效' } });
+  } catch (err) {
+    setState({ llmBusy: false, notice: { kind: 'err', text: (err as Error).message } });
+  }
+}
 
 /* ---------------- 启动 ---------------- */
 
