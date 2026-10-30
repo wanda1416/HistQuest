@@ -18,7 +18,7 @@ import { RoomDo } from './room-do.ts';
 export { RoomDo };
 
 /**
- * Cloudflare Worker 入口：纯 BS 一体化（TECH-DESIGN v1.5）。
+ * Cloudflare Worker 入口：纯 BS 一体化（见 docs/ARCHITECTURE.md §6）。
  * 路由与 src/server/routes.ts 逐条对齐；core/ai 层原样复用。
  *
  * 密钥：AI_API_KEY 走 wrangler secret，只存在于 Worker→LLM 这一段。

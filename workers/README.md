@@ -1,6 +1,6 @@
 # CF Workers 部署（纯 BS 一体化）
 
-架构见 `docs/TECH-DESIGN.md` §3.1。服务器持有 LLM Key，朋友零配置打开即玩。
+架构见 [`docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md)；部署步骤与两种形态差异见 [`docs/DEPLOY.md`](../docs/DEPLOY.md)。服务器持有 LLM Key，朋友零配置打开即玩。
 
 ## 首次部署
 
@@ -20,6 +20,7 @@ npx wrangler d1 execute hq --remote --file=schema.sql
 # 4. 生成本地部署配置（wrangler.toml 不入库）
 cp wrangler.example.toml wrangler.toml
 #    编辑 wrangler.toml：name / database_id / routes / AI_BASE_URL / AI_MODEL / ADMIN_USER
+#    （对战房间的 DO 绑定与 migrations 段模板里已带，无需手加）
 
 # 5. 注入密钥（不会写进任何文件）
 npx wrangler secret put AI_API_KEY
@@ -80,7 +81,7 @@ npx wrangler deploy   # 首个请求会重新播种
 规则见 [`docs/MULTIPLAYER.md`](../docs/MULTIPLAYER.md)。每房一个 DO 实例，房间状态机是
 `src/core/room/reducer.ts` 的纯函数，`room-do.ts` 只做 IO（WS、storage、模型调用、alarm、账本）。
 
-首次（或换库）部署，`wrangler.toml` 需要这两段：
+绑定与迁移已写进 `wrangler.example.toml`，按模板复制即含这两段：
 
 ```toml
 [[durable_objects.bindings]]
@@ -92,13 +93,19 @@ tag = "v1"
 new_sqlite_classes = ["RoomDo"]     # SQLite 版 DO，免费档可用
 ```
 
-已上线的库补一次表结构（`ALTER` 不可重复执行，所以单独放一个文件）：
+如果是从**旧模板**升级来的 `wrangler.toml`（没有这两段），手动补上后再 `deploy`；
+`migrations.tag = "v1"` 保持不变——这是 DO 类的首次登记，不是版本号。
+
+数据表在首次部署时随 `schema.sql` 一起建好；**已上线的旧库**补一次表结构
+（`ALTER` 不可重复执行，所以单独放一个文件）：
 
 ```bash
 cd workers
 npx wrangler d1 execute hq --remote --file=migrations/v8-rooms.sql
 npx wrangler deploy
 ```
+
+部署成功的标志：`wrangler deploy` 输出的绑定清单里出现 `env.ROOMS (RoomDo)`。
 
 接口：
 
