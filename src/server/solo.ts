@@ -1,12 +1,5 @@
-import { randomBytes } from 'node:crypto';
-import type { DatabaseSync } from 'node:sqlite';
 import type { AiCredential, AnswerMode, AnswerRecord, PronounStyle, Region, SoloSession } from '../shared/domain.ts';
-import {
-  JsonSessionPersistence,
-  MemorySessionPersistence,
-  SqliteSessionPersistence,
-  type SessionPersistence,
-} from './sessions.ts';
+import type { SessionPersistence } from './sessions.ts';
 import type { GameRecorder, TargetSnapshot } from './history.ts';
 import type { AskRes, GuessRes, RevealRes } from '../shared/protocol.ts';
 import type { CharacterIndex } from '../core/index.ts';
@@ -16,6 +9,11 @@ import { projectHistory } from './dto.ts';
 import { log } from './util.ts';
 
 export type SoloErrorCode = 'NOT_FOUND' | 'NOT_PLAYING' | 'NO_TURNS';
+
+/** 默认 id 生成：两端都有 crypto.randomUUID（Node 19+/Workers 原生） */
+function defaultNewId(): string {
+  return crypto.randomUUID().replace(/-/g, '');
+}
 
 export class SoloError extends Error {
   readonly code: SoloErrorCode;
@@ -29,11 +27,10 @@ export class SoloError extends Error {
 export interface SoloStoreOptions {
   /** 服务端允许的最大轮次上限；每局可在 10 到该值之间自选 */
   turns: number;
-  /** 传 null 关闭持久化（测试用）；传 db 时优先用 SQLite */
-  file?: string | null;
-  db?: DatabaseSync;
-  /** 直接注入持久层实现（Workers：D1 版）；优先于 db/file */
+  /** 默认持久化工厂：Node 侧注入 sessions-node.ts 的实现，Workers 注入 D1 版 */
   persistence?: SessionPersistence;
+  /** 未注入 persistence 时用它兜底（不给就是内存版，测试用） */
+  makePersistence?: () => SessionPersistence;
   /** 对局归档（永久账本）；不传则只保留 24h 会话，不留历史 */
   history?: GameRecorder;
   /** 预加载的会话列表（Workers：D1 异步读出后注入，跳过同步 load） */
@@ -65,7 +62,14 @@ export interface CreateInput {
   rng?: () => number;
 }
 
-const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+/** 内存版兜底：测试或显式关闭持久化时用（ Workers/Node 各自注入真实现） */
+class MemorySessionPersistence implements SessionPersistence {
+  load(): SoloSession[] {
+    return [];
+  }
+  save(): void {}
+  flush(): void {}
+}
 
 export class SoloStore {
   private sessions = new Map<string, SoloSession>();
@@ -77,13 +81,7 @@ export class SoloStore {
   constructor(index: CharacterIndex, opts: SoloStoreOptions) {
     this.index = index;
     this.opts = opts;
-    this.persistence =
-      opts.persistence ??
-      (opts.db
-        ? new SqliteSessionPersistence(opts.db)
-        : opts.file
-          ? new JsonSessionPersistence(opts.file)
-          : new MemorySessionPersistence());
+    this.persistence = opts.persistence ?? opts.makePersistence?.() ?? new MemorySessionPersistence();
     if (opts.preloaded) {
       // Workers 环境：D1 异步加载后注入（Node 环境走下面的同步 load）
       for (const s of opts.preloaded) this.sessions.set(s.id, s);
@@ -106,7 +104,7 @@ export class SoloStore {
     const turns = Math.min(this.opts.turns, Math.max(10, Math.round(input.turns ?? this.opts.turns)));
     const now = Date.now();
     const session: SoloSession = {
-      id: this.opts.newId ? this.opts.newId() : randomBytes(12).toString('hex'),
+      id: this.opts.newId ? this.opts.newId() : defaultNewId(),
       targetId: target.id,
       difficulty: input.difficulty,
       polity: input.polity ?? null,

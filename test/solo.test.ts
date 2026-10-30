@@ -7,6 +7,7 @@ import { before, after } from 'node:test';
 import type { AiCredential, Character } from '../src/shared/domain.ts';
 import { CharacterIndex } from '../src/core/index.ts';
 import { SoloStore } from '../src/server/solo.ts';
+import { JsonSessionPersistence } from '../src/server/sessions-node.ts';
 import { startMockLlm, type MockLlm } from './fixtures/mock-llm.ts';
 
 const list = JSON.parse(
@@ -29,7 +30,7 @@ after(async () => {
 });
 
 test('开局锁定目标人物，重复读取不变', async () => {
-  const store = new SoloStore(index, { turns: 20, file: null });
+  const store = new SoloStore(index, { turns: 20 });
   const s = await store.create({ difficulty: 2, polity: '唐', rng: () => 0.3 });
   const again = store.require(s.id);
   assert.equal(again.targetId, s.targetId);
@@ -38,17 +39,17 @@ test('开局锁定目标人物，重复读取不变', async () => {
 
 test('验收1：进程重启后目标人物不变', async () => {
   const file = path.join(os.tmpdir(), `hq-solo-${Date.now()}.json`);
-  const store1 = new SoloStore(index, { turns: 20, file });
+  const store1 = new SoloStore(index, { turns: 20, makePersistence: () => new JsonSessionPersistence(file) });
   const s = await store1.create({ difficulty: 1, polity: '唐', rng: () => 0.7 });
   store1.flush();
 
-  const store2 = new SoloStore(index, { turns: 20, file });
+  const store2 = new SoloStore(index, { turns: 20, makePersistence: () => new JsonSessionPersistence(file) });
   assert.equal(store2.require(s.id).targetId, s.targetId);
   fs.rmSync(file, { force: true });
 });
 
 test('验收5：猜中别名即获胜', async () => {
-  const store = new SoloStore(onlyLibai, { turns: 20, file: null });
+  const store = new SoloStore(onlyLibai, { turns: 20 });
   const s = await store.create({ difficulty: 1, polity: null });
   const r = await store.guess(s.id, '李太白');
   assert.equal(r.correct, true);
@@ -56,7 +57,7 @@ test('验收5：猜中别名即获胜', async () => {
 });
 
 test('猜错扣一次机会', async () => {
-  const store = new SoloStore(onlyLibai, { turns: 20, file: null });
+  const store = new SoloStore(onlyLibai, { turns: 20 });
   const s = await store.create({ difficulty: 1, polity: null });
   const r = await store.guess(s.id, '杜甫');
   assert.equal(r.correct, false);
@@ -65,7 +66,7 @@ test('猜错扣一次机会', async () => {
 });
 
 test('有效提问扣次数，无效提问不扣', async () => {
-  const store = new SoloStore(onlyLibai, { turns: 20, file: null });
+  const store = new SoloStore(onlyLibai, { turns: 20 });
   const s = await store.create({ difficulty: 1, polity: null });
 
   const ok = await store.ask(s.id, '他是唐朝人吗', cred);
@@ -79,7 +80,7 @@ test('有效提问扣次数，无效提问不扣', async () => {
 });
 
 test('同一问题第二次直接命中缓存，不再调用模型', async () => {
-  const store = new SoloStore(onlyLibai, { turns: 20, file: null });
+  const store = new SoloStore(onlyLibai, { turns: 20 });
   const s = await store.create({ difficulty: 1, polity: null });
   await store.ask(s.id, '他是唐朝人吗', cred);
   const before = mock.callCount();
@@ -89,7 +90,7 @@ test('同一问题第二次直接命中缓存，不再调用模型', async () =>
 });
 
 test('次数用尽自动进入揭晓态', async () => {
-  const store = new SoloStore(onlyLibai, { turns: 1, file: null });
+  const store = new SoloStore(onlyLibai, { turns: 1 });
   const s = await store.create({ difficulty: 1, polity: null });
   const r = await store.ask(s.id, '他是唐朝人吗', cred);
   assert.equal(r.turnsLeft, 0);
@@ -97,7 +98,7 @@ test('次数用尽自动进入揭晓态', async () => {
 });
 
 test('揭晓返回人物与历史，历史不含判定依据', async () => {
-  const store = new SoloStore(onlyLibai, { turns: 20, file: null });
+  const store = new SoloStore(onlyLibai, { turns: 20 });
   const s = await store.create({ difficulty: 1, polity: null });
   await store.ask(s.id, '他是唐朝人吗', cred);
   const reveal = await store.reveal(s.id);
@@ -107,12 +108,12 @@ test('揭晓返回人物与历史，历史不含判定依据', async () => {
 });
 
 test('出错时抛明确的业务错误', async () => {
-  const store = new SoloStore(index, { turns: 20, file: null });
+  const store = new SoloStore(index, { turns: 20 });
   assert.throws(() => store.require('不存在的id'), /找不到这一局/);
 });
 
 test('提问中点名猜中：直接结算为 won，这一问不扣次数', async () => {
-  const store = new SoloStore(onlyLibai, { turns: 20, file: null });
+  const store = new SoloStore(onlyLibai, { turns: 20 });
   const s = await store.create({ difficulty: 1, polity: null });
   const before = store.require(s.id).turnsLeft;
   const r = await store.ask(s.id, '他是李白吗', cred);
@@ -127,7 +128,7 @@ test('提问中点名猜中：直接结算为 won，这一问不扣次数', asyn
 });
 
 test('提问中点名猜错：答否并扣一次', async () => {
-  const store = new SoloStore(onlyLibai, { turns: 20, file: null });
+  const store = new SoloStore(onlyLibai, { turns: 20 });
   const s = await store.create({ difficulty: 1, polity: null });
   const r = await store.ask(s.id, '他是杜甫吗', cred);
   assert.equal(r.status, 'playing');
@@ -136,7 +137,7 @@ test('提问中点名猜错：答否并扣一次', async () => {
 });
 
 test('轮次可选：自选 30 问生效，越界被夹到 [10, 上限]', async () => {
-  const store = new SoloStore(index, { turns: 50, file: null });
+  const store = new SoloStore(index, { turns: 50 });
   const a = await store.create({ difficulty: 1, polity: null, turns: 30 });
   assert.equal(a.turnsLeft, 30);
 

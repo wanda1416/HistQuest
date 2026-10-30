@@ -16,6 +16,7 @@ import { SqliteHistoryStore } from './history.ts';
 import { createRoutes } from './routes.ts';
 import { createSettingsRoutes } from './settings.ts';
 import { SoloStore } from './solo.ts';
+import { JsonSessionPersistence, SqliteSessionPersistence } from './sessions-node.ts';
 import { log } from './util.ts';
 
 /**
@@ -117,8 +118,8 @@ export function createApp(options: AppOptions = {}): CreatedApp {
 
   const solo = new SoloStore(store.index, {
     turns: config.soloTurns,
-    file: db ? null : sessionsFile,
-    db: db ?? undefined,
+    makePersistence: () =>
+      db ? new SqliteSessionPersistence(db) : new JsonSessionPersistence(sessionsFile ?? path.join('data', 'sessions.json')),
     history: history ?? undefined,
   });
 

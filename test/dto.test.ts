@@ -19,7 +19,7 @@ const index = new CharacterIndex(list);
 const libai = list.find((c) => c.name === '李白')!;
 
 test('验收2：会话 DTO 不含任何答案字段', async () => {
-  const store = new SoloStore(index, { turns: 20, file: null });
+  const store = new SoloStore(index, { turns: 20 });
   const s = await store.create({ difficulty: 1, polity: null });
   const view = projectSession(s);
 
@@ -30,7 +30,7 @@ test('验收2：会话 DTO 不含任何答案字段', async () => {
 });
 
 test('会话 DTO 里不出现目标人物的姓名或别名', async () => {
-  const store = new SoloStore(index, { turns: 20, file: null });
+  const store = new SoloStore(index, { turns: 20 });
   const s = await store.create({ difficulty: 1, polity: null });
   const view = projectSession(s);
   assert.equal(containsCharacterName(view, index.get(s.targetId)!), false);
