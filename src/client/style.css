@@ -1422,3 +1422,18 @@ a.btn {
     padding-bottom: 12px;
   }
 }
+
+/* 顶栏用户身份徽标：与用户名视觉分离（管理员≠用户名的一部分） */
+.chip-badge {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  background: var(--ink, #3a3226);
+  color: var(--paper, #fff);
+  font-size: 10px;
+  line-height: 1;
+  margin-left: -2px;
+}

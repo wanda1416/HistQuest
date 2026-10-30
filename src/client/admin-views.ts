@@ -661,7 +661,7 @@ function usersView(s: AdminState): string {
           title="-1=默认500，0=禁用，>0=自定义" />`;
       return `
     <tr>
-      <td>${esc(u.username)}${isAdmin ? ' <span class="a-tag">管理员</span>' : ''}</td>
+      <td>${esc(u.username)}${isAdmin ? ' <span class="a-tag" title="管理员账号">管</span>' : ''}</td>
       <td>${u.asksToday}</td>
       <td>${quotaCell}</td>
       <td>${isAdmin ? '—' : u.allowServerKey ? '允许' : '禁止'}</td>
