@@ -18,9 +18,9 @@ const list = JSON.parse(
 const index = new CharacterIndex(list);
 const libai = list.find((c) => c.name === '李白')!;
 
-test('验收2：会话 DTO 不含任何答案字段', () => {
+test('验收2：会话 DTO 不含任何答案字段', async () => {
   const store = new SoloStore(index, { turns: 20, file: null });
-  const s = store.create({ difficulty: 1, polity: null });
+  const s = await store.create({ difficulty: 1, polity: null });
   const view = projectSession(s);
 
   assert.deepEqual(findForbiddenKeys(view), []);
@@ -31,12 +31,12 @@ test('验收2：会话 DTO 不含任何答案字段', () => {
 
 test('会话 DTO 里不出现目标人物的姓名或别名', async () => {
   const store = new SoloStore(index, { turns: 20, file: null });
-  const s = store.create({ difficulty: 1, polity: null });
+  const s = await store.create({ difficulty: 1, polity: null });
   const view = projectSession(s);
   assert.equal(containsCharacterName(view, index.get(s.targetId)!), false);
 });
 
-test('回答记录投影会剥掉 basis / calls / query', () => {
+test('回答记录投影会剥掉 basis / calls / query', async () => {
   const record = {
     seq: 1,
     question: '他是唐朝人吗',
@@ -51,7 +51,7 @@ test('回答记录投影会剥掉 basis / calls / query', () => {
   assert.deepEqual(Object.keys(view).sort(), ['question', 'seq', 'text', 'verdict']);
 });
 
-test('揭晓允许出现姓名，但仍不允许出现 targetId 与 basis', () => {
+test('揭晓允许出现姓名，但仍不允许出现 targetId 与 basis', async () => {
   const payload = {
     character: libai,
     status: 'revealed',

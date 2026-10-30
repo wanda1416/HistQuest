@@ -33,6 +33,15 @@ export class D1SessionPersistence implements SessionPersistence {
     return rows.results.map(rowToSession);
   }
 
+  /** Workers 多 isolate 兜底：内存未命中时按 id 从 D1 读单条 */
+  async loadOne(id: string): Promise<SoloSession | null> {
+    const row = await this.db
+      .prepare('SELECT * FROM sessions WHERE id = ?')
+      .bind(id)
+      .first<SessionRow>();
+    return row ? rowToSession(row) : null;
+  }
+
   async save(session: SoloSession): Promise<void> {
     await this.db
       .prepare(

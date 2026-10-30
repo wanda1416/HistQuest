@@ -14,6 +14,8 @@ import type { AnswerMode, AnswerRecord, PronounStyle, SoloSession } from '../sha
 
 export interface SessionPersistence {
   load(): SoloSession[] | Promise<SoloSession[]>;
+  /** 按 id 加载单条（Workers 多 isolate 兜底）；Node 实现可不提供 */
+  loadOne?(id: string): Promise<SoloSession | null> | SoloSession | null;
   /** 允许异步实现（D1）；Node 端实现保持同步 */
   save(session: SoloSession): void | Promise<void>;
   flush(): void | Promise<void>;

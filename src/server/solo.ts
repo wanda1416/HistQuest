@@ -35,6 +35,8 @@ export interface SoloStoreOptions {
   preloaded?: SoloSession[];
   /** id 生成器（Workers 环境注入 crypto.randomUUID 版本） */
   newId?: () => string;
+  /** 异步持久层时等待写完成再返回（Workers：响应后未完成的写会被取消） */
+  awaitPersist?: boolean;
 }
 
 export interface CreateInput {
@@ -79,7 +81,7 @@ export class SoloStore {
     }
   }
 
-  create(input: CreateInput): SoloSession {
+  async create(input: CreateInput): Promise<SoloSession> {
     const cnShare = Math.min(1, Math.max(0, input.cnShare ?? 0.5));
     const target = this.index.pick({
       difficulty: input.difficulty,
@@ -110,7 +112,7 @@ export class SoloStore {
     };
 
     this.sessions.set(session.id, session);
-    this.persist(session);
+    await this.persist(session);
     log('solo.create', {
       id: session.id,
       difficulty: input.difficulty,
@@ -134,7 +136,7 @@ export class SoloStore {
     credential: AiCredential,
     options: { timeoutMs?: number } = {},
   ): Promise<AskRes> {
-    const session = this.require(id);
+    const session = await this.requireAsync(id);
     if (session.status !== 'playing') throw new SoloError('NOT_PLAYING', '本局已结束');
     if (session.turnsLeft <= 0) throw new SoloError('NO_TURNS', '提问次数已用完');
 
@@ -167,7 +169,7 @@ export class SoloStore {
       session.history.push(outcome.record);
       session.status = 'won';
       session.updatedAt = Date.now();
-      this.persist(session);
+      await this.persist(session);
       log('solo.win', { id, via: 'ask' });
       const view: AskRes = {
         accepted: true,
@@ -184,8 +186,8 @@ export class SoloStore {
     return this.applyRecord(session, outcome.record);
   }
 
-  guess(id: string, name: string): GuessRes {
-    const session = this.require(id);
+  async guess(id: string, name: string): Promise<GuessRes> {
+    const session = await this.requireAsync(id);
     if (session.status !== 'playing') throw new SoloError('NOT_PLAYING', '本局已结束');
 
     const target = this.index.get(session.targetId);
@@ -194,7 +196,7 @@ export class SoloStore {
     if (guessMatches(target, name)) {
       session.status = 'won';
       session.updatedAt = Date.now();
-      this.persist(session);
+      await this.persist(session);
       log('solo.win', { id });
       return { correct: true, status: session.status, turnsLeft: session.turnsLeft };
     }
@@ -202,7 +204,7 @@ export class SoloStore {
     session.turnsLeft = Math.max(0, session.turnsLeft - 1);
     if (session.turnsLeft === 0) session.status = 'revealed';
     session.updatedAt = Date.now();
-    this.persist(session);
+    await this.persist(session);
     return {
       correct: false,
       status: session.status,
@@ -211,15 +213,15 @@ export class SoloStore {
     };
   }
 
-  reveal(id: string): RevealRes {
-    const session = this.require(id);
+  async reveal(id: string): Promise<RevealRes> {
+    const session = await this.requireAsync(id);
     const target = this.index.get(session.targetId);
     if (!target) throw new SoloError('NOT_FOUND', '目标人物丢失');
 
     if (session.status === 'playing') {
       session.status = 'revealed';
       session.updatedAt = Date.now();
-      this.persist(session);
+      await this.persist(session);
     }
 
     const turnsUsed = session.history.filter((r) => !r.transient && !r.invalid).length;
@@ -231,7 +233,7 @@ export class SoloStore {
     };
   }
 
-  private applyRecord(session: SoloSession, record: AnswerRecord): AskRes {
+  private async applyRecord(session: SoloSession, record: AnswerRecord): Promise<AskRes> {
     session.history.push(record);
     session.updatedAt = Date.now();
 
@@ -240,7 +242,7 @@ export class SoloStore {
       if (session.turnsLeft === 0) session.status = 'revealed';
     }
 
-    this.persist(session);
+    await this.persist(session);
 
     const view: AskRes = {
       accepted: !record.invalid && !record.transient,
@@ -267,12 +269,34 @@ export class SoloStore {
     }
   }
 
-  private persist(session: SoloSession): void {
+  private persist(session: SoloSession): void | Promise<void> {
     try {
-      this.persistence.save(session);
+      const out = this.persistence.save(session);
+      if (out && typeof (out as Promise<void>).then === 'function') {
+        const p = (out as Promise<void>).catch((err: unknown) => {
+          log('solo.persist.failed', { message: (err as Error)?.message ?? 'async' });
+        });
+        // 等待模式下返回 Promise（Workers：响应返回后未完成的写会被运行时取消）
+        if (this.opts.awaitPersist) return p;
+      }
     } catch (err) {
       log('solo.persist.failed', { message: (err as Error).message });
     }
+  }
+
+  /**
+   * 内存未命中时从持久层兜底加载（Workers 多 isolate：开局与提问
+   * 可能落在不同 isolate，各自内存 Map 不共享，D1 才是 source of truth）。
+   */
+  async requireAsync(id: string): Promise<SoloSession> {
+    const hit = this.sessions.get(id);
+    if (hit) return hit;
+    const loader = this.persistence.loadOne?.bind(this.persistence);
+    if (!loader) throw new SoloError('NOT_FOUND', '找不到这一局，可能已过期');
+    const loaded = await loader(id);
+    if (!loaded) throw new SoloError('NOT_FOUND', '找不到这一局，可能已过期');
+    this.sessions.set(loaded.id, loaded);
+    return loaded;
   }
 
   /**

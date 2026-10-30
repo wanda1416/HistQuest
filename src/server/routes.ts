@@ -83,7 +83,7 @@ export function createRoutes(deps: { getIndex: () => CharacterIndex; solo: SoloS
     res.json(result);
   });
 
-  router.post('/solo', (req: Request, res: Response) => {
+  router.post('/solo', async (req: Request, res: Response) => {
     const cfg = readAiConfig(req.body);
     if (!cfg && !serverModelReady()) {
       return fail(res, 400, 'MODEL_NOT_CONFIGURED', '没有模型配置就无法开局');
@@ -114,7 +114,7 @@ export function createRoutes(deps: { getIndex: () => CharacterIndex; solo: SoloS
     const turnsRaw = Number(body?.turns);
     const turns = Number.isFinite(turnsRaw) && turnsRaw > 0 ? Math.round(turnsRaw) : undefined;
 
-    const session = deps.solo.create({ difficulty, polity, region, worldEra, cnShare, mode, pronoun, turns });
+    const session = await deps.solo.create({ difficulty, polity, region, worldEra, cnShare, mode, pronoun, turns });
     res.status(201).json(projectSession(session));
   });
 
@@ -151,20 +151,20 @@ export function createRoutes(deps: { getIndex: () => CharacterIndex; solo: SoloS
     }
   });
 
-  router.post('/solo/:id/guess', (req: Request, res: Response) => {
+  router.post('/solo/:id/guess', async (req: Request, res: Response) => {
     const name = String((req.body as { name?: unknown })?.name ?? '').trim();
     if (!name) return fail(res, 400, 'EMPTY_GUESS', '请输入你猜的人物名');
     try {
-      const result = deps.solo.guess(String(req.params.id), name);
+      const result = await deps.solo.guess(String(req.params.id), name);
       res.json(result);
     } catch (err) {
       return handleError(res, err);
     }
   });
 
-  router.post('/solo/:id/reveal', (req: Request, res: Response) => {
+  router.post('/solo/:id/reveal', async (req: Request, res: Response) => {
     try {
-      const result = deps.solo.reveal(String(req.params.id));
+      const result = await deps.solo.reveal(String(req.params.id));
       res.json(result);
     } catch (err) {
       return handleError(res, err);

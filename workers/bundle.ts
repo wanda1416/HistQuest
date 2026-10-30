@@ -58,6 +58,7 @@ function initRuntime(env: Env): Promise<Runtime> {
       const persistence = new D1SessionPersistence(env.DB);
       const sessions = await persistence.load();
       const solo = new SoloStore(index, {
+        awaitPersist: true,
         turns: Number(env.SOLO_TURNS) || MAX_TURNS_DEFAULT,
         preloaded: sessions,
         newId: () => crypto.randomUUID().replace(/-/g, ''),
@@ -177,7 +178,7 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
     const pronoun = body.pronoun === 'neutral' ? 'neutral' : 'normal';
     const turnsRaw = Number(body.turns);
     const turns = Number.isFinite(turnsRaw) && turnsRaw > 0 ? Math.round(turnsRaw) : undefined;
-    const session = rt.solo.create({ difficulty, polity, region, worldEra, cnShare, mode, pronoun, turns });
+    const session = await rt.solo.create({ difficulty, polity, region, worldEra, cnShare, mode, pronoun, turns });
     return json(201, projectSession(session));
   }
 
