@@ -13,9 +13,10 @@ import type { AnswerMode, AnswerRecord, PronounStyle, SoloSession } from '../sha
  */
 
 export interface SessionPersistence {
-  load(): SoloSession[];
-  save(session: SoloSession): void;
-  flush(): void;
+  load(): SoloSession[] | Promise<SoloSession[]>;
+  /** 允许异步实现（D1）；Node 端实现保持同步 */
+  save(session: SoloSession): void | Promise<void>;
+  flush(): void | Promise<void>;
 }
 
 export const SESSION_TTL_MS = 24 * 60 * 60 * 1000;

@@ -1,4 +1,3 @@
-import fs from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import type { AiCredential, AnswerMode, AnswerRecord, PronounStyle, Region, SoloSession } from '../shared/domain.ts';
@@ -32,6 +31,10 @@ export interface SoloStoreOptions {
   /** 传 null 关闭持久化（测试用）；传 db 时优先用 SQLite */
   file?: string | null;
   db?: DatabaseSync;
+  /** 预加载的会话列表（Workers：D1 异步读出后注入，跳过同步 load） */
+  preloaded?: SoloSession[];
+  /** id 生成器（Workers 环境注入 crypto.randomUUID 版本） */
+  newId?: () => string;
 }
 
 export interface CreateInput {
@@ -68,7 +71,12 @@ export class SoloStore {
       : opts.file
         ? new JsonSessionPersistence(opts.file)
         : new MemorySessionPersistence();
-    this.load();
+    if (opts.preloaded) {
+      // Workers 环境：D1 异步加载后注入（Node 环境走下面的同步 load）
+      for (const s of opts.preloaded) this.sessions.set(s.id, s);
+    } else {
+      this.load();
+    }
   }
 
   create(input: CreateInput): SoloSession {
@@ -85,7 +93,7 @@ export class SoloStore {
     const turns = Math.min(this.opts.turns, Math.max(10, Math.round(input.turns ?? this.opts.turns)));
     const now = Date.now();
     const session: SoloSession = {
-      id: randomBytes(12).toString('hex'),
+      id: this.opts.newId ? this.opts.newId() : randomBytes(12).toString('hex'),
       targetId: target.id,
       difficulty: input.difficulty,
       polity: input.polity ?? null,
@@ -249,7 +257,9 @@ export class SoloStore {
 
   private load(): void {
     try {
-      const list = this.persistence.load();
+      const result = this.persistence.load();
+      // D1 实现返回 Promise：Workers 路径不走这里（preloaded 注入），但保持类型安全
+      const list = Array.isArray(result) ? result : [];
       for (const s of list) this.sessions.set(s.id, s);
       if (list.length) log('solo.load', { count: this.sessions.size });
     } catch {

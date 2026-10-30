@@ -33,7 +33,7 @@ export interface StartSoloReq {
   pronoun: PronounStyle;
   /** 本局提问轮次（10–maxTurns），缺省 = maxTurns */
   turns?: number;
-  aiConfig: AiConfig;
+  aiConfig?: AiConfig | null;
 }
 
 export interface StartSoloRes {
@@ -46,7 +46,7 @@ export interface StartSoloRes {
 
 export interface AskReq {
   question: string;
-  aiConfig: AiConfig;
+  aiConfig?: AiConfig | null;
 }
 
 export interface AskRes {

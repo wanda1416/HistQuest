@@ -34,14 +34,21 @@ function readAiConfig(body: unknown): AiConfig | null {
   return cfg;
 }
 
-function toCredential(cfg: AiConfig): AiCredential {
-  return {
-    kind: 'byok',
-    baseURL: cfg.baseURL,
-    apiKey: cfg.apiKey,
-    model: cfg.model,
-    temperature: cfg.temperature ?? config.ai.temperature,
-  };
+function toCredential(cfg: AiConfig | null): AiCredential {
+  // 优先用户 BYOK；未填时回落服务端配置（CF 部署：部署者出 key 给朋友玩）
+  if (cfg) {
+    return {
+      kind: 'byok',
+      baseURL: cfg.baseURL,
+      apiKey: cfg.apiKey,
+      model: cfg.model,
+      temperature: cfg.temperature ?? config.ai.temperature,
+    };
+  }
+  if (serverModelReady()) {
+    return { kind: 'byok', baseURL: config.ai.baseURL, apiKey: config.ai.apiKey, model: config.ai.model, temperature: config.ai.temperature };
+  }
+  throw new AiError('UNSUPPORTED', '没有可用的模型配置');
 }
 
 export function createRoutes(deps: { getIndex: () => CharacterIndex; solo: SoloStore }): express.Router {
@@ -78,7 +85,9 @@ export function createRoutes(deps: { getIndex: () => CharacterIndex; solo: SoloS
 
   router.post('/solo', (req: Request, res: Response) => {
     const cfg = readAiConfig(req.body);
-    if (!cfg) return fail(res, 400, 'MODEL_NOT_CONFIGURED', '没有模型配置就无法开局');
+    if (!cfg && !serverModelReady()) {
+      return fail(res, 400, 'MODEL_NOT_CONFIGURED', '没有模型配置就无法开局');
+    }
 
     const body = req.body as {
       difficulty?: unknown;
@@ -124,7 +133,9 @@ export function createRoutes(deps: { getIndex: () => CharacterIndex; solo: SoloS
     if (!question) return fail(res, 400, 'EMPTY_QUESTION', '问题不能为空');
 
     const cfg = readAiConfig(req.body);
-    if (!cfg) return fail(res, 400, 'MODEL_NOT_CONFIGURED', '没有模型配置就无法判定');
+    if (!cfg && !serverModelReady()) {
+      return fail(res, 400, 'MODEL_NOT_CONFIGURED', '没有模型配置就无法判定');
+    }
 
     const id = String(req.params.id);
     if (!limiter.take(id)) return fail(res, 429, 'RATE_LIMITED', '问得太快了，缓一缓');

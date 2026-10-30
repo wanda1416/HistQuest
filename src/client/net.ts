@@ -74,7 +74,7 @@ export const api = {
 
   getSolo: (id: string) => request<SessionView>(`/api/solo/${encodeURIComponent(id)}`),
 
-  ask: (id: string, question: string, aiConfig: AiConfig) =>
+  ask: (id: string, question: string, aiConfig?: AiConfig | null) =>
     request<AskRes>(`/api/solo/${encodeURIComponent(id)}/ask`, jsonInit({ question, aiConfig })),
 
   guess: (id: string, name: string) =>

@@ -93,7 +93,8 @@ async function testAi(): Promise<void> {
 
 async function startGame(): Promise<void> {
   const s = getState();
-  if (!s.config) {
+  // 服务器已配模型（CF 部署）：无需本地 BYOK 即可开局
+  if (!s.config && !s.meta?.serverModelReady) {
     setState({ view: 'setup', notice: { kind: 'error', text: '先配置模型才能开局' } });
     return;
   }
@@ -119,7 +120,9 @@ async function startGame(): Promise<void> {
 
 async function askQuestion(question: string): Promise<void> {
   const s = getState();
-  if (!s.session || !s.config || s.pending) return;
+  // 服务器已配模型时无需本地 BYOK（CF 部署场景）
+  if (!s.session || s.pending) return;
+  if (!s.config && !s.meta?.serverModelReady) return;
   const text = question.trim();
   if (!text) return;
 
@@ -575,7 +578,7 @@ async function boot(): Promise<void> {
     }
   }
 
-  setState({ view: config ? 'lobby' : 'setup' });
+  setState({ view: config || getState().meta?.serverModelReady ? 'lobby' : 'setup' });
 }
 
 void boot();
