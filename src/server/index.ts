@@ -10,7 +10,9 @@ import { CharacterStore, readCharacters } from './characters.ts';
 import type { CharacterStoreLike } from './characters-sqlite.ts';
 import { SqliteCharacterStore, importCharacters } from './characters-sqlite.ts';
 import { createAdminRoutes } from './admin.ts';
+import { createAuthRoutes, ensureAdmin, ensureSessionSecret, readUser, takeQuota } from './auth.ts';
 import { integrityCheck, openDatabase, tableCount } from './db.ts';
+import { SqliteHistoryStore } from './history.ts';
 import { createRoutes } from './routes.ts';
 import { createSettingsRoutes } from './settings.ts';
 import { SoloStore } from './solo.ts';
@@ -57,6 +59,8 @@ export interface AppOptions {
   dbFile?: string;
   /** 存储后端；默认 sqlite，HQ_STORE=json 可回滚到 JSON */
   store?: 'sqlite' | 'json';
+  /** 覆盖会话签名密钥（测试用；默认取环境变量或库内自动生成） */
+  sessionSecret?: string;
 }
 
 export interface CreatedApp {
@@ -65,6 +69,8 @@ export interface CreatedApp {
   store: CharacterStoreLike;
   solo: SoloStore;
   db: DatabaseSync | null;
+  /** 启动期异步任务（预置管理员）：监听前 await 一次即可 */
+  ready: Promise<void>;
 }
 
 export function createApp(options: AppOptions = {}): CreatedApp {
@@ -107,19 +113,38 @@ export function createApp(options: AppOptions = {}): CreatedApp {
     });
   }
 
+  const history = db ? new SqliteHistoryStore(db) : null;
+
   const solo = new SoloStore(store.index, {
     turns: config.soloTurns,
     file: db ? null : sessionsFile,
     db: db ?? undefined,
+    history: history ?? undefined,
   });
+
+  // 账号系统只在 SQLite 模式可用：JSON 模式没有 db，历史与账号一并关闭
+  const sessionSecret = db
+    ? ensureSessionSecret(db, options.sessionSecret ?? config.auth.secret)
+    : '';
+  const getUser = db
+    ? (req: Request) => readUser(db, req, sessionSecret)
+    : undefined;
+  const quota = db ? (user: Parameters<typeof takeQuota>[1]) => takeQuota(db, user, config.auth.dailyQuota) : undefined;
+
+  const ready = db
+    ? ensureAdmin(db, config.auth.adminUser, config.auth.adminPassword)
+    : Promise.resolve();
 
   const app = express();
   app.disable('x-powered-by');
   app.use(express.json({ limit: '64kb' }));
 
-  app.use('/api/admin', createAdminRoutes({ store, solo, token: config.admin.token }));
+  app.use('/api/auth', db ? createAuthRoutes({ db, secret: sessionSecret }) : (_req, res) => {
+    res.status(503).json({ error: 'AUTH_DISABLED', message: 'JSON 存储模式下没有账号系统' });
+  });
+  app.use('/api/admin', createAdminRoutes({ store, solo, token: config.admin.token, db, history, getUser }));
   app.use('/api/settings', createSettingsRoutes({ db }));
-  app.use('/api', createRoutes({ getIndex: () => store.index, solo }));
+  app.use('/api', createRoutes({ getIndex: () => store.index, solo, history, getUser, quota }));
 
   app.get('/admin', (_req: Request, res: Response) => {
     res.redirect('/admin.html');
@@ -142,11 +167,11 @@ export function createApp(options: AppOptions = {}): CreatedApp {
     res.status(500).json({ error: 'SERVER_ERROR', message: '服务器内部错误' });
   });
 
-  return { app, index: store.index, store, solo, db };
+  return { app, index: store.index, store, solo, db, ready };
 }
 
 if (import.meta.filename === process.argv[1] || process.env.HQ_STANDALONE === '1') {
-  const { app, store, solo, db } = createApp();
+  const { app, store, solo, db, ready } = createApp();
   const host = process.env.HOST ?? '127.0.0.1';
 
   const shutdown = (): void => {
@@ -157,6 +182,7 @@ if (import.meta.filename === process.argv[1] || process.env.HQ_STANDALONE === '1
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
 
+  await ready;
   app.listen(config.port, host, () => {
     log('listen', {
       host,
@@ -164,6 +190,7 @@ if (import.meta.filename === process.argv[1] || process.env.HQ_STANDALONE === '1
       characters: store.activeCount,
       store: db ? 'sqlite' : 'json',
       serverModelReady: serverModelReady(),
+      auth: Boolean(db),
       devProxy: process.env.HQ_DEV_PROXY ?? '',
       distServed: !process.env.HQ_DEV_PROXY && fs.existsSync(config.paths.dist),
       adminToken: Boolean(config.admin.token),

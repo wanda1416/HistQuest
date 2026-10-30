@@ -3,10 +3,12 @@ import type { Request, Response } from 'express';
 import { AiError, testConnection } from '../ai/client.ts';
 import type { AiCredential } from '../shared/domain.ts';
 import { DYNASTIES, REGIONS, REGION_LABELS, type Region } from '../shared/domain.ts';
-import type { AiConfig, MetaRes } from '../shared/protocol.ts';
+import type { AiConfig, HistoryDetail, MetaRes } from '../shared/protocol.ts';
 import type { CharacterIndex } from '../core/index.ts';
 import { config, serverModelReady } from '../config.ts';
+import type { AuthUser } from './auth.ts';
 import { projectSession } from './dto.ts';
+import type { HistoryStore } from './history.ts';
 import { SoloError, type SoloStore } from './solo.ts';
 import { RateLimiter, log } from './util.ts';
 
@@ -51,15 +53,31 @@ function toCredential(cfg: AiConfig | null): AiCredential {
   throw new AiError('UNSUPPORTED', '没有可用的模型配置');
 }
 
-export function createRoutes(deps: { getIndex: () => CharacterIndex; solo: SoloStore }): express.Router {
+export interface RouteDeps {
+  getIndex: () => CharacterIndex;
+  solo: SoloStore;
+  /** 永久对局账本；JSON 存储模式下为 null（历史接口返回 503） */
+  history?: HistoryStore | null;
+  /** 解析当前登录用户；不传表示未启用账号系统 */
+  getUser?: (req: Request) => Promise<AuthUser | null>;
+  /** 站方模型每日配额扣减；不传表示不限额 */
+  quota?: (user: AuthUser) => { ok: boolean; message?: string };
+}
+
+export function createRoutes(deps: RouteDeps): express.Router {
   const router = express.Router();
   const limiter = new RateLimiter(30, 0.5);
+  const authEnabled = Boolean(deps.getUser);
 
-  router.get('/meta', (_req: Request, res: Response) => {
+  const currentUser = async (req: Request): Promise<AuthUser | null> =>
+    deps.getUser ? deps.getUser(req) : null;
+
+  router.get('/meta', async (req: Request, res: Response) => {
     const index = deps.getIndex();
     const counts = new Map<string, number>();
     for (const c of index.list) counts.set(c.region, (counts.get(c.region) ?? 0) + 1);
 
+    const user = await currentUser(req);
     const meta: MetaRes = {
       dynasties: [...DYNASTIES],
       difficulties: DIFFICULTIES,
@@ -71,6 +89,10 @@ export function createRoutes(deps: { getIndex: () => CharacterIndex; solo: SoloS
         label: REGION_LABELS[value],
         count: counts.get(value) ?? 0,
       })),
+      authEnabled,
+      user: user
+        ? { username: user.username, role: user.role, allowServerKey: user.allowServerKey }
+        : null,
     };
     res.json(meta);
   });
@@ -114,7 +136,21 @@ export function createRoutes(deps: { getIndex: () => CharacterIndex; solo: SoloS
     const turnsRaw = Number(body?.turns);
     const turns = Number.isFinite(turnsRaw) && turnsRaw > 0 ? Math.round(turnsRaw) : undefined;
 
-    const session = await deps.solo.create({ difficulty, polity, region, worldEra, cnShare, mode, pronoun, turns });
+    // 归属玩家：游客为 null，历史里仍能看到这局，只是没有归属
+    const user = await currentUser(req);
+
+    const session = await deps.solo.create({
+      difficulty,
+      polity,
+      region,
+      worldEra,
+      cnShare,
+      mode,
+      pronoun,
+      turns,
+      userId: user?.id ?? null,
+      userName: user?.username ?? null,
+    });
     res.status(201).json(projectSession(session));
   });
 
@@ -133,15 +169,32 @@ export function createRoutes(deps: { getIndex: () => CharacterIndex; solo: SoloS
     if (!question) return fail(res, 400, 'EMPTY_QUESTION', '问题不能为空');
 
     const cfg = readAiConfig(req.body);
-    if (!cfg && !serverModelReady()) {
+    let cred: AiCredential;
+    if (cfg) {
+      cred = toCredential(cfg);
+    } else if (!serverModelReady()) {
       return fail(res, 400, 'MODEL_NOT_CONFIGURED', '没有模型配置就无法判定');
+    } else {
+      // 站方 Key 的规则与 Workers 一致：必须登录、账号允许、且当日额度未用尽
+      const user = await currentUser(req);
+      if (authEnabled && !user) {
+        return fail(res, 401, 'LOGIN_REQUIRED', '未登录只能使用自己的模型（BYOK）；注册/登录后可用站方模型');
+      }
+      if (user) {
+        if (user.role !== 'admin' && !user.allowServerKey) {
+          return fail(res, 403, 'BYOK_REQUIRED', '管理员为本账号关闭了站方模型，请在设置里填写自己的模型');
+        }
+        const quota = deps.quota ? deps.quota(user) : { ok: true };
+        if (!quota.ok) return fail(res, 429, 'QUOTA_EXCEEDED', quota.message ?? '今日额度已用完');
+      }
+      cred = toCredential(null);
     }
 
     const id = String(req.params.id);
     if (!limiter.take(id)) return fail(res, 429, 'RATE_LIMITED', '问得太快了，缓一缓');
 
     try {
-      const result = await deps.solo.ask(id, question, toCredential(cfg), {
+      const result = await deps.solo.ask(id, question, cred, {
         timeoutMs: config.ai.timeoutMs,
       });
       log('solo.ask', { id, seq: result.seq, accepted: result.accepted, status: result.status });
@@ -169,6 +222,47 @@ export function createRoutes(deps: { getIndex: () => CharacterIndex; solo: SoloS
     } catch (err) {
       return handleError(res, err);
     }
+  });
+
+  /* ---------------- 我的对局历史 ---------------- */
+
+  const requireHistory = (res: Response): HistoryStore | null => {
+    if (!deps.history) {
+      fail(res, 503, 'HISTORY_DISABLED', '当前是 JSON 存储模式，对局历史不可用');
+      return null;
+    }
+    return deps.history;
+  };
+
+  router.get('/history/mine', async (req: Request, res: Response) => {
+    const store = requireHistory(res);
+    if (!store) return;
+    const user = await currentUser(req);
+    if (!user) return fail(res, 401, 'LOGIN_REQUIRED', '登录后可查看自己的对局历史');
+
+    const result = await store.list({
+      userId: user.id,
+      limit: Number(req.query.limit) || undefined,
+      offset: Number(req.query.offset) || undefined,
+      ...(typeof req.query.result === 'string' && req.query.result
+        ? { result: req.query.result as HistoryDetail['result'] }
+        : {}),
+    });
+    res.json(result);
+  });
+
+  router.get('/history/mine/:id', async (req: Request, res: Response) => {
+    const store = requireHistory(res);
+    if (!store) return;
+    const user = await currentUser(req);
+    if (!user) return fail(res, 401, 'LOGIN_REQUIRED', '登录后可查看自己的对局历史');
+
+    const detail = await store.get(String(req.params.id));
+    if (!detail) return fail(res, 404, 'NOT_FOUND', '找不到这一局');
+    if (detail.userId !== user.id && user.role !== 'admin') {
+      return fail(res, 403, 'FORBIDDEN', '这局不属于当前账号');
+    }
+    res.json(detail);
   });
 
   return router;

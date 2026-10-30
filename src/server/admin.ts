@@ -1,10 +1,22 @@
 import express from 'express';
 import type { Request, Response } from 'express';
 import { timingSafeEqual } from 'node:crypto';
+import type { DatabaseSync } from 'node:sqlite';
 import { DYNASTIES, REGIONS, REGION_LABELS, type Region } from '../shared/domain.ts';
 import type { Character } from '../shared/domain.ts';
+import type { GameResult } from '../shared/protocol.ts';
 import type { Issue } from '../core/schema.ts';
 import type { CharacterStoreLike } from './characters-sqlite.ts';
+import type { AuthUser } from './auth.ts';
+import {
+  changePassword,
+  createInvites,
+  findUserRole,
+  listInvites,
+  listUsers,
+  setUserFlag,
+} from './auth.ts';
+import type { HistoryStore } from './history.ts';
 import type { SoloStore } from './solo.ts';
 import { log } from './util.ts';
 
@@ -34,6 +46,11 @@ export interface AdminDeps {
   store: CharacterStoreLike;
   solo: SoloStore;
   token: string;
+  /** 账号与历史都依赖 SQLite；JSON 存储模式下为 null */
+  db?: DatabaseSync | null;
+  history?: HistoryStore | null;
+  /** 解析管理员会话（getUser 由 index.ts 注入，与玩家端共用一套 cookie） */
+  getUser?: (req: Request) => Promise<AuthUser | null>;
 }
 
 export function isLoopback(address: string | undefined): boolean {
@@ -195,6 +212,80 @@ export function createAdminRoutes(deps: AdminDeps): express.Router {
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="characters.json"');
     res.send(deps.store.exportText());
+  });
+
+  /* ---------------- 对局历史（管理员视角：全部用户） ---------------- */
+
+  router.get('/history', async (req: Request, res: Response) => {
+    if (!deps.history) return fail(res, 503, 'HISTORY_DISABLED', '当前是 JSON 存储模式，对局历史不可用');
+    const result = await deps.history.list({
+      ...(String(req.query.guest ?? '') === '1' ? { userId: 'guest' as const } : {}),
+      ...(String(req.query.user ?? '').trim() ? { userName: String(req.query.user).trim() } : {}),
+      ...(String(req.query.result ?? '').trim() ? { result: String(req.query.result).trim() as GameResult } : {}),
+      ...(String(req.query.q ?? '').trim() ? { q: String(req.query.q).trim() } : {}),
+      limit: Number(req.query.limit) || undefined,
+      offset: Number(req.query.offset) || undefined,
+    });
+    res.json(result);
+  });
+
+  router.get('/history/:id', async (req: Request, res: Response) => {
+    if (!deps.history) return fail(res, 503, 'HISTORY_DISABLED', '当前是 JSON 存储模式，对局历史不可用');
+    const detail = await deps.history.get(String(req.params.id));
+    if (!detail) return fail(res, 404, 'NOT_FOUND', '找不到这一局');
+    res.json(detail);
+  });
+
+  /* ---------------- 用户与邀请码 ---------------- */
+
+  router.get('/users', (_req: Request, res: Response) => {
+    if (!deps.db) return fail(res, 503, 'AUTH_DISABLED', 'JSON 存储模式下没有账号系统');
+    const users = listUsers(deps.db);
+    res.json({ total: users.length, users });
+  });
+
+  router.post('/users/:id/:kind(server-key|ban|quota)', (req: Request, res: Response) => {
+    if (!deps.db) return fail(res, 503, 'AUTH_DISABLED', 'JSON 存储模式下没有账号系统');
+    const id = String(req.params.id);
+    const kind = String(req.params.kind) as 'server-key' | 'ban' | 'quota';
+    const body = req.body as { on?: unknown; quota?: unknown };
+
+    // 防自锁：管理员的封禁 / 关停 / 配额都不许改
+    if (findUserRole(deps.db, id) === 'admin') {
+      return fail(res, 403, 'ADMIN_PROTECTED', kind === 'quota' ? '管理员配额不受限制（无限）' : '不能对管理员执行封禁或关闭站方模型');
+    }
+
+    if (kind === 'quota') {
+      const quota = Math.max(-1, Math.round(Number(body?.quota)));
+      setUserFlag(deps.db, id, 'quota', Number.isFinite(quota) ? quota : -1);
+    } else {
+      setUserFlag(deps.db, id, kind, Boolean(body?.on));
+    }
+    log('admin.user.flag', { id, kind });
+    res.json({ ok: true });
+  });
+
+  router.get('/invites', (_req: Request, res: Response) => {
+    if (!deps.db) return fail(res, 503, 'AUTH_DISABLED', 'JSON 存储模式下没有账号系统');
+    const invites = listInvites(deps.db);
+    res.json({ total: invites.length, invites });
+  });
+
+  router.post('/invites', (req: Request, res: Response) => {
+    if (!deps.db) return fail(res, 503, 'AUTH_DISABLED', 'JSON 存储模式下没有账号系统');
+    const codes = createInvites(deps.db, Number((req.body as { count?: unknown })?.count) || 1);
+    log('admin.invite.create', { count: codes.length });
+    res.status(201).json({ codes });
+  });
+
+  router.post('/change-password', async (req: Request, res: Response) => {
+    if (!deps.db) return fail(res, 503, 'AUTH_DISABLED', 'JSON 存储模式下没有账号系统');
+    const me = deps.getUser ? await deps.getUser(req) : null;
+    if (!me) return fail(res, 403, 'ADMIN_FORBIDDEN', '修改密码需要登录管理员会话（ADMIN_TOKEN 通道不可用）');
+    const body = req.body as { current?: unknown; next?: unknown };
+    const result = await changePassword(deps.db, me.id, String(body?.current ?? ''), String(body?.next ?? ''));
+    if (!result.ok) return fail(res, result.error === 'BAD_CREDENTIALS' ? 401 : 400, result.error ?? 'BAD_REQUEST', result.message ?? '修改失败');
+    res.json({ ok: true });
   });
 
   return router;

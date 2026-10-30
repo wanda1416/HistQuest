@@ -77,12 +77,22 @@ export const SESSION_COOKIE = 'hq_session';
 
 export const SESSION_TTL_SECONDS = 30 * 24 * 3600; // 30 天
 
-export function sessionCookieHeader(token: string, maxAge = SESSION_TTL_SECONDS): string {
-  return `${SESSION_COOKIE}=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`;
+/**
+ * Secure 标记只在 HTTPS 下加：Workers 生产环境恒为 HTTPS，
+ * 本地 Node 走 http://127.0.0.1 或局域网 IP，带 Secure 会被浏览器直接丢弃。
+ */
+export function sessionCookieHeader(
+  token: string,
+  opts: { maxAge?: number; secure?: boolean } = {},
+): string {
+  const maxAge = opts.maxAge ?? SESSION_TTL_SECONDS;
+  const secure = opts.secure === false ? '' : '; Secure';
+  return `${SESSION_COOKIE}=${token}; Path=/; HttpOnly${secure}; SameSite=Lax; Max-Age=${maxAge}`;
 }
 
-export function clearSessionCookieHeader(): string {
-  return `${SESSION_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
+export function clearSessionCookieHeader(opts: { secure?: boolean } = {}): string {
+  const secure = opts.secure === false ? '' : '; Secure';
+  return `${SESSION_COOKIE}=; Path=/; HttpOnly${secure}; SameSite=Lax; Max-Age=0`;
 }
 
 export function readSessionCookie(header: string | null): string | null {

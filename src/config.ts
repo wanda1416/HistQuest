@@ -44,6 +44,15 @@ export const config = {
   wikiProvider: process.env.WIKI_PROVIDER ?? 'local',
   /** 服务端允许的轮次上限；每局可在 10 到该值之间自选 */
   soloTurns: num(process.env.SOLO_TURNS, 50),
+  auth: {
+    /** 会话签名密钥；留空则从库内自动生成并持久化（本地单机零配置） */
+    secret: process.env.SESSION_SECRET ?? process.env.HQ_SESSION_SECRET ?? '',
+    /** 预置管理员；留空时"库里第一个注册的账号"直接成为管理员 */
+    adminUser: process.env.ADMIN_USER ?? '',
+    adminPassword: process.env.ADMIN_PASSWORD ?? '',
+    /** 站方 Key 每日默认提问上限（单账号可单独覆盖） */
+    dailyQuota: num(process.env.DAILY_QUOTA, 500),
+  },
   admin: {
     /** 非回环访问管理接口时需要的令牌；为空则只允许本机访问 */
     token: process.env.ADMIN_TOKEN ?? '',
