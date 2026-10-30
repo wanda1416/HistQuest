@@ -200,6 +200,44 @@ async function doReveal(): Promise<void> {
   }
 }
 
+/* ---------------- 我的历史 ---------------- */
+
+async function openHistory(): Promise<void> {
+  setState({ view: 'history', historyDetail: null, historyError: null });
+  try {
+    const res = await api.historyMine();
+    setState({ history: res.items, historyTotal: res.total, historyError: null });
+  } catch (err) {
+    setState({ history: [], historyTotal: 0, historyError: msg(err) });
+  }
+}
+
+async function openHistoryGame(id: string): Promise<void> {
+  try {
+    const detail = await api.historyGame(id);
+    setState({ view: 'history', historyDetail: detail, historyError: null });
+  } catch (err) {
+    setState({ historyError: msg(err) });
+  }
+}
+
+/** 从历史里接着打：只有仍在进行中的局能回到对局界面 */
+async function resumeHistoryGame(id: string): Promise<void> {
+  try {
+    const session = await api.getSolo(id);
+    if (session.status === 'playing') {
+      saveGameId(session.gameId);
+      setState({ session, view: 'game', historyDetail: null, reveal: null });
+      return;
+    }
+    const reveal = await api.reveal(id);
+    saveGameId(null);
+    setState({ session, reveal, view: 'reveal', historyDetail: null });
+  } catch (err) {
+    setState({ historyError: msg(err) });
+  }
+}
+
 /* ---------------- 设置同步 ---------------- */
 
 function currentSecret(): Uint8Array | null {
@@ -360,7 +398,29 @@ root.addEventListener('click', (event) => {
       setState({ view: 'setup', testResult: null, notice: null, guessOpen: false });
       break;
     case 'back':
-      setState({ view: getState().reveal ? 'reveal' : getState().session ? 'game' : 'lobby' });
+      setState({
+        view:
+          getState().view === 'history'
+            ? 'history'
+            : getState().reveal
+              ? 'reveal'
+              : getState().session
+                ? 'game'
+                : 'lobby',
+        ...(getState().view === 'history' ? { historyDetail: null } : {}),
+      });
+      break;
+    case 'go-history':
+      void openHistory();
+      break;
+    case 'open-history':
+      if (el.dataset.id) void openHistoryGame(el.dataset.id);
+      break;
+    case 'resume-history':
+      if (el.dataset.id) void resumeHistoryGame(el.dataset.id);
+      break;
+    case 'history-back':
+      setState({ historyDetail: null });
       break;
     case 'test-ai':
       void testAi();

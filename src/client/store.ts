@@ -1,7 +1,15 @@
-import type { AiConfig, AiTestRes, MetaRes, RevealRes, SessionView } from '../shared/protocol.ts';
+import type {
+  AiConfig,
+  AiTestRes,
+  HistoryDetail,
+  HistorySummary,
+  MetaRes,
+  RevealRes,
+  SessionView,
+} from '../shared/protocol.ts';
 import type { AnswerMode, PronounStyle } from '../shared/domain.ts';
 
-export type ViewName = 'setup' | 'lobby' | 'game' | 'reveal' | 'auth';
+export type ViewName = 'setup' | 'lobby' | 'game' | 'reveal' | 'auth' | 'history';
 
 export interface Notice {
   kind: 'error' | 'info';
@@ -48,6 +56,12 @@ export interface State {
   syncBusy: boolean;
   syncMessage: string | null;
   syncError: boolean;
+  /** 我的对局历史列表；null = 还没加载 */
+  history: HistorySummary[] | null;
+  historyTotal: number;
+  /** 展开的那一局（含完整问答） */
+  historyDetail: HistoryDetail | null;
+  historyError: string | null;
 }
 
 const CONFIG_KEY = 'hq.aiConfig';
@@ -210,6 +224,10 @@ let state: State = {
   pronoun: 'neutral',
   turns: null,
   ...initialSyncState(),
+  history: null,
+  historyTotal: 0,
+  historyDetail: null,
+  historyError: null,
 };
 
 type Listener = (s: State) => void;

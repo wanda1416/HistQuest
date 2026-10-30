@@ -3,6 +3,8 @@ import type {
   AiTestRes,
   AskRes,
   GuessRes,
+  HistoryDetail,
+  HistoryListRes,
   MetaRes,
   RevealRes,
   SessionView,
@@ -90,4 +92,10 @@ export const api = {
 
   reveal: (id: string) =>
     request<RevealRes>(`/api/solo/${encodeURIComponent(id)}/reveal`, jsonInit({})),
+
+  /** 我的对局历史 */
+  historyMine: () => request<HistoryListRes>('/api/history/mine'),
+
+  historyGame: (id: string) =>
+    request<HistoryDetail>(`/api/history/mine/${encodeURIComponent(id)}`),
 };

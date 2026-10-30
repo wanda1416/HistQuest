@@ -1,6 +1,6 @@
 import type { State } from './store.ts';
 import { loadVaultSecret, normalizeQuestion } from './store.ts';
-import type { RecordView } from '../shared/protocol.ts';
+import type { HistorySummary, RecordView } from '../shared/protocol.ts';
 import { WORLD_ERAS } from '../shared/domain.ts';
 import { encodeManagementKey, keyFromBase64 } from './vault.ts';
 
@@ -37,6 +37,7 @@ function topbar(s: State): string {
             : `<span class="chip chip-off"><i class="chip-dot"></i>未接模型</span>`
       }
       ${user ? `<button class="btn btn-ghost" data-action="logout">登出</button>` : ''}
+      ${user ? `<button class="btn btn-ghost" data-action="go-history">历史</button>` : ''}
       <a class="btn btn-ghost" href="/admin.html" target="_blank" rel="noopener">管理</a>
       <button class="btn btn-ghost" data-action="go-setup">设置</button>
     </div>
@@ -546,6 +547,147 @@ function revealView(s: State): string {
   );
 }
 
+/* ---------------- 我的历史 ---------------- */
+
+const RESULT_LABEL: Record<string, string> = {
+  won: '猜中',
+  lost: '次数用尽',
+  abandoned: '放弃',
+  playing: '进行中',
+};
+
+function fmtTime(ts: number | null): string {
+  if (!ts) return '—';
+  return new Date(ts).toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function historyRow(g: HistorySummary): string {
+  const scope = g.polity ?? g.worldEra ?? (g.region ? REGION_LABEL_CLIENT[g.region] ?? g.region : '不限');
+  const target = g.target ? `目标 · ${esc(g.target.name)}（${esc(g.target.polity)}）` : '目标未揭晓';
+  const action =
+    g.result === 'playing'
+      ? `<button class="btn btn-ghost" data-action="resume-history" data-id="${esc(g.id)}">继续这局</button>`
+      : `<button class="btn btn-ghost" data-action="open-history" data-id="${esc(g.id)}">查看</button>`;
+  return `
+    <li class="history-item">
+      <div class="history-main">
+        <div class="history-head">
+          <span class="verdict history-result is-${esc(g.result)}">${esc(RESULT_LABEL[g.result] ?? g.result)}</span>
+          <span class="history-target">${target}</span>
+        </div>
+        <div class="history-meta">
+          <span>${fmtTime(g.startedAt)}</span>
+          <i class="dot"></i><span>${esc(scope)}</span>
+          <i class="dot"></i><span>用了 ${g.turnsUsed} / ${g.turnsTotal} 问</span>
+          <i class="dot"></i><span>${esc(difficultyLabel(g.difficulty))}</span>
+        </div>
+      </div>
+      ${action}
+    </li>`;
+}
+
+const REGION_LABEL_CLIENT: Record<string, string> = {
+  cn: '中国',
+  europe: '欧洲',
+  'west-asia': '西亚北非',
+  'south-asia': '南亚',
+  'east-asia': '东亚',
+  africa: '撒哈拉以南非洲',
+  americas: '美洲',
+  oceania: '大洋洲',
+};
+
+function difficultyLabel(level: number): string {
+  return level === 1 ? '入门' : level === 2 ? '进阶' : level === 3 ? '考据' : `难度 ${level}`;
+}
+
+function historyTurnView(r: { seq: number; question: string; verdict: string; text: string; hint?: string; invalid?: string; failed?: boolean }): string {
+  const cls = r.invalid ? 'v-format' : r.failed ? 'v-wait' : `v-${r.verdict}`;
+  const label = r.invalid ? '改问法' : r.failed ? '调用失败' : (VERDICT_LABEL[r.verdict] ?? '');
+  const hint = r.hint ? `<span class="hint">${esc(r.hint)}</span>` : '';
+  return `
+    <div class="turn turn-q"><p>${esc(r.question)}</p></div>
+    <div class="turn turn-a ${r.invalid ? 'is-format' : ''}">
+      <span class="verdict ${cls}">${esc(label)}</span>
+      <p>${esc(r.text)}${hint}</p>
+    </div>`;
+}
+
+function historyDetailHead(g: NonNullable<State['historyDetail']>): string {
+  const facts = g.target
+    ? `<dl class="facts">
+         <div class="fact"><dt>人物</dt><dd>${esc(g.target.name)}</dd></div>
+         <div class="fact"><dt>政权</dt><dd>${esc(g.target.polity || '—')}</dd></div>
+         <div class="fact"><dt>身份</dt><dd>${esc(g.target.roles.join('、') || '—')}</dd></div>
+         <div class="fact"><dt>结果</dt><dd>${esc(RESULT_LABEL[g.result] ?? g.result)}</dd></div>
+       </dl>`
+    : `<p class="history-note">这局还没结束，目标人物暂不显示。</p>`;
+
+  return `
+    <div class="history-detail-head">
+      <button class="btn btn-text" data-action="history-back">← 返回列表</button>
+      <h2 class="history-detail-title">${esc(fmtTime(g.startedAt))} 的对局</h2>
+      <p class="history-meta">
+        用了 ${g.turnsUsed} / ${g.turnsTotal} 问
+        <i class="dot"></i>${esc(difficultyLabel(g.difficulty))}
+        <i class="dot"></i>${g.mode === 'guided' ? '解说模式' : '精确模式'}
+      </p>
+      ${facts}
+    </div>`;
+}
+
+function historyView(s: State): string {
+  if (!s.meta?.user) {
+    return shell(
+      s,
+      `<section class="panel"><p class="muted">登录后才能保存和查看自己的对局历史。</p>
+       <div class="actions"><button class="btn btn-primary" data-action="back">返回</button></div></section>`,
+    );
+  }
+
+  const detail = s.historyDetail;
+  if (detail) {
+    const turns = detail.turns.length
+      ? detail.turns.map(historyTurnView).join('')
+      : '<p class="muted">这一局没有提问。</p>';
+    return shell(
+      s,
+      `<section class="history-view">
+         ${historyDetailHead(detail)}
+         <div class="panel history-log">${turns}</div>
+       </section>`,
+    );
+  }
+
+  const list = s.history;
+  const body = !list
+    ? '<p class="muted">正在载入…</p>'
+    : list.length
+      ? `<ul class="history-list">${list.map(historyRow).join('')}</ul>
+         ${s.historyTotal > list.length ? `<p class="muted">共 ${s.historyTotal} 局，显示最近 ${list.length} 局。</p>` : ''}`
+      : '<p class="muted">还没有对局记录。开局打一局，这里就会留下完整问答。</p>';
+
+  return shell(
+    s,
+    `<section class="history-view">
+       <div class="history-toolbar">
+         <div>
+           <p class="eyebrow">我的历史</p>
+           <h2>对局与问答记录</h2>
+         </div>
+         <button class="btn btn-ghost" data-action="go-history">刷新</button>
+       </div>
+       ${s.historyError ? `<p class="testline fail">${esc(s.historyError)}</p>` : ''}
+       <div class="panel">${body}</div>
+     </section>`,
+  );
+}
+
 function authView(s: State): string {
   const isLogin = s.authMode === 'login';
   return shell(
@@ -558,7 +700,7 @@ function authView(s: State): string {
         <p class="lede">${
           isLogin
             ? '登录后可直接使用站方模型开局；也可以在设置里填自己的（BYOK）。'
-            : '需要邀请码。注册后每日可玩 500 问（站方模型），也可在设置里填自己的模型。'
+            : '需要邀请码（本机第一个账号除外——它直接成为管理员）。注册后每日可玩站方模型，也可在设置里填自己的模型；历史会跟着账号走。'
         }</p>
       </div>
 
@@ -610,6 +752,8 @@ export function renderApp(s: State): string {
       return lobbyView(s);
     case 'reveal':
       return revealView(s);
+    case 'history':
+      return historyView(s);
     default:
       return gameView(s);
   }
