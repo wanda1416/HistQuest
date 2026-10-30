@@ -9,7 +9,7 @@ import { DatabaseSync } from 'node:sqlite';
  * 代价是要求宿主 Node ≥ 23.4（22.x 需 --experimental-sqlite）。
  */
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export interface OpenOptions {
   file: string;
@@ -123,6 +123,211 @@ export function migrate(db: DatabaseSync): void {
       ALTER TABLE settings_vault ADD COLUMN wrapped_dek TEXT NOT NULL DEFAULT '';
       INSERT INTO schema_migrations (version, applied_at) VALUES (2, ${Date.now()});
     `);
+  }
+
+  if (current < 3) {
+    migrateV3(db);
+  }
+}
+
+/**
+ * v3：账号系统 + 对局归档。
+ *
+ * sessions 仍是「进行中的工作状态」（24h TTL，可随时重写），
+ * games / game_turns 才是永久账本：一局一行、一问一行，只追加不覆盖。
+ * 分开存是为了让历史不受会话过期影响——会话被清理掉，历史仍在。
+ */
+function migrateV3(db: DatabaseSync): void {
+  db.exec(`
+    -- 账号：PBKDF2 哈希，与 Workers 端 users 表同构
+    CREATE TABLE IF NOT EXISTS users (
+      id               TEXT PRIMARY KEY,
+      username         TEXT NOT NULL UNIQUE,
+      password_hash    TEXT NOT NULL,
+      role             TEXT NOT NULL DEFAULT 'user',
+      allow_server_key INTEGER NOT NULL DEFAULT 1,
+      banned           INTEGER NOT NULL DEFAULT 0,
+      asks_today       INTEGER NOT NULL DEFAULT 0,
+      quota_day        INTEGER NOT NULL DEFAULT 0,
+      daily_quota      INTEGER NOT NULL DEFAULT -1,
+      created_at       INTEGER NOT NULL,
+      updated_at       INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS invites (
+      code       TEXT PRIMARY KEY,
+      created_by TEXT NOT NULL,
+      used_by    TEXT,
+      used_at    INTEGER,
+      created_at INTEGER NOT NULL
+    );
+
+    -- 服务端自用键值（会话签名密钥等），只存本机
+    CREATE TABLE IF NOT EXISTS app_settings (
+      k          TEXT PRIMARY KEY,
+      v          TEXT NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    -- 对局账本：一局一行，永不因 TTL 删除
+    CREATE TABLE IF NOT EXISTS games (
+      id          TEXT PRIMARY KEY,
+      user_id     TEXT,
+      user_name   TEXT,
+      target_id   TEXT NOT NULL,
+      target_name TEXT NOT NULL,
+      target_roles TEXT NOT NULL DEFAULT '[]',
+      difficulty  INTEGER NOT NULL,
+      polity      TEXT,
+      region      TEXT,
+      world_era   TEXT,
+      mode        TEXT NOT NULL,
+      pronoun     TEXT NOT NULL,
+      turns_total INTEGER NOT NULL,
+      turns_left  INTEGER NOT NULL,
+      turns_used  INTEGER NOT NULL DEFAULT 0,
+      asks        INTEGER NOT NULL DEFAULT 0,
+      status      TEXT NOT NULL,
+      started_at  INTEGER NOT NULL,
+      ended_at    INTEGER,
+      updated_at  INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_games_user    ON games(user_id, started_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_games_started ON games(started_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_games_target  ON games(target_id);
+
+    -- 对话账本：一问一行，含无效提问与失败调用（那是真实的对话记录）
+    CREATE TABLE IF NOT EXISTS game_turns (
+      game_id   TEXT NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+      seq       INTEGER NOT NULL,
+      question  TEXT NOT NULL,
+      verdict   TEXT NOT NULL,
+      text      TEXT NOT NULL,
+      hint      TEXT,
+      invalid   TEXT,
+      failed    INTEGER NOT NULL DEFAULT 0,
+      hit       INTEGER NOT NULL DEFAULT 0,
+      basis     TEXT,
+      calls     INTEGER NOT NULL DEFAULT 0,
+      ms        INTEGER NOT NULL DEFAULT 0,
+      asked_at  INTEGER NOT NULL,
+      PRIMARY KEY (game_id, seq)
+    );
+  `);
+
+  addColumn(db, 'sessions', 'user_id', 'TEXT');
+  addColumn(db, 'sessions', 'user_name', 'TEXT');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id, updated_at)');
+
+  backfillGamesFromSessions(db);
+
+  db.exec(`INSERT INTO schema_migrations (version, applied_at) VALUES (3, ${Date.now()})`);
+}
+
+/** 给老库补列：SQLite 没有 ADD COLUMN IF NOT EXISTS，只能先查 table_info */
+function addColumn(db: DatabaseSync, table: string, column: string, type: string): void {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as unknown as Array<{ name: string }>;
+  if (cols.some((c) => c.name === column)) return;
+  db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+}
+
+/**
+ * 把升级前还在有效期内的会话搬进账本，避免"刚打完的局在历史里查不到"。
+ * 只搬 games 表还没有的局；turns 从会话的 history JSON 逐条展开。
+ */
+function backfillGamesFromSessions(db: DatabaseSync): void {
+  interface SessionRow {
+    id: string;
+    target_id: string;
+    difficulty: number;
+    polity: string | null;
+    region: string | null;
+    world_era: string | null;
+    mode: string;
+    pronoun: string;
+    turns_left: number;
+    status: string;
+    history: string;
+    created_at: number;
+    updated_at: number;
+    user_id?: string | null;
+    user_name?: string | null;
+  }
+
+  const rows = db
+    .prepare(
+      `SELECT s.id, s.target_id, s.difficulty, s.polity, s.region, s.world_era, s.mode, s.pronoun,
+              s.turns_left, s.status, s.history, s.created_at, s.updated_at, s.user_id, s.user_name
+         FROM sessions s
+         LEFT JOIN games g ON g.id = s.id
+        WHERE g.id IS NULL`,
+    )
+    .all() as unknown as SessionRow[];
+  if (!rows.length) return;
+
+  const insertGame = db.prepare(
+    `INSERT OR IGNORE INTO games (
+       id, user_id, user_name, target_id, target_name, target_roles, difficulty, polity, region, world_era,
+       mode, pronoun, turns_total, turns_left, turns_used, asks, status, started_at, ended_at, updated_at
+     ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+  );
+  const insertTurn = db.prepare(
+    `INSERT OR REPLACE INTO game_turns (
+       game_id, seq, question, verdict, text, hint, invalid, failed, hit, basis, calls, ms, asked_at
+     ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+  );
+  const findName = db.prepare('SELECT name, roles FROM characters WHERE id = ?');
+
+  for (const row of rows) {
+    let turns: Array<Record<string, unknown>> = [];
+    try {
+      const parsed = JSON.parse(row.history) as unknown;
+      if (Array.isArray(parsed)) turns = parsed as Array<Record<string, unknown>>;
+    } catch {
+      turns = [];
+    }
+    const found = findName.get(row.target_id) as { name?: string; roles?: string } | undefined;
+    const used = turns.filter((t) => !t.transient && !t.invalid).length;
+    const endedAt = row.status === 'playing' ? null : row.updated_at;
+    insertGame.run(
+      row.id,
+      row.user_id ?? null,
+      row.user_name ?? null,
+      row.target_id,
+      found?.name ?? row.target_id,
+      found?.roles ?? '[]',
+      row.difficulty,
+      row.polity,
+      row.region,
+      row.world_era,
+      row.mode,
+      row.pronoun,
+      row.turns_left + used,
+      row.turns_left,
+      used,
+      turns.length,
+      row.status,
+      row.created_at,
+      endedAt,
+      row.updated_at,
+    );
+    for (const t of turns) {
+      insertTurn.run(
+        row.id,
+        Number(t.seq) || 0,
+        String(t.question ?? ''),
+        String(t.verdict ?? 'unknown'),
+        String(t.text ?? ''),
+        typeof t.hint === 'string' ? t.hint : null,
+        typeof t.invalid === 'string' ? t.invalid : null,
+        t.transient ? 1 : 0,
+        t.hit ? 1 : 0,
+        typeof t.basis === 'string' ? t.basis : null,
+        Number(t.calls) || 0,
+        Number(t.ms) || 0,
+        row.created_at,
+      );
+    }
   }
 }
 
