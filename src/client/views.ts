@@ -39,7 +39,7 @@ function topbar(s: State): string {
       ${user ? `<button class="btn btn-ghost" data-action="logout">登出</button>` : ''}
       ${user ? `<button class="btn btn-ghost" data-action="go-history">历史</button>` : ''}
       <a class="btn btn-ghost" href="/admin.html" target="_blank" rel="noopener">管理</a>
-      <button class="btn btn-ghost" data-action="go-setup">设置</button>
+      ${user || !s.meta?.authEnabled ? `<button class="btn btn-ghost" data-action="go-setup">设置</button>` : ''}
     </div>
   </header>`;
 }
@@ -734,7 +734,7 @@ function authView(s: State): string {
         </div>
       </form>
 
-      <p class="footnote">不想注册？游客也可玩——在设置里填自己的模型（BYOK）即可开局。</p>
+      <p class="footnote">开局需要账号，这样每一局都能在「历史」里找回；自带模型（BYOK）的也请先登录。</p>
     </section>`,
   );
 }

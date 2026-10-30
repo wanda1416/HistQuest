@@ -11,6 +11,8 @@ import { startMockLlm, type MockLlm } from './fixtures/mock-llm.ts';
 let mock: MockLlm;
 let base = '';
 let closeServer: () => void;
+/** 开局要求登录：验收用例统一带一个已登录账号的身份 */
+let cookie = '';
 
 before(async () => {
   mock = await startMockLlm();
@@ -23,6 +25,14 @@ before(async () => {
       resolve();
     });
   });
+  const res = await fetch(`${base}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: 'acceptance', password: 'passw0rd!' }),
+  });
+  const setCookie = res.headers.getSetCookie?.() ?? [];
+  cookie = setCookie[0] ? setCookie[0].split(';')[0]! : '';
+  if (!cookie) throw new Error('验收用例需要先登录：注册失败');
 });
 
 after(async () => {
@@ -35,7 +45,7 @@ const aiConfig = () => ({ baseURL: mock.url, apiKey: 'sk-acceptance-abcdef', mod
 async function post(path: string, body: unknown) {
   const res = await fetch(`${base}${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', Cookie: cookie },
     body: JSON.stringify(body),
   });
   return { status: res.status, body: (await res.json()) as Record<string, unknown> };

@@ -123,7 +123,7 @@ async function doLogout(): Promise<void> {
   const meta = await api.meta().catch(() => null);
   setState({ meta });
   const s = getState();
-  if (s.meta?.authEnabled && !s.meta.user && !s.config) setState({ view: 'auth' });
+  if (s.meta?.authEnabled && !s.meta.user) setState({ view: 'auth' });
   else setState({ view: 'lobby' });
 }
 
@@ -685,7 +685,7 @@ async function boot(): Promise<void> {
   }
 
   const m = getState().meta;
-  if (m?.authEnabled && !m.user && !config) {
+  if (m?.authEnabled && !m.user) {
     setState({ view: 'auth' });
   } else {
     setState({ view: config || m?.serverModelReady ? 'lobby' : 'setup' });

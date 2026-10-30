@@ -77,18 +77,11 @@ interface HistoryItem {
 let aliceCookie = '';
 let bobCookie = '';
 let aliceGameId = '';
-let guestGameId = '';
 
-test('游客也能开局，但历史里没有归属', async () => {
+test('未登录不能开局（否则会留下无主对局）', async () => {
   const start = await post('/api/solo', { difficulty: 1, polity: '唐', aiConfig: aiConfig() });
-  assert.equal(start.status, 201);
-  guestGameId = start.body.gameId as string;
-
-  const ask = await post(`/api/solo/${guestGameId}/ask`, {
-    question: '他是唐朝人吗',
-    aiConfig: aiConfig(),
-  });
-  assert.equal(ask.status, 200);
+  assert.equal(start.status, 401);
+  assert.equal(start.body.error, 'LOGIN_REQUIRED');
 
   const mine = await call('/api/history/mine');
   assert.equal(mine.status, 401);
@@ -179,11 +172,6 @@ test('别人看不到我的局（403），管理员能看到全部用户', async
   assert.equal(all.status, 200);
   const items = all.body.items as HistoryItem[];
   assert.ok(items.some((g) => g.id === aliceGameId && g.userName === 'alice'));
-  assert.ok(
-    items.some((g) => g.id === guestGameId && (g.userName ?? null) === null),
-    '游客的局也要能在后台看到（归属为空）',
-  );
-
   const onlyMine = await call('/api/admin/history?user=alice', { headers: { 'X-HQ-Admin': '1' } });
   const filtered = onlyMine.body.items as HistoryItem[];
   assert.ok(filtered.length > 0);
@@ -198,30 +186,30 @@ test('别人看不到我的局（403），管理员能看到全部用户', async
   assert.equal(adminDetail.body.owner, 'user');
   assert.equal((adminDetail.body.turns as unknown[]).length, 3);
 
-  // 「游客」只标真正没登录的局，别把登录玩家算进去
-  const guestRow = items.find((g) => g.id === guestGameId)!;
-  assert.equal(guestRow.owner, 'guest');
-  assert.equal(guestRow.userName, null);
 });
 
-test('迁移回填的老局标「归属未记录」，不能被当成游客', async () => {
+test('「游客」与「归属未记录」不能混为一谈', async () => {
   assert.ok(db);
-  // 造一条 v3 之前写入的账本行：只有历史，没有归属信息
-  db!
-    .prepare(
-      `INSERT INTO games (id, user_id, user_name, attribution, target_id, target_name, target_roles,
-         difficulty, polity, region, world_era, mode, pronoun, turns_total, turns_left, turns_used, asks,
-         status, started_at, ended_at, updated_at)
-       VALUES ('legacy-1', NULL, NULL, NULL, 'c-legacy', '某位古人', '[]', 2, '唐', NULL, NULL,
-         'strict', 'normal', 20, 5, 15, 15, 'revealed', ?, ?, ?)`,
-    )
-    .run(Date.now() - 86_400_000, Date.now() - 80_000_000, Date.now() - 80_000_000);
+  const insert = db!.prepare(
+    `INSERT INTO games (id, user_id, user_name, attribution, target_id, target_name, target_roles,
+       difficulty, polity, region, world_era, mode, pronoun, turns_total, turns_left, turns_used, asks,
+       status, started_at, ended_at, updated_at)
+     VALUES (?, NULL, NULL, ?, 'c-legacy', ?, '[]', 2, '唐', NULL, NULL,
+       'strict', 'normal', 20, 5, 15, 15, 'revealed', ?, ?, ?)`,
+  );
+  const t = Date.now() - 86_400_000;
+  // 迁移回填：当时还没有归属列，玩家登录与否已无从得知
+  insert.run('legacy-1', null, '某位古人', t, t, t);
+  // 明确未登录：本版本起写入的游客局
+  insert.run('guest-1', 'guest', '另一位古人', t, t, t);
 
-  const all = await call('/api/admin/history?q=某位古人', { headers: { 'X-HQ-Admin': '1' } });
-  const row = (all.body.items as HistoryItem[]).find((g) => g.id === 'legacy-1');
-  assert.ok(row, '回填的老局应能在后台查到');
-  assert.equal(row!.owner, 'unknown');
-  assert.equal(row!.userName, null);
+  const all = await call('/api/admin/history?q=古人', { headers: { 'X-HQ-Admin': '1' } });
+  const rows = all.body.items as HistoryItem[];
+  const legacy = rows.find((g) => g.id === 'legacy-1');
+  const guest = rows.find((g) => g.id === 'guest-1');
+  assert.equal(legacy?.owner, 'unknown', '查不到归属的老局不能被当成游客');
+  assert.equal(guest?.owner, 'guest');
+  for (const g of [legacy, guest]) assert.equal(g!.userName, null);
 });
 
 test('会话被清理后历史仍在（历史不寄生在 24h 会话上）', async () => {

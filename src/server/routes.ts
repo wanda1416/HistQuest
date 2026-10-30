@@ -106,6 +106,13 @@ export function createRoutes(deps: RouteDeps): express.Router {
   });
 
   router.post('/solo', async (req: Request, res: Response) => {
+    // 开局即要求登录：否则会出现无主对局（能开局、能猜、能放弃，一问都没问），
+    // 历史和后台里就会多出归属不明的记录
+    const user = await currentUser(req);
+    if (authEnabled && !user) {
+      return fail(res, 401, 'LOGIN_REQUIRED', '登录后才能开局');
+    }
+
     const cfg = readAiConfig(req.body);
     if (!cfg && !serverModelReady()) {
       return fail(res, 400, 'MODEL_NOT_CONFIGURED', '没有模型配置就无法开局');
@@ -136,9 +143,7 @@ export function createRoutes(deps: RouteDeps): express.Router {
     const turnsRaw = Number(body?.turns);
     const turns = Number.isFinite(turnsRaw) && turnsRaw > 0 ? Math.round(turnsRaw) : undefined;
 
-    // 归属玩家：游客为 null，历史里仍能看到这局，只是没有归属
-    const user = await currentUser(req);
-
+    // 归属玩家：未启用账号系统时（JSON 存储模式）可能为空
     const session = await deps.solo.create({
       difficulty,
       polity,

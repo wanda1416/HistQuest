@@ -265,6 +265,10 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
     const creator = rt.env.SESSION_SECRET
       ? await currentUser(rt.env.DB, req, rt.env.SESSION_SECRET)
       : null;
+    // 开局即要求登录：否则会留下无主对局（能开局、能猜、能放弃，一问都没问）
+    if (rt.env.SESSION_SECRET && !creator) {
+      return fail(401, 'LOGIN_REQUIRED', '登录后才能开局');
+    }
     const session = await rt.solo.create({
       difficulty, polity, region, worldEra, cnShare, mode, pronoun, turns,
       userId: creator?.id ?? null,
