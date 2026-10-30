@@ -1,7 +1,7 @@
 import type { AiConfig, AiTestRes, MetaRes, RevealRes, SessionView } from '../shared/protocol.ts';
 import type { AnswerMode, PronounStyle } from '../shared/domain.ts';
 
-export type ViewName = 'setup' | 'lobby' | 'game' | 'reveal';
+export type ViewName = 'setup' | 'lobby' | 'game' | 'reveal' | 'auth';
 
 export interface Notice {
   kind: 'error' | 'info';
@@ -22,6 +22,10 @@ export interface State {
   guessOpen: boolean;
   copied: boolean;
   saved: string[];
+  /** 登录/注册页模式 */
+  authMode: 'login' | 'register';
+  authBusy: boolean;
+  authError: string | null;
   guessError: string | null;
   difficulty: number;
   /** 中国朝代筛选 */
@@ -193,6 +197,9 @@ let state: State = {
   guessOpen: false,
   copied: false,
   saved: [],
+  authMode: 'login',
+  authBusy: false,
+  authError: null,
   guessError: null,
   difficulty: 2,
   polity: null,

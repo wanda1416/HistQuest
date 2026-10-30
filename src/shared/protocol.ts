@@ -8,6 +8,12 @@ export interface AiConfig {
   temperature?: number;
 }
 
+export interface MetaUser {
+  username: string;
+  role: 'user' | 'admin';
+  allowServerKey: boolean;
+}
+
 export interface MetaRes {
   dynasties: string[];
   difficulties: Array<{ level: number; label: string; desc: string }>;
@@ -17,6 +23,10 @@ export interface MetaRes {
   characterCount: number;
   /** 可选文明圈与各自人数 */
   regions: Array<{ value: Region; label: string; count: number }>;
+  /** 用户系统是否启用（Workers 部署） */
+  authEnabled?: boolean;
+  /** 当前登录用户（未登录为 null） */
+  user?: MetaUser | null;
 }
 
 export interface StartSoloReq {

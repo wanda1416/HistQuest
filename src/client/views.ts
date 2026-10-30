@@ -18,6 +18,7 @@ function fmtYear(year: number | null): string {
 
 function topbar(s: State): string {
   const model = s.config?.model;
+  const user = s.meta?.user;
   return `
   <header class="topbar">
     <div class="brand">
@@ -29,10 +30,13 @@ function topbar(s: State): string {
     </div>
     <div class="topbar-actions">
       ${
-        model
-          ? `<span class="chip"><i class="chip-dot"></i>${esc(model)}</span>`
-          : `<span class="chip chip-off"><i class="chip-dot"></i>未接模型</span>`
+        user
+          ? `<span class="chip"><i class="chip-dot"></i>${esc(user.username)}${user.role === 'admin' ? ' · 管理员' : ''}</span>`
+          : model
+            ? `<span class="chip"><i class="chip-dot"></i>${esc(model)}</span>`
+            : `<span class="chip chip-off"><i class="chip-dot"></i>未接模型</span>`
       }
+      ${user ? `<button class="btn btn-ghost" data-action="logout">登出</button>` : ''}
       <a class="btn btn-ghost" href="/admin.html" target="_blank" rel="noopener">管理</a>
       <button class="btn btn-ghost" data-action="go-setup">设置</button>
     </div>
@@ -542,6 +546,57 @@ function revealView(s: State): string {
   );
 }
 
+function authView(s: State): string {
+  const isLogin = s.authMode === 'login';
+  return shell(
+    s,
+    `
+    <section class="setup">
+      <div class="setup-intro">
+        <p class="eyebrow">${isLogin ? '欢迎回来' : '加入'}</p>
+        <h2>${isLogin ? '登录' : '注册账号'}</h2>
+        <p class="lede">${
+          isLogin
+            ? '登录后可直接使用站方模型开局；也可以在设置里填自己的（BYOK）。'
+            : '需要邀请码。注册后每日可玩 500 问（站方模型），也可在设置里填自己的模型。'
+        }</p>
+      </div>
+
+      <form class="panel" data-role="auth-form">
+        <div class="field">
+          <label class="field-label" for="username">用户名</label>
+          <input class="input" id="username" name="username" placeholder="2-20 位，字母数字或中文"
+            autocomplete="username" />
+        </div>
+        <div class="field">
+          <label class="field-label" for="password">密码</label>
+          <input class="input" id="password" name="password" type="password" placeholder="至少 8 位"
+            autocomplete="${isLogin ? 'current-password' : 'new-password'}" />
+        </div>
+        ${
+          isLogin
+            ? ''
+            : `<div class="field">
+                 <label class="field-label" for="invite">邀请码</label>
+                 <input class="input" id="invite" name="invite" placeholder="找管理员要" autocomplete="off" />
+               </div>`
+        }
+        ${s.authError ? `<p class="testline fail">${esc(s.authError)}</p>` : ''}
+        <div class="actions">
+          <button type="submit" class="btn btn-primary" ${s.authBusy ? 'disabled' : ''}>
+            ${s.authBusy ? '请稍候…' : isLogin ? '登录' : '注册并登录'}
+          </button>
+          <button type="button" class="btn btn-text" data-action="auth-toggle">
+            ${isLogin ? '没有账号？用邀请码注册' : '已有账号？去登录'}
+          </button>
+        </div>
+      </form>
+
+      <p class="footnote">不想注册？游客也可玩——在设置里填自己的模型（BYOK）即可开局。</p>
+    </section>`,
+  );
+}
+
 export function renderApp(s: State): string {
   if (!s.ready) {
     return `<div class="boot"><div class="boot-seal">猜</div><p>正在载入…</p></div>`;
@@ -549,6 +604,8 @@ export function renderApp(s: State): string {
   switch (s.view) {
     case 'setup':
       return setupView(s);
+    case 'auth':
+      return authView(s);
     case 'lobby':
       return lobbyView(s);
     case 'reveal':

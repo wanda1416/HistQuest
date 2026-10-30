@@ -118,6 +118,15 @@ async function startGame(): Promise<void> {
   }
 }
 
+async function doLogout(): Promise<void> {
+  try { await api.logout(); } catch { /* ignore */ }
+  const meta = await api.meta().catch(() => null);
+  setState({ meta });
+  const s = getState();
+  if (s.meta?.authEnabled && !s.meta.user && !s.config) setState({ view: 'auth' });
+  else setState({ view: 'lobby' });
+}
+
 async function askQuestion(question: string): Promise<void> {
   const s = getState();
   // 服务器已配模型时无需本地 BYOK（CF 部署场景）
@@ -341,6 +350,12 @@ root.addEventListener('click', (event) => {
   const action = el.dataset.action;
 
   switch (action) {
+    case 'auth-toggle':
+      setState({ authMode: getState().authMode === 'login' ? 'register' : 'login', authError: null });
+      break;
+    case 'logout':
+      void doLogout();
+      break;
     case 'go-setup':
       setState({ view: 'setup', testResult: null, notice: null, guessOpen: false });
       break;
@@ -489,11 +504,42 @@ root.addEventListener('click', (event) => {
   }
 });
 
-root.addEventListener('submit', (event) => {
+root.addEventListener('submit', async (event) => {
   const form = event.target as HTMLFormElement;
   const role = form.dataset.role;
   if (!role) return;
   event.preventDefault();
+
+  if (role === 'auth-form') {
+    const val = (name: string) =>
+      form.querySelector<HTMLInputElement>(`[name="${name}"]`)?.value?.trim() ?? '';
+    const username = val('username');
+    const password = form.querySelector<HTMLInputElement>('[name="password"]')?.value ?? '';
+    if (!username || !password) {
+      setState({ authError: '用户名和密码都要填' });
+      return;
+    }
+    setState({ authBusy: true, authError: null });
+    try {
+      const s = getState();
+      if (s.authMode === 'register') {
+        const invite = val('invite');
+        if (!invite) {
+          setState({ authBusy: false, authError: '注册需要邀请码' });
+          return;
+        }
+        await api.register(username, password, invite);
+      } else {
+        await api.login(username, password);
+      }
+      // 登录成功：刷新 meta 拿用户态，进开局页
+      const meta = await api.meta();
+      setState({ meta, authBusy: false, view: 'lobby' });
+    } catch (err) {
+      setState({ authBusy: false, authError: msg(err) });
+    }
+    return;
+  }
 
   if (role === 'config-form') {
     const cfg = readFormConfig();
@@ -578,7 +624,12 @@ async function boot(): Promise<void> {
     }
   }
 
-  setState({ view: config || getState().meta?.serverModelReady ? 'lobby' : 'setup' });
+  const m = getState().meta;
+  if (m?.authEnabled && !m.user && !config) {
+    setState({ view: 'auth' });
+  } else {
+    setState({ view: config || m?.serverModelReady ? 'lobby' : 'setup' });
+  }
 }
 
 void boot();

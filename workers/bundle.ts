@@ -5,15 +5,18 @@ import { CharacterIndex } from '../src/core/index.ts';
 import { SoloStore, SoloError } from '../src/server/solo.ts';
 import { projectSession } from '../src/server/dto.ts';
 import { AiError, testConnection } from '../src/ai/client.ts';
-import { D1Database, D1SessionPersistence, loadCharactersFromD1, seedCharactersIntoD1 } from './d1.ts';
+import { D1Database, D1SessionPersistence } from './d1.ts';
 import { D1CharacterStore } from './d1-characters.ts';
 import { handleVault } from './vault.ts';
+import { handleAuth, currentUser, ensureAdmin, type AuthUser } from './auth.ts';
+import { takeUserQuota } from './quota.ts';
 
 /**
  * Cloudflare Worker 入口：纯 BS 一体化（TECH-DESIGN v1.5）。
  * 路由与 src/server/routes.ts 逐条对齐；core/ai 层原样复用。
  *
  * 密钥：AI_API_KEY 走 wrangler secret，只存在于 Worker→LLM 这一段。
+ * 用户系统：邀请码注册 + 用户名密码登录；ask 按账号/访客 IP 计配额。
  */
 
 interface Env {
@@ -24,6 +27,11 @@ interface Env {
   AI_MODEL?: string;
   SOLO_TURNS?: string;
   ADMIN_TOKEN?: string;
+  /** 会话签名密钥（secret）；未配置时用户系统禁用 */
+  SESSION_SECRET?: string;
+  /** 预置管理员 */
+  ADMIN_USER?: string;
+  ADMIN_PASSWORD?: string;
 }
 
 const DIFFICULTIES = [
@@ -58,11 +66,18 @@ function initRuntime(env: Env): Promise<Runtime> {
       const sessions = await persistence.load();
       const solo = new SoloStore(index, {
         awaitPersist: true,
+        persistence,
         turns: Number(env.SOLO_TURNS) || MAX_TURNS_DEFAULT,
         preloaded: sessions,
         newId: () => crypto.randomUUID().replace(/-/g, ''),
       });
       const maxTurns = Number(env.SOLO_TURNS) || MAX_TURNS_DEFAULT;
+
+      // 预置管理员（幂等）
+      if (env.SESSION_SECRET && env.ADMIN_USER && env.ADMIN_PASSWORD) {
+        await ensureAdmin(env.DB, env.ADMIN_USER, env.ADMIN_PASSWORD);
+      }
+
       return { index, store, solo, env, maxTurns };
     })().catch((err) => {
       runtime = null; // 失败后允许重试
@@ -142,6 +157,9 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
   if (path === '/meta' && req.method === 'GET') {
     const counts = new Map<string, number>();
     for (const c of rt.index.list) counts.set(c.region, (counts.get(c.region) ?? 0) + 1);
+    const user = rt.env.SESSION_SECRET
+      ? await currentUser(rt.env.DB, req, rt.env.SESSION_SECRET)
+      : null;
     const meta: MetaRes = {
       dynasties: [...DYNASTIES],
       difficulties: DIFFICULTIES,
@@ -154,7 +172,11 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
         count: counts.get(v) ?? 0,
       })),
     };
-    return json(200, meta);
+    return json(200, {
+      ...meta,
+      authEnabled: Boolean(rt.env.SESSION_SECRET),
+      user: user ? { username: user.username, role: user.role, allowServerKey: user.allowServerKey } : null,
+    });
   }
 
   // ---------- 模型连通测试（BYOK 时代用；服务器持 key 时也保留） ----------
@@ -198,8 +220,27 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
     if (action === 'ask' && req.method === 'POST') {
       const question = String(body.question ?? '').trim();
       if (!question) return fail(400, 'EMPTY_QUESTION', '问题不能为空');
-      const cred = readAiConfig(body) ?? serverCred;
+
+      // 凭据规则：BYOK 优先（游客也可用）；服务端 Key 仅限登录用户。
+      const user = rt.env.SESSION_SECRET
+        ? await currentUser(rt.env.DB, req, rt.env.SESSION_SECRET)
+        : null;
+      const byok = readAiConfig(body);
+      let cred: AiCredential | null = byok ?? null;
+
+      if (!cred && serverCred) {
+        if (!user) {
+          return fail(401, 'LOGIN_REQUIRED', '未登录只能使用自己的模型（BYOK）；注册/登录后可用站方模型');
+        }
+        if (user.role !== 'admin' && !user.allowServerKey) {
+          return fail(403, 'BYOK_REQUIRED', '管理员为本账号关闭了站方模型，请在设置里填写自己的模型');
+        }
+        const quota = await takeUserQuota(rt.env.DB, user);
+        if (!quota.ok) return fail(429, 'QUOTA_EXCEEDED', quota.message ?? '今日额度已用完');
+        cred = serverCred;
+      }
       if (!cred) return fail(400, 'MODEL_NOT_CONFIGURED', '没有模型配置就无法判定');
+
       try {
         const result = await rt.solo.ask(id, question, cred, { timeoutMs: 20000 });
         return json(200, result);
@@ -230,7 +271,7 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
   return fail(404, 'NOT_FOUND', '接口不存在');
 }
 
-// ---------- 管理后台（Workers 版：一律要求 Bearer ADMIN_TOKEN） ----------
+// ---------- 管理后台（双通道：管理员会话为主，ADMIN_TOKEN 备用） ----------
 
 function sameToken(given: string, expected: string): boolean {
   if (given.length !== expected.length) return false;
@@ -240,13 +281,20 @@ function sameToken(given: string, expected: string): boolean {
 }
 
 async function handleAdmin(req: Request, url: URL, rt: Runtime): Promise<Response> {
-  const token = rt.env.ADMIN_TOKEN ?? '';
-  if (!token) return fail(503, 'ADMIN_DISABLED', '未配置 ADMIN_TOKEN，管理接口未开放');
-  const matched = /^Bearer\s+(.+)$/i.exec(req.headers.get('authorization') ?? '');
-  if (!matched || !sameToken(matched[1]!.trim(), token)) {
-    return fail(403, 'ADMIN_FORBIDDEN', '令牌无效');
+  // 通道一：管理员会话（登录的 role=admin 用户）
+  let isAdminSession = false;
+  if (rt.env.SESSION_SECRET) {
+    const user = await currentUser(rt.env.DB, req, rt.env.SESSION_SECRET);
+    isAdminSession = user?.role === 'admin';
   }
-  if (req.headers.get('x-hq-admin') !== '1') {
+  // 通道二：ADMIN_TOKEN Bearer（逃生门，防会话故障锁死）
+  const bearer = /^Bearer\s+(.+)$/i.exec(req.headers.get('authorization') ?? '');
+  const tokenOk = Boolean(rt.env.ADMIN_TOKEN) && Boolean(bearer) && sameToken(bearer![1]!.trim(), rt.env.ADMIN_TOKEN!);
+
+  if (!isAdminSession && !tokenOk) {
+    return fail(403, 'ADMIN_FORBIDDEN', '需要管理员账号登录，或携带 ADMIN_TOKEN');
+  }
+  if (!tokenOk && req.headers.get('x-hq-admin') !== '1') {
     return fail(403, 'ADMIN_HEADER_REQUIRED', '缺少管理请求标识 X-HQ-Admin');
   }
 
@@ -337,6 +385,86 @@ async function handleAdmin(req: Request, url: URL, rt: Runtime): Promise<Respons
     });
   }
 
+  // ---------- 用户管理 ----------
+  if (path === '/users' && req.method === 'GET') {
+    const rows = await rt.env.DB
+      .prepare(
+        `SELECT u.id, u.username, u.role, u.allow_server_key, u.banned, u.created_at,
+                u.asks_today, u.quota_day,
+                (SELECT COUNT(*) FROM sessions s WHERE s.target_id IS NOT NULL AND s.id IN
+                  (SELECT id FROM sessions)) AS dummy
+         FROM users u ORDER BY u.created_at DESC LIMIT 500`,
+      )
+      .bind()
+      .all<Record<string, unknown>>();
+    const today = new Date();
+    const dayNow = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+    const users = rows.results.map((r) => ({
+      id: r.id,
+      username: r.username,
+      role: r.role,
+      allowServerKey: Boolean(r.allow_server_key),
+      banned: Boolean(r.banned),
+      createdAt: r.created_at,
+      asksToday: Number(r.quota_day) === dayNow ? r.asks_today : 0,
+    }));
+    return json(200, { total: users.length, users });
+  }
+
+  const userToggle = path.match(/^\/users\/([A-Za-z0-9-]+)\/(server-key|ban)$/);
+  if (userToggle && req.method === 'POST') {
+    const id = userToggle[1]!;
+    const what = userToggle[2]!;
+    const on = Boolean(body.on);
+    if (what === 'server-key') {
+      await rt.env.DB
+        .prepare('UPDATE users SET allow_server_key = ?, updated_at = ? WHERE id = ?')
+        .bind(on ? 1 : 0, Date.now(), id)
+        .run();
+    } else {
+      await rt.env.DB
+        .prepare('UPDATE users SET banned = ?, updated_at = ? WHERE id = ?')
+        .bind(on ? 1 : 0, Date.now(), id)
+        .run();
+    }
+    return json(200, { ok: true });
+  }
+
+  // ---------- 邀请码管理 ----------
+  if (path === '/invites' && req.method === 'GET') {
+    const rows = await rt.env.DB
+      .prepare(
+        `SELECT i.code, i.created_at, i.used_at, i.used_by, u.username AS used_by_name
+         FROM invites i LEFT JOIN users u ON u.id = i.used_by
+         ORDER BY i.created_at DESC LIMIT 200`,
+      )
+      .bind()
+      .all<Record<string, unknown>>();
+    return json(200, {
+      total: rows.results.length,
+      invites: rows.results.map((r) => ({
+        code: r.code,
+        createdAt: r.created_at,
+        usedAt: r.used_at,
+        usedByName: r.used_by_name,
+      })),
+    });
+  }
+
+  if (path === '/invites' && req.method === 'POST') {
+    const count = Math.min(20, Math.max(1, Math.round(Number(body.count) || 1)));
+    const codes: string[] = [];
+    for (let i = 0; i < count; i++) {
+      const code = crypto.randomUUID().replace(/-/g, '').slice(0, 10);
+      await rt.env.DB
+        .prepare('INSERT INTO invites (code, created_by, created_at) VALUES (?, ?, ?)')
+        .bind(code, 'admin', Date.now())
+        .run();
+      codes.push(code);
+    }
+    return json(201, { codes });
+  }
+
   return fail(404, 'NOT_FOUND', '接口不存在');
 }
 
@@ -349,6 +477,12 @@ export default {
         const rt = await initRuntime(env);
         if (url.pathname.startsWith('/api/settings/vault')) {
           return handleVault(env.DB, req);
+        }
+        if (url.pathname.startsWith('/api/auth/')) {
+          if (!env.SESSION_SECRET) {
+            return fail(503, 'AUTH_DISABLED', '用户系统未启用（缺 SESSION_SECRET）');
+          }
+          return handleAuth(env.DB, req, url, env.SESSION_SECRET, true);
         }
         if (url.pathname.startsWith('/api/admin')) {
           return handleAdmin(req, url, rt);

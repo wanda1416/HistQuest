@@ -67,6 +67,14 @@ function jsonInit(body: unknown): RequestInit {
 export const api = {
   meta: () => request<MetaRes>('/api/meta'),
 
+  login: (username: string, password: string) =>
+    request<{ user: unknown }>('/api/auth/login', jsonInit({ username, password })),
+
+  register: (username: string, password: string, invite: string) =>
+    request<{ user: unknown }>('/api/auth/register', jsonInit({ username, password, invite })),
+
+  logout: () => request<{ ok: boolean }>('/api/auth/logout', jsonInit({})),
+
   testAi: (cfg: AiConfig) =>
     request<AiTestRes>('/api/ai/test', jsonInit({ baseURL: cfg.baseURL, apiKey: cfg.apiKey, model: cfg.model })),
 

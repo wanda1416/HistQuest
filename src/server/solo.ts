@@ -31,6 +31,8 @@ export interface SoloStoreOptions {
   /** 传 null 关闭持久化（测试用）；传 db 时优先用 SQLite */
   file?: string | null;
   db?: DatabaseSync;
+  /** 直接注入持久层实现（Workers：D1 版）；优先于 db/file */
+  persistence?: SessionPersistence;
   /** 预加载的会话列表（Workers：D1 异步读出后注入，跳过同步 load） */
   preloaded?: SoloSession[];
   /** id 生成器（Workers 环境注入 crypto.randomUUID 版本） */
@@ -68,11 +70,13 @@ export class SoloStore {
   constructor(index: CharacterIndex, opts: SoloStoreOptions) {
     this.index = index;
     this.opts = opts;
-    this.persistence = opts.db
-      ? new SqliteSessionPersistence(opts.db)
-      : opts.file
-        ? new JsonSessionPersistence(opts.file)
-        : new MemorySessionPersistence();
+    this.persistence =
+      opts.persistence ??
+      (opts.db
+        ? new SqliteSessionPersistence(opts.db)
+        : opts.file
+          ? new JsonSessionPersistence(opts.file)
+          : new MemorySessionPersistence());
     if (opts.preloaded) {
       // Workers 环境：D1 异步加载后注入（Node 环境走下面的同步 load）
       for (const s of opts.preloaded) this.sessions.set(s.id, s);
@@ -274,13 +278,19 @@ export class SoloStore {
       const out = this.persistence.save(session);
       if (out && typeof (out as Promise<void>).then === 'function') {
         const p = (out as Promise<void>).catch((err: unknown) => {
-          log('solo.persist.failed', { message: (err as Error)?.message ?? 'async' });
+          // eslint-disable-next-line no-console
+          console.error('solo.persist.failed', {
+            message: (err as Error)?.message ?? 'async',
+            stack: String((err as Error)?.stack ?? '').slice(0, 300),
+            cause: String((err as Error)?.cause ?? '').slice(0, 200),
+          });
         });
         // 等待模式下返回 Promise（Workers：响应返回后未完成的写会被运行时取消）
         if (this.opts.awaitPersist) return p;
       }
     } catch (err) {
-      log('solo.persist.failed', { message: (err as Error).message });
+      // eslint-disable-next-line no-console
+      console.error('solo.persist.sync-failed', { message: (err as Error).message });
     }
   }
 

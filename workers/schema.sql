@@ -62,3 +62,26 @@ CREATE TABLE IF NOT EXISTS settings_vault (
   auth_hash  TEXT NOT NULL DEFAULT '',
   wrapped_dek TEXT NOT NULL DEFAULT ''
 );
+
+-- v3：用户系统（邀请码注册）
+CREATE TABLE IF NOT EXISTS users (
+  id            TEXT PRIMARY KEY,
+  username      TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,          -- PBKDF2-SHA256: salt$iter$hash 的 base64
+  role          TEXT NOT NULL DEFAULT 'user',  -- user | admin
+  allow_server_key INTEGER NOT NULL DEFAULT 1, -- 是否允许用服务端 Key（0=必须 BYOK）
+  banned        INTEGER NOT NULL DEFAULT 0,
+  created_at    INTEGER NOT NULL,
+  updated_at    INTEGER NOT NULL,
+  asks_today    INTEGER NOT NULL DEFAULT 0,   -- 当日提问计数（服务端 Key 的调用）
+  quota_day     INTEGER NOT NULL DEFAULT 0     -- 计数所属日（yyyymmdd，跨日清零）
+);
+
+CREATE TABLE IF NOT EXISTS invites (
+  code       TEXT PRIMARY KEY,
+  created_by TEXT NOT NULL,
+  used_by    TEXT,
+  used_at    INTEGER,
+  created_at INTEGER NOT NULL
+);
+
