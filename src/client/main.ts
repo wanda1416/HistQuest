@@ -24,6 +24,7 @@ import { decodeManagementKey, generateKey, keyFromBase64, keyToBase64 } from './
 import { applyPayload, normalizeEndpoint, pullVault, pushVault } from './sync.ts';
 import { renderApp } from './views.ts';
 import { transcriptForGame, transcriptForReview } from './format.ts';
+import { isShowing, parseRoute, routeHash, type Route } from './route.ts';
 
 const root = document.getElementById('app')!;
 
@@ -113,6 +114,7 @@ async function startGame(): Promise<void> {
     });
     saveGameId(session.gameId);
     setState({ session, view: 'game', pending: false, reveal: null, testResult: null });
+    syncUrl({ view: 'game', id: session.gameId });
   } catch (err) {
     setState({ pending: false, notice: { kind: 'error', text: msg(err) } });
   }
@@ -121,10 +123,9 @@ async function startGame(): Promise<void> {
 async function doLogout(): Promise<void> {
   try { await api.logout(); } catch { /* ignore */ }
   const meta = await api.meta().catch(() => null);
-  setState({ meta });
-  const s = getState();
-  if (s.meta?.authEnabled && !s.meta.user) setState({ view: 'auth' });
-  else setState({ view: 'lobby' });
+  setState({ meta, session: null, reveal: null, history: null, historyDetail: null });
+  saveGameId(null);
+  go({ view: meta?.authEnabled ? 'auth' : 'lobby' });
 }
 
 async function askQuestion(question: string): Promise<void> {
@@ -195,6 +196,8 @@ async function doReveal(): Promise<void> {
   try {
     const reveal = await api.reveal(s.session.gameId);
     setState({ reveal, view: 'reveal', notice: null, guessOpen: false });
+    // 局结束了就把地址换成 reveal：刷新仍回到这张人物卡
+    syncUrl({ view: 'reveal', id: s.session.gameId }, { replace: true });
   } catch (err) {
     setState({ notice: { kind: 'error', text: msg(err) } });
   }
@@ -223,20 +226,117 @@ async function openHistoryGame(id: string): Promise<void> {
 
 /** 从历史里接着打：只有仍在进行中的局能回到对局界面 */
 async function resumeHistoryGame(id: string): Promise<void> {
+  // 交给路由：它会判断这局还在不在、该进对局还是揭晓
+  go({ view: 'game', id });
+}
+
+
+/* ---------------- 路由：地址栏即事实 ---------------- */
+
+let routing = false;
+
+function currentRoute(): Route | null {
+  return parseRoute(location.hash);
+}
+
+/** 只改地址栏，不动状态（避免 applyRoute 递归） */
+function syncUrl(route: Route, opts: { replace?: boolean } = {}): void {
+  const hash = routeHash(route);
+  if (location.hash === hash) return;
+  if (opts.replace) history.replaceState(null, '', hash);
+  else history.pushState(null, '', hash);
+}
+
+/** 改地址栏并立即应用 */
+function go(route: Route, opts: { replace?: boolean } = {}): void {
+  syncUrl(route, opts);
+  void applyRoute(true);
+}
+
+/**
+ * 把界面状态对齐到地址栏。
+ * 刷新、前进后退、粘贴链接、从历史里续局，全都汇聚到这里，
+ * 所以在任何入口都不需要重复写"加载这一局"的代码。
+ */
+async function applyRoute(force = false): Promise<void> {
+  if (routing) return;
+  routing = true;
   try {
-    const session = await api.getSolo(id);
-    if (session.status === 'playing') {
-      saveGameId(session.gameId);
-      setState({ session, view: 'game', historyDetail: null, reveal: null });
+    const route = currentRoute();
+    if (!route) {
+      syncUrl({ view: 'lobby' }, { replace: true });
+      setState({ view: 'lobby' });
       return;
     }
-    const reveal = await api.reveal(id);
-    saveGameId(null);
-    setState({ session, reveal, view: 'reveal', historyDetail: null });
-  } catch (err) {
-    setState({ historyError: msg(err) });
+
+    const s = getState();
+    const showing = isShowing(route, {
+      view: s.view,
+      gameId: s.session?.gameId ?? null,
+      historyId: s.historyDetail?.id ?? null,
+    });
+    if (!force && showing) return;
+
+    switch (route.view) {
+      case 'game':
+      case 'reveal': {
+        let session = s.session?.gameId === route.id ? s.session : null;
+        if (!session) {
+          try {
+            session = await api.getSolo(route.id);
+          } catch {
+            saveGameId(null);
+            setState({ notice: { kind: 'error', text: '找不到这一局，可能已经过期' } });
+            syncUrl({ view: 'lobby' }, { replace: true });
+            setState({ view: 'lobby', session: null, reveal: null });
+            return;
+          }
+        }
+
+        if (session.status === 'playing') {
+          saveGameId(session.gameId);
+          setState({ session, view: 'game', reveal: null, pending: false });
+          // 地址写成 reveal 但这局还没结束：拉回对局界面
+          if (route.view === 'reveal') syncUrl({ view: 'game', id: route.id }, { replace: true });
+          return;
+        }
+
+        // 已结束：直接把揭晓还原出来（刷新 #/reveal/<id> 也成立）
+        if (s.reveal && s.session?.gameId === route.id) {
+          setState({ session, view: 'reveal', pending: false });
+        } else {
+          try {
+            const reveal = await api.reveal(route.id);
+            setState({ session, reveal, view: 'reveal', pending: false });
+          } catch {
+            setState({ session, view: 'game', pending: false });
+          }
+        }
+        if (route.view === 'game') syncUrl({ view: 'reveal', id: route.id }, { replace: true });
+        return;
+      }
+
+      case 'history':
+        setState({ view: 'history' });
+        if (route.id) await openHistoryGame(route.id);
+        else await openHistory();
+        return;
+
+      case 'auth':
+        setState({ view: 'auth' });
+        return;
+
+      default:
+        setState({ view: route.view });
+        return;
+    }
+  } finally {
+    routing = false;
   }
 }
+
+window.addEventListener('popstate', () => void applyRoute());
+window.addEventListener('hashchange', () => void applyRoute());
 
 /* ---------------- 设置同步 ---------------- */
 
@@ -395,32 +495,34 @@ root.addEventListener('click', (event) => {
       void doLogout();
       break;
     case 'go-setup':
-      setState({ view: 'setup', testResult: null, notice: null, guessOpen: false });
+      setState({ testResult: null, notice: null, guessOpen: false });
+      go({ view: 'setup' });
       break;
-    case 'back':
-      setState({
-        view:
-          getState().view === 'history'
-            ? 'history'
-            : getState().reveal
-              ? 'reveal'
-              : getState().session
-                ? 'game'
-                : 'lobby',
-        ...(getState().view === 'history' ? { historyDetail: null } : {}),
-      });
+    case 'go-home':
+      setState({ notice: null, guessOpen: false });
+      go({ view: 'lobby' });
       break;
+    case 'back': {
+      // 返回上一层：历史详情→列表，其余→对局/揭晓/首页
+      const st = getState();
+      if (st.view === 'history') go({ view: 'history', id: null });
+      else if (st.reveal && st.session) go({ view: 'reveal', id: st.session.gameId });
+      else if (st.session) go({ view: 'game', id: st.session.gameId });
+      else go({ view: 'lobby' });
+      break;
+    }
     case 'go-history':
-      void openHistory();
+      go({ view: 'history', id: null });
       break;
     case 'open-history':
-      if (el.dataset.id) void openHistoryGame(el.dataset.id);
+      if (el.dataset.id) go({ view: 'history', id: el.dataset.id });
       break;
     case 'resume-history':
-      if (el.dataset.id) void resumeHistoryGame(el.dataset.id);
+      // 续局也走路由：路由会判断这局还在不在、该进对局还是揭晓
+      if (el.dataset.id) go({ view: 'game', id: el.dataset.id });
       break;
     case 'history-back':
-      setState({ historyDetail: null });
+      go({ view: 'history', id: null });
       break;
     case 'test-ai':
       void testAi();
@@ -477,7 +579,8 @@ root.addEventListener('click', (event) => {
       break;
     case 'new-game':
       saveGameId(null);
-      setState({ view: 'lobby', session: null, reveal: null, notice: null });
+      setState({ session: null, reveal: null, notice: null });
+      go({ view: 'lobby' });
       break;
     case 'pick-sync-mode': {
       const mode = el.dataset.value === 'online' ? 'online' : 'local';
@@ -583,18 +686,22 @@ root.addEventListener('submit', async (event) => {
     try {
       const s = getState();
       if (s.authMode === 'register') {
-        const invite = val('invite');
-        if (!invite) {
-          setState({ authBusy: false, authError: '注册需要邀请码' });
-          return;
-        }
-        await api.register(username, password, invite);
+        // 是否必须邀请码由服务端判定：空库的第一个账号免邀请码、直接成为管理员，
+        // 前端不能在这里先拦下来（否则本地新装环境永远注册不进去）
+        await api.register(username, password, val('invite'));
       } else {
         await api.login(username, password);
       }
       // 登录成功：刷新 meta 拿用户态，进开局页
       const meta = await api.meta();
-      setState({ meta, authBusy: false, view: 'lobby' });
+      setState({ meta, authBusy: false });
+      // 登录前地址栏里可能就写着某一局/历史：登录后直接回去，而不是丢掉
+      const after = currentRoute();
+      if (after && (after.view === 'game' || after.view === 'reveal' || after.view === 'history')) {
+        await applyRoute(true);
+      } else {
+        go({ view: 'lobby' });
+      }
     } catch (err) {
       setState({ authBusy: false, authError: msg(err) });
     }
@@ -615,9 +722,10 @@ root.addEventListener('submit', async (event) => {
       config: cfg,
       verified: true,
       pronoun,
-      view: getState().session ? 'game' : 'lobby',
       notice: null,
     });
+    const session = getState().session;
+    go(session ? { view: 'game', id: session.gameId } : { view: 'lobby' });
     return;
   }
 
@@ -668,26 +776,44 @@ async function boot(): Promise<void> {
   setState({ pronoun: prefs.pronoun, turns: prefs.turns, saved: loadQuestions() });
   if (config) setState({ config, verified: true });
 
-  const gameId = loadGameId();
-  if (config && gameId) {
-    try {
-      const session = await api.getSolo(gameId);
-      if (session.status === 'playing') {
-        setState({ session, view: 'game' });
-      } else {
-        const reveal = await api.reveal(gameId);
-        setState({ session, reveal, view: 'reveal' });
-      }
-      return;
-    } catch {
-      saveGameId(null);
-    }
-  }
-
   const m = getState().meta;
+  const route = currentRoute();
+
+  // 0) 没登录：先去登录页，地址栏原样保留，登录后再回到原来那一屏
   if (m?.authEnabled && !m.user) {
     setState({ view: 'auth' });
+    return;
+  }
+
+  // 1) 地址栏里写着具体页面：以地址栏为准（刷新、粘链接、前进后退都走这条）
+  if (route && (route.view === 'game' || route.view === 'reveal' || route.view === 'history')) {
+    await applyRoute(true);
+    const view = getState().view;
+    if (view === 'game' || view === 'reveal' || view === 'history') return;
+  }
+
+  // 2) 地址栏**完全没写页面**（裸域名）时，才退回上次那一局。
+  //    `#/` 是用户明确点过「首页」的结果，刷新就该留在首页，不能又被拽回旧对局。
+  //    这里以前还多了个 `config` 条件，导致用站方 Key 的登录用户刷新就丢局。
+  const bareHash = !location.hash || location.hash === '#';
+  const lastId = bareHash ? loadGameId() : null;
+  if (lastId) {
+    syncUrl({ view: 'game', id: lastId }, { replace: true });
+    await applyRoute(true);
+    const view = getState().view;
+    if (view === 'game' || view === 'reveal') return;
+  }
+
+  // 3) 默认落点
+  if (route && (route.view === 'setup' || route.view === 'auth')) {
+    setState({ view: route.view });
+    return;
+  }
+  if (m?.authEnabled && !m.user) {
+    syncUrl({ view: 'auth' }, { replace: true });
+    setState({ view: 'auth' });
   } else {
+    syncUrl({ view: config || m?.serverModelReady ? 'lobby' : 'setup' }, { replace: true });
     setState({ view: config || m?.serverModelReady ? 'lobby' : 'setup' });
   }
 }

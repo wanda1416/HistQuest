@@ -1,0 +1,77 @@
+/**
+ * 玩家端 URL 路由。
+ *
+ * 对局状态必须能从地址栏还原：`#/game/<id>` 刷新、换标签页、把链接发给
+ * 同一个账号的另一个设备，都应回到同一局。以前只把 id 放在 localStorage，
+ * 且恢复条件还要求"本地填过 BYOK"，登录用户一刷新就丢局。
+ *
+ * 选 hash 而不是路径：管理端（admin.html）已是 hash 路由，这里保持同一套心智，
+ * 也不必依赖 express / Vite / Workers assets 三处的 SPA 回退行为。
+ */
+
+export type Route =
+  | { view: 'setup' }
+  | { view: 'auth' }
+  | { view: 'lobby' }
+  | { view: 'game'; id: string }
+  | { view: 'reveal'; id: string }
+  | { view: 'history'; id: string | null };
+
+const ID_RE = /^[A-Za-z0-9-]{4,64}$/;
+
+/** 解析地址栏 hash；无法识别返回 null（调用方走默认视图） */
+export function parseRoute(rawHash: string): Route | null {
+  const hash = String(rawHash ?? '').replace(/^#/, '');
+  const path = hash.startsWith('/') ? hash.slice(1) : hash;
+  if (!path) return { view: 'lobby' };
+
+  const parts = path.split('/').filter(Boolean);
+  const head = parts[0];
+  const id = parts[1];
+
+  if (head === 'setup' && parts.length === 1) return { view: 'setup' };
+  if (head === 'auth' && parts.length === 1) return { view: 'auth' };
+  if (head === 'lobby' && parts.length === 1) return { view: 'lobby' };
+  if (head === 'history' && parts.length === 1) return { view: 'history', id: null };
+  if (head === 'history' && parts.length === 2 && id && ID_RE.test(id)) {
+    return { view: 'history', id };
+  }
+  if (head === 'game' && parts.length === 2 && id && ID_RE.test(id)) return { view: 'game', id };
+  if (head === 'reveal' && parts.length === 2 && id && ID_RE.test(id)) return { view: 'reveal', id };
+  return null;
+}
+
+/** 路由 → hash（写进地址栏的规范形式） */
+export function routeHash(route: Route): string {
+  switch (route.view) {
+    case 'game':
+      return `#/game/${route.id}`;
+    case 'reveal':
+      return `#/reveal/${route.id}`;
+    case 'history':
+      return route.id ? `#/history/${route.id}` : '#/history';
+    case 'setup':
+      return '#/setup';
+    case 'auth':
+      return '#/auth';
+    default:
+      return '#/';
+  }
+}
+
+/** 这一屏是不是已经显示出来了（用于避免重复拉取；也用于前进后退时判断要不要重载） */
+export function isShowing(
+  route: Route,
+  current: { view: string; gameId?: string | null; historyId?: string | null },
+): boolean {
+  switch (route.view) {
+    case 'game':
+      return current.view === 'game' && current.gameId === route.id;
+    case 'reveal':
+      return current.view === 'reveal' && current.gameId === route.id;
+    case 'history':
+      return current.view === 'history' && (current.historyId ?? null) === (route.id ?? null);
+    default:
+      return current.view === route.view;
+  }
+}

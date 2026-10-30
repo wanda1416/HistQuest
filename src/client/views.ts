@@ -36,6 +36,12 @@ function topbar(s: State): string {
             ? `<span class="chip"><i class="chip-dot"></i>${esc(model)}</span>`
             : `<span class="chip chip-off"><i class="chip-dot"></i>未接模型</span>`
       }
+      ${
+        // 任何非首页的页面都要有一条明确的路回去，别让人只能靠刷新
+        (user || !s.meta?.authEnabled) && s.view !== 'lobby'
+          ? `<button class="btn btn-ghost" data-action="go-home">首页</button>`
+          : ''
+      }
       ${user ? `<button class="btn btn-ghost" data-action="logout">登出</button>` : ''}
       ${user ? `<button class="btn btn-ghost" data-action="go-history">历史</button>` : ''}
       <a class="btn btn-ghost" href="/admin.html" target="_blank" rel="noopener">管理</a>
@@ -159,7 +165,12 @@ function setupView(s: State): string {
           <div class="actions">
             <button type="button" class="btn btn-ghost" data-action="test-ai">测试连接</button>
             <button type="submit" class="btn btn-primary">保存并进入</button>
-            ${isFirst ? '' : '<button type="button" class="btn btn-text" data-action="back">返回</button>'}
+            ${
+              // 设置页必须能直接回首页：登录用户没有本地 BYOK 时以前一个返回按钮都没有
+              s.meta?.user || s.meta?.serverModelReady || s.session
+                ? '<button type="button" class="btn btn-text" data-action="go-home">首页</button>'
+                : ''
+            }
           </div>
         </form>
 
@@ -720,7 +731,8 @@ function authView(s: State): string {
             ? ''
             : `<div class="field">
                  <label class="field-label" for="invite">邀请码</label>
-                 <input class="input" id="invite" name="invite" placeholder="找管理员要" autocomplete="off" />
+                 <input class="input" id="invite" name="invite" placeholder="找管理员要；库里的第一个账号可留空" autocomplete="off" />
+                 <p class="field-hint">架设这台服务的人：空库时第一个注册的账号直接成为管理员，不需要邀请码。</p>
                </div>`
         }
         ${s.authError ? `<p class="testline fail">${esc(s.authError)}</p>` : ''}
