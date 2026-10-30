@@ -6,7 +6,7 @@
   "description": "猜历史 — 中文 AI 二十问猜历史人物",
   "license": "MIT",
   "engines": {
-    "node": ">=22.18"
+    "node": ">=23.4"
   },
   "scripts": {
     "dev": "node scripts/dev.mjs",

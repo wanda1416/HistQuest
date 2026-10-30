@@ -30,6 +30,8 @@ export const config = {
   paths: {
     characters: path.join(ROOT, 'data', 'characters.json'),
     sessions: path.join(ROOT, 'data', 'sessions.json'),
+    /** SQLite 主库；首次启动会从 characters.json 自动迁移 */
+    db: process.env.HQ_DB ?? path.join(ROOT, 'data', 'hq.db'),
     dist: path.join(ROOT, 'dist'),
   },
   ai: {

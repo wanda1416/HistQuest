@@ -1,6 +1,11 @@
 node_modules/
 dist/
 data/sessions.json
+data/hq.db
+data/hq.db-wal
+data/hq.db-shm
+data/characters.json.migrated
+data/backups/
 .tmp/
 .workbuddy/
 .env

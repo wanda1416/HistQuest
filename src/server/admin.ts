@@ -4,7 +4,7 @@ import { timingSafeEqual } from 'node:crypto';
 import { DYNASTIES, REGIONS, REGION_LABELS, type Region } from '../shared/domain.ts';
 import type { Character } from '../shared/domain.ts';
 import type { Issue } from '../core/schema.ts';
-import type { CharacterStore } from './characters.ts';
+import type { CharacterStoreLike } from './characters-sqlite.ts';
 import type { SoloStore } from './solo.ts';
 import { log } from './util.ts';
 
@@ -31,7 +31,7 @@ export interface AdminAccess {
 }
 
 export interface AdminDeps {
-  store: CharacterStore;
+  store: CharacterStoreLike;
   solo: SoloStore;
   token: string;
 }

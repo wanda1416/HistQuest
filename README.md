@@ -22,7 +22,7 @@
 
 ## 快速开始
 
-需要 Node.js ≥ 22.18（依赖原生 TypeScript 类型擦除，无需编译服务端）。
+需要 Node.js ≥ 23.4（依赖原生 TypeScript 类型擦除与内置 `node:sqlite`，无需编译服务端）。
 
 ```bash
 npm install
@@ -52,6 +52,8 @@ npm start            # 单进程同时提供 API 与静态资源，:3000
 | `SOLO_TURNS` | `50` | 单人提问次数 |
 | `ADMIN_TOKEN` | 空 | 管理后台远程访问令牌；留空时只允许本机访问 |
 | `ADMIN_BACKUP_KEEP` | `20` | 后台保存前备份的保留份数 |
+| `HQ_DB` | `data/hq.db` | SQLite 主库路径 |
+| `HQ_STORE` | `sqlite` | 设为 `json` 可整体回滚到 JSON 存储 |
 
 模型地址填到域名即可，`https://api.deepseek.com` 和 `https://api.deepseek.com/v1` 都认。
 
@@ -75,6 +77,15 @@ npm run dev
 写入流程：校验 → 备份到 `data/backups/` → 原子写（临时文件 + rename）→ 重建索引并热替换，**保存立即生效、无需重启**。任何 error 级问题都会阻止写入，warning 只提示不拦截。
 
 访问控制：默认只允许本机（`127.0.0.1` / `::1`）访问 `/api/admin/*`；需要从别的机器维护时在 `.env` 配置 `ADMIN_TOKEN`，请求带 `Authorization: Bearer <token>`。所有管理请求还必须带 `X-HQ-Admin: 1`——浏览器跨站无法在不触发预检的情况下伪造该头。
+
+## 数据存储
+
+人物库与会话存在 SQLite（`data/hq.db`），使用 Node 内置的 `node:sqlite`，零依赖、无需编译。
+
+- 首次启动若库为空且发现 `data/characters.json`，自动导入并留下 `characters.json.migrated` 副本；原 JSON 保留作为种子与回滚点
+- 后台每次保存前用 `VACUUM INTO` 生成数据库快照（`data/backups/`），保留最近 `ADMIN_BACKUP_KEEP` 份
+- 会话单条 upsert，不再每次全量重写 JSON；24 小时过期
+- 设置 `HQ_STORE=json` 可整体回滚到 JSON 存储，`HQ_DB` 可指定其他库路径
 
 ## 测试
 
@@ -106,7 +117,8 @@ src/
 ├─ ai/         OpenAI 兼容客户端与提示词
 ├─ server/     express 路由、单人状态机、DTO 投影、人物库读写
 └─ client/     Vite + 原生 DOM 界面（index.html 玩家端 / admin.html 管理端）
-data/characters.json   184 位人物索引（130 中国 + 54 世界）
+data/characters.json   184 位人物索引（迁移种子 / 导出物）
+data/hq.db             SQLite 主库（人物 + 会话）
 docs/TECH-DESIGN.md    技术方案与架构
 docs/DATA-EXPANSION.md 人物库扩充方案（暂缓实施）
 ```

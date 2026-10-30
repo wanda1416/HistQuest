@@ -1,7 +1,13 @@
 import fs from 'node:fs';
-import path from 'node:path';
 import { randomBytes } from 'node:crypto';
+import type { DatabaseSync } from 'node:sqlite';
 import type { AiCredential, AnswerMode, AnswerRecord, PronounStyle, Region, SoloSession } from '../shared/domain.ts';
+import {
+  JsonSessionPersistence,
+  MemorySessionPersistence,
+  SqliteSessionPersistence,
+  type SessionPersistence,
+} from './sessions.ts';
 import type { AskRes, GuessRes, RevealRes } from '../shared/protocol.ts';
 import type { CharacterIndex } from '../core/index.ts';
 import { guessMatches } from '../core/judge.ts';
@@ -23,8 +29,9 @@ export class SoloError extends Error {
 export interface SoloStoreOptions {
   /** 服务端允许的最大轮次上限；每局可在 10 到该值之间自选 */
   turns: number;
-  /** 传 null 关闭持久化（测试用） */
+  /** 传 null 关闭持久化（测试用）；传 db 时优先用 SQLite */
   file?: string | null;
+  db?: DatabaseSync;
 }
 
 export interface CreateInput {
@@ -49,13 +56,18 @@ const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 export class SoloStore {
   private sessions = new Map<string, SoloSession>();
   private answerCache = new Map<string, AnswerRecord>();
-  private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private index: CharacterIndex;
   private readonly opts: SoloStoreOptions;
+  private readonly persistence: SessionPersistence;
 
   constructor(index: CharacterIndex, opts: SoloStoreOptions) {
     this.index = index;
     this.opts = opts;
+    this.persistence = opts.db
+      ? new SqliteSessionPersistence(opts.db)
+      : opts.file
+        ? new JsonSessionPersistence(opts.file)
+        : new MemorySessionPersistence();
     this.load();
   }
 
@@ -90,7 +102,7 @@ export class SoloStore {
     };
 
     this.sessions.set(session.id, session);
-    this.persist();
+    this.persist(session);
     log('solo.create', {
       id: session.id,
       difficulty: input.difficulty,
@@ -147,7 +159,7 @@ export class SoloStore {
       session.history.push(outcome.record);
       session.status = 'won';
       session.updatedAt = Date.now();
-      this.persist();
+      this.persist(session);
       log('solo.win', { id, via: 'ask' });
       const view: AskRes = {
         accepted: true,
@@ -174,7 +186,7 @@ export class SoloStore {
     if (guessMatches(target, name)) {
       session.status = 'won';
       session.updatedAt = Date.now();
-      this.persist();
+      this.persist(session);
       log('solo.win', { id });
       return { correct: true, status: session.status, turnsLeft: session.turnsLeft };
     }
@@ -182,7 +194,7 @@ export class SoloStore {
     session.turnsLeft = Math.max(0, session.turnsLeft - 1);
     if (session.turnsLeft === 0) session.status = 'revealed';
     session.updatedAt = Date.now();
-    this.persist();
+    this.persist(session);
     return {
       correct: false,
       status: session.status,
@@ -199,7 +211,7 @@ export class SoloStore {
     if (session.status === 'playing') {
       session.status = 'revealed';
       session.updatedAt = Date.now();
-      this.persist();
+      this.persist(session);
     }
 
     const turnsUsed = session.history.filter((r) => !r.transient && !r.invalid).length;
@@ -220,7 +232,7 @@ export class SoloStore {
       if (session.turnsLeft === 0) session.status = 'revealed';
     }
 
-    this.persist();
+    this.persist(session);
 
     const view: AskRes = {
       accepted: !record.invalid && !record.transient,
@@ -236,33 +248,21 @@ export class SoloStore {
   }
 
   private load(): void {
-    const file = this.opts.file;
-    if (!file || !fs.existsSync(file)) return;
     try {
-      const raw = JSON.parse(fs.readFileSync(file, 'utf8')) as SoloSession[];
-      const now = Date.now();
-      for (const s of raw) {
-        if (now - s.updatedAt < SESSION_TTL_MS) this.sessions.set(s.id, s);
-      }
-      log('solo.load', { count: this.sessions.size });
+      const list = this.persistence.load();
+      for (const s of list) this.sessions.set(s.id, s);
+      if (list.length) log('solo.load', { count: this.sessions.size });
     } catch {
       log('solo.load.failed', {});
     }
   }
 
-  private persist(): void {
-    const file = this.opts.file;
-    if (!file) return;
-    if (this.saveTimer) clearTimeout(this.saveTimer);
-    this.saveTimer = setTimeout(() => {
-      try {
-        fs.mkdirSync(path.dirname(file), { recursive: true });
-        fs.writeFileSync(file, JSON.stringify([...this.sessions.values()]), 'utf8');
-      } catch (err) {
-        log('solo.persist.failed', { message: (err as Error).message });
-      }
-    }, 200);
-    this.saveTimer.unref?.();
+  private persist(session: SoloSession): void {
+    try {
+      this.persistence.save(session);
+    } catch (err) {
+      log('solo.persist.failed', { message: (err as Error).message });
+    }
   }
 
   /**
@@ -276,17 +276,6 @@ export class SoloStore {
 
   /** 测试/优雅退出用 */
   flush(): void {
-    if (this.saveTimer) {
-      clearTimeout(this.saveTimer);
-      this.saveTimer = null;
-    }
-    const file = this.opts.file;
-    if (!file) return;
-    try {
-      fs.mkdirSync(path.dirname(file), { recursive: true });
-      fs.writeFileSync(file, JSON.stringify([...this.sessions.values()]), 'utf8');
-    } catch {
-      /* ignore */
-    }
+    this.persistence.flush();
   }
 }
