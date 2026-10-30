@@ -64,3 +64,13 @@ npx wrangler deploy   # 首个请求会重新播种
 - `ADMIN_TOKEN` / `SESSION_SECRET` 同样走 secret，不写入配置文件
 - 不出现在日志、响应、前端（与验收 9 一致）
 - 管理后台（admin）未迁移到 Workers；人物编辑继续用本地 Node 模式
+
+## 对局账本（对局历史）
+
+`sessions` 只是 24h 工作状态；历史存在 `games` + `game_turns`（schema.sql 的 v6 段），
+由 `d1-history.ts` 在开局 / 每问 / 状态变化时写入，与会话过期无关。
+
+- 玩家：`GET /api/history/mine`、`GET /api/history/mine/:id`
+- 管理员：`GET /api/admin/history?user=&result=&q=`、`GET /api/admin/history/:id`
+- 已上线的库升级：再跑一次 `npx wrangler d1 execute hq --remote --file=schema.sql`
+  （新增段都是 `CREATE TABLE IF NOT EXISTS`；v5 的 `ALTER TABLE sessions ADD COLUMN` 只需执行一次）

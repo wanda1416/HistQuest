@@ -48,7 +48,7 @@ interface LlmSettings {
 |---|---|---|---|
 | 1 | ✅ **猜名单字即胜**（已修复，待提交） | `core/judge.ts` `guessMatches` | 改为严格相等：只有完整姓名或别名才算中，单字与子串一律不算。实测「子」「李」「白」命中 0 人，「孔子」「孔夫子」「李白」「诗仙」各命中 1 人 |
 | 2 | **限流被算作有效提问** | `core/engine.ts` catch 分支 | 只把 `BAD_JSON` / `TIMEOUT` / `EMPTY` 标为 transient；`RATE`（429）与 `HTTP` 走兜底，提示"没听明白"且扣次数 |
-| 3 | **会话过期记录只读不删** | `server/sessions.ts` `prune()` | 方法已实现但无调用点，表只增不减；加载时靠 TTL 过滤 |
+| 3 | ✅ **会话过期记录只读不删**（历史已分离，见下条） | `server/sessions.ts` `prune()` | 对局历史已迁到 `games` / `game_turns` 账本，会话表只剩 24h 工作状态；`prune()` 仍未接定时任务，属清理优化 |
 | 4 | **空朝代静默跨朝代抽人** | `core/index.ts` `pick()` | 西晋、五代为 0 人，选中后回退到全量池，玩家会拿到别的朝代的目标 |
 
 ---
@@ -62,7 +62,8 @@ interface LlmSettings {
 | **UI 冒烟未入库** | `.tmp/verify-*.mjs` 为一次性脚本，未进 `scripts/` |
 | **后台缺导入入口** | 服务端有 `importFrom`，UI 只提供导出 |
 | **dev.sh 无执行位** | Git 记录 100644，macOS/Linux 需 `chmod +x` 后重提交 |
-| **旧 JSON 会话未迁移** | 24h TTL 自然过期，可忽略 |
+| **旧 JSON 会话未迁移** | 24h TTL 自然过期，可忽略；SQLite 库在迁移 v3 时已自动把在途会话连同问答搬进账本 |
+| **Workers 端历史排序靠 started_at** | 管理员列表按开局时间倒序；若要"最近活动优先"需记录 `updated_at` 排序 |
 
 ---
 

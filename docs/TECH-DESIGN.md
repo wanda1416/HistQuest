@@ -396,3 +396,20 @@ type AnswerRecord = {
 | 许可证 | MIT |
 | CF 部署架构 | **纯 BS 一体化**（v1.5）：Worker 持有 Key，判定全在服务端；否决"LLM 端拆到浏览器"方案（普通用户不会配 key，会配的人自己部署源码） |
 | 每问上下文 | **不带历史**：每问独立单条调用（资料卡+当前问题），判定独立性、泄题面最小、成本恒定；重复问题由 answerCache 短路 |
+
+## 16. 账号与对局账本（v1.6 增补）
+
+> 本节的实现早于 TECH-DESIGN 其余章节的刷新；其余章节仍描述旧架构，见 `BACKLOG.md` 技术债首行。
+
+**两张表分工。** `sessions` 只负责"接着打"：单条 upsert、24h 过期、可随时整行重写。`games` / `game_turns` 负责"留档"：一局一行、一问一行，只追加不覆盖。两者用同一个 `id`（对局 id）关联，但不互相依赖——`sessions` 被清空，历史照旧可读。
+
+**写入口只有一个。** `SoloStore` 在开局 / 每问 / 状态变化时调用 `GameRecorder`（`src/server/history.ts` 定义），Node 侧是 `SqliteHistoryStore`，Workers 侧是 `D1HistoryStore`（`workers/d1-history.ts`）。二者共用同一份 SQL 常量与行投影，避免"线上和本地历史字段不一致"。
+
+**结局判定是推导值，不落冗余状态。** `result = won | lost | abandoned | playing`：
+`won` → `status='won'`；`lost` → `revealed` 且 `turns_left=0`（次数用尽）；`abandoned` → `revealed` 且还有余量（主动放弃）。
+
+**泄题面。** 进行中的局在历史里不下发目标人物（前后台一致），完成目标名快照（`target_name` / `target_roles`）是为了人物改名或下线后历史仍能复盘。
+
+**账号。** Node 与 Workers 同构：`users`（PBKDF2-SHA256）、`invites`（邀请码核销）、HMAC 签名 HttpOnly cookie（`core/session-token.ts`）。差异只有密钥来源与首个账号策略：Workers 从 `SESSION_SECRET` 环境变量取，Node 留空时自动生成并存 `app_settings`；Node 空库的第一个注册者直接成为管理员，免邀请码。
+
+**站方 Key 的边界。** 只有 `allow_server_key=1` 且当日配额未用尽的登录账号能用站方 Key；BYOK 不受限、也不计次。游客只能用 BYOK。
