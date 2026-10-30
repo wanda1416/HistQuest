@@ -136,9 +136,26 @@ test('时序判定：生卒缺失或朝代认不出时回 unknown', () => {
 
 test('猜测归一化与别名匹配', () => {
   assert.equal(normalizeGuess('我猜是李白吧？'), '李白');
+  assert.equal(guessMatches(libai, '李白'), true);
   assert.equal(guessMatches(libai, '李太白'), true);
   assert.equal(guessMatches(libai, '诗仙'), true);
   assert.equal(guessMatches(libai, '杜甫'), false);
+});
+
+test('猜名必须严格相等，单字与子串都不算', () => {
+  // 之前用包含匹配时，这些输入会被判成猜中
+  assert.equal(guessMatches(libai, '白'), false, '单字不能命中李白');
+  assert.equal(guessMatches(libai, '李'), false, '姓氏不能命中李白');
+  assert.equal(guessMatches(libai, '太白'), false, '别名的一部分也不算');
+  assert.equal(guessMatches(libai, '李太'), false);
+
+  const kongzi = byName('孔子');
+  assert.equal(guessMatches(kongzi, '子'), false, '单字不能命中孔子');
+  assert.equal(guessMatches(kongzi, '孔'), false);
+
+  // 口语修饰仍会被 normalizeGuess 去掉，不影响正常猜中
+  assert.equal(guessMatches(libai, '我猜是李白吧'), true);
+  assert.equal(guessMatches(libai, '李太白啊'), true);
 });
 
 test('索引能按朝代取样', () => {

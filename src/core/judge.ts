@@ -219,11 +219,17 @@ export function normalizeGuess(raw: string): string {
   return s.replace(/(吧|吗|呢|呀|啊)$/g, '').trim();
 }
 
+/**
+ * 猜名判定：必须与姓名或某个别名完全相等。
+ *
+ * 不做任何包含匹配：输入「子」不应命中「孔子」，输入「白」也不应命中「李白」。
+ * 常见的口语修饰（我猜是/吧/吗）由 normalizeGuess 先去干净，这里只负责严格比对。
+ */
 export function guessMatches(c: Character, raw: string): boolean {
   const want = normalizeGuess(raw);
   if (!want) return false;
   const candidates = [c.name, ...c.aliases].map((n) => n.replace(/\s/g, ''));
-  return candidates.some((n) => n === want || n.includes(want) || want.includes(n));
+  return candidates.some((n) => n === want);
 }
 
 export { fmtYear };
