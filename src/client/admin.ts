@@ -1,5 +1,6 @@
 import type { Character } from '../shared/domain.ts';
 import type { Issue } from '../core/schema.ts';
+import type { HistoryDetail, HistorySummary } from '../shared/protocol.ts';
 import { renderAdmin } from './admin-views.ts';
 import type { AdminMeta, AdminState, AdminUserRow, AdminInviteRow, HealthReport } from './admin-views.ts';
 
@@ -26,6 +27,10 @@ let state: AdminState = {
   llm: null,
   pwBusy: false,
   llmBusy: false,
+  history: [],
+  historyTotal: 0,
+  historyDetail: null,
+  historyFilters: { user: '', result: '', q: '' },
 };
 
 function render(): void {
@@ -88,6 +93,22 @@ async function loadInvites(): Promise<void> {
 async function loadLlm(): Promise<void> {
   const res = await request<{ baseURL: string; model: string; hasKey: boolean; maxTurns: number }>('/api/admin/llm');
   setState({ llm: res });
+}
+
+async function loadHistory(): Promise<void> {
+  const qs = new URLSearchParams();
+  if (state.historyFilters.user) qs.set('user', state.historyFilters.user);
+  if (state.historyFilters.result) qs.set('result', state.historyFilters.result);
+  if (state.historyFilters.q) qs.set('q', state.historyFilters.q);
+  const res = await request<{ total: number; items: HistorySummary[] }>(
+    `/api/admin/history?${qs.toString()}`,
+  );
+  setState({ history: res.items, historyTotal: res.total, historyDetail: null });
+}
+
+async function openHistoryGame(id: string): Promise<void> {
+  const detail = await request<HistoryDetail>(`/api/admin/history/${encodeURIComponent(id)}`);
+  setState({ historyDetail: detail });
 }
 
 async function loadList(): Promise<void> {
@@ -202,6 +223,19 @@ function handleField(el: HTMLElement): void {
   }
   if (field === 'q') {
     state.filters.q = (el as HTMLInputElement).value.trim();
+    return;
+  }
+  if (field === 'history-user') {
+    state.historyFilters.user = (el as HTMLInputElement).value.trim();
+    return;
+  }
+  if (field === 'history-q') {
+    state.historyFilters.q = (el as HTMLInputElement).value.trim();
+    return;
+  }
+  if (field === 'history-result') {
+    state.historyFilters.result = (el as HTMLSelectElement).value;
+    void loadHistory();
     return;
   }
   if (field === 'filter-polity') {
@@ -366,6 +400,26 @@ root.addEventListener('click', async (event) => {
       setState({ view: 'invites' });
       syncHash('invites');
       break;
+    case 'go-history':
+      await loadHistory();
+      setState({ view: 'history' });
+      syncHash('history');
+      break;
+    case 'reload-history':
+      await loadHistory();
+      break;
+    case 'open-history':
+      if (el.dataset.id) {
+        try {
+          await openHistoryGame(el.dataset.id);
+        } catch (err) {
+          setState({ notice: { kind: 'err', text: (err as Error).message } });
+        }
+      }
+      break;
+    case 'history-back':
+      setState({ historyDetail: null });
+      break;
     case 'go-settings':
       await loadLlm();
       setState({ view: 'settings' });
@@ -463,9 +517,15 @@ root.addEventListener('change', onField);
 
 root.addEventListener('keydown', (event) => {
   const el = event.target as HTMLElement;
-  if (event.key === 'Enter' && el.getAttribute('data-field') === 'q') {
+  if (event.key !== 'Enter') return;
+  const field = el.getAttribute('data-field');
+  if (field === 'q') {
     event.preventDefault();
     void loadList();
+  }
+  if (field === 'history-user' || field === 'history-q') {
+    event.preventDefault();
+    void loadHistory();
   }
 });
 
@@ -530,6 +590,7 @@ const VIEW_HASH: Record<AdminState['view'], string> = {
   users: 'users',
   invites: 'invites',
   settings: 'settings',
+  history: 'history',
 };
 
 const HASH_VIEW: Record<string, AdminState['view']> = {
@@ -538,6 +599,7 @@ const HASH_VIEW: Record<string, AdminState['view']> = {
   users: 'users',
   invites: 'invites',
   settings: 'settings',
+  history: 'history',
 };
 
 function syncHash(view: AdminState['view']): void {
@@ -551,6 +613,7 @@ async function viewFromHash(): Promise<void> {
   if (view === 'users') await loadUsers();
   if (view === 'invites') await loadInvites();
   if (view === 'settings') await loadLlm();
+  if (view === 'history') await loadHistory();
   setState({ view, notice: null });
 }
 

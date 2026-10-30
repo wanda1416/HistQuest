@@ -1,5 +1,6 @@
 import type { Character, Verdict } from '../shared/domain.ts';
 import { DYNASTIES, WORLD_ERAS } from '../shared/domain.ts';
+import type { HistoryDetail, HistorySummary } from '../shared/protocol.ts';
 import { CharacterIndex } from '../core/index.ts';
 import { judgeByIndex } from '../core/judge.ts';
 import { charLen, type Issue } from '../core/schema.ts';
@@ -49,7 +50,7 @@ export interface AdminState {
   list: Character[];
   total: number;
   filters: { q: string; polity: string; region: string; difficulty: string; retired: string };
-  view: 'list' | 'edit' | 'health' | 'users' | 'invites' | 'settings';
+  view: 'list' | 'edit' | 'health' | 'users' | 'invites' | 'settings' | 'history';
   draft: Character | null;
   /** 正在编辑的原始 id；新建时为 null */
   originalId: string | null;
@@ -62,6 +63,10 @@ export interface AdminState {
   llm: { baseURL: string; model: string; hasKey: boolean; maxTurns: number } | null;
   pwBusy: boolean;
   llmBusy: boolean;
+  history: HistorySummary[];
+  historyTotal: number;
+  historyDetail: HistoryDetail | null;
+  historyFilters: { user: string; result: string; q: string };
 }
 
 export interface AdminUserRow {
@@ -98,6 +103,8 @@ function headerFor(s: AdminState): { title: string; sub: string } {
   switch (s.view) {
     case 'users':
       return { title: '管理后台', sub: `用户 ${s.users.length} 位` };
+    case 'history':
+      return { title: '管理后台', sub: `对局记录 ${s.historyTotal} 局` };
     case 'invites':
       return {
         title: '管理后台',
@@ -141,6 +148,7 @@ function shell(s: AdminState, body: string): string {
       <button class="a-tab ${s.view === 'list' || s.view === 'edit' ? 'is-active' : ''}" data-action="go-list">数据管理</button>
       <button class="a-tab ${s.view === 'health' ? 'is-active' : ''}" data-action="go-health">数据健康</button>
       <button class="a-tab ${s.view === 'users' ? 'is-active' : ''}" data-action="go-users">用户管理</button>
+      <button class="a-tab ${s.view === 'history' ? 'is-active' : ''}" data-action="go-history">对局历史</button>
       <button class="a-tab ${s.view === 'invites' ? 'is-active' : ''}" data-action="go-invites">邀请码</button>
       <button class="a-tab ${s.view === 'settings' ? 'is-active' : ''}" data-action="go-settings">系统设置</button>
       <span class="a-tabs-spacer"></span>
@@ -604,6 +612,100 @@ function healthView(s: AdminState): string {
   </div>`;
 }
 
+/* ---------------- 对局历史（管理员视角） ---------------- */
+
+const RESULT_TEXT: Record<string, string> = {
+  won: '猜中',
+  lost: '次数用尽',
+  abandoned: '放弃',
+  playing: '进行中',
+};
+
+function historyDetailPane(d: HistoryDetail): string {
+  const turns = d.turns.length
+    ? d.turns
+        .map((t) => {
+          const cls = t.invalid ? 'is-bad' : t.failed ? '' : 'is-ok';
+          const label = t.invalid
+            ? '改问法'
+            : t.failed
+              ? '调用失败'
+              : (VERDICT_LABEL[t.verdict] ?? t.verdict);
+          return `<tr>
+            <td class="a-muted">${t.seq}</td>
+            <td>${esc(t.question)}</td>
+            <td><span class="a-pill ${cls}">${esc(label)}</span></td>
+            <td>${esc(t.text)}${t.hint ? `<br /><small class="a-muted">${esc(t.hint)}</small>` : ''}</td>
+          </tr>`;
+        })
+        .join('')
+    : '<tr><td colspan="4" class="a-muted">这一局没有提问</td></tr>';
+
+  return `
+  <section class="a-panel">
+    <div class="a-row" style="justify-content:space-between;align-items:center">
+      <h2 class="a-h2">对局详情</h2>
+      <button class="a-btn" data-action="history-back">返回列表</button>
+    </div>
+    <p class="a-muted">
+      ${esc(new Date(d.startedAt).toLocaleString('zh-CN'))}
+      · 玩家 ${esc(d.userName ?? '游客')}
+      · ${esc(RESULT_TEXT[d.result] ?? d.result)}
+      · 用了 ${d.turnsUsed} / ${d.turnsTotal} 问
+      · 难度 ${d.difficulty}
+      ${d.target ? ` · 目标 <b>${esc(d.target.name)}</b>（${esc(d.target.polity)}）` : ' · 目标未揭晓（进行中）'}
+    </p>
+    <table class="a-table">
+      <thead><tr><th>#</th><th>提问</th><th>判定</th><th>回答</th></tr></thead>
+      <tbody>${turns}</tbody>
+    </table>
+  </section>`;
+}
+
+function historyView(s: AdminState): string {
+  if (s.historyDetail) return historyDetailPane(s.historyDetail);
+
+  const rows = s.history
+    .map(
+      (g) => `<tr>
+        <td>${esc(new Date(g.startedAt).toLocaleString('zh-CN'))}</td>
+        <td>${g.userName ? esc(g.userName) : '<span class="a-muted">游客</span>'}</td>
+        <td><span class="a-pill ${g.result === 'won' ? 'is-ok' : g.result === 'lost' ? 'is-bad' : ''}">${esc(RESULT_TEXT[g.result] ?? g.result)}</span></td>
+        <td>${g.target ? esc(g.target.name) : '<span class="a-muted">—</span>'}</td>
+        <td>${g.turnsUsed} / ${g.turnsTotal}</td>
+        <td>${g.difficulty}</td>
+        <td><button class="a-btn a-btn-sm" data-action="open-history" data-id="${esc(g.id)}">查看记录</button></td>
+      </tr>`,
+    )
+    .join('');
+
+  const resultOptions = [
+    ['', '全部结局'],
+    ['won', '猜中'],
+    ['lost', '次数用尽'],
+    ['abandoned', '放弃'],
+    ['playing', '进行中'],
+  ]
+    .map(([v, label]) => `<option value="${v}" ${s.historyFilters.result === v ? 'selected' : ''}>${label}</option>`)
+    .join('');
+
+  return `
+  <section class="a-panel">
+    <h2 class="a-h2">对局历史（全部玩家 · ${s.historyTotal} 局）</h2>
+    <div class="a-filters">
+      <input type="search" data-field="history-user" value="${esc(s.historyFilters.user)}" placeholder="按用户名筛选" />
+      <input type="search" data-field="history-q" value="${esc(s.historyFilters.q)}" placeholder="搜目标人物 / 用户名" />
+      <select data-field="history-result">${resultOptions}</select>
+      <button class="a-btn" data-action="reload-history">刷新</button>
+    </div>
+    <table class="a-table">
+      <thead><tr><th>开局时间</th><th>玩家</th><th>结局</th><th>目标</th><th>问数</th><th>难度</th><th>操作</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="7" class="a-muted">还没有对局记录</td></tr>'}</tbody>
+    </table>
+    <p class="a-hint">进行中的局不显示目标人物，避免从后台反推答案；完整问答点「查看记录」。</p>
+  </section>`;
+}
+
 /* ---------------- 入口 ---------------- */
 
 export function renderAdmin(s: AdminState): string {
@@ -632,7 +734,9 @@ export function renderAdmin(s: AdminState): string {
             ? invitesView(s)
             : s.view === 'settings'
               ? settingsView(s)
-              : listView(s);
+              : s.view === 'history'
+                ? historyView(s)
+                : listView(s);
 
   return shell(s, body);
 }
