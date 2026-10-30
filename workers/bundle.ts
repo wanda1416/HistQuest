@@ -159,7 +159,7 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
 
   // ---------- 模型连通测试（BYOK 时代用；服务器持 key 时也保留） ----------
   if (path === '/ai/test' && req.method === 'POST') {
-    const cred = serverCred ?? readAiConfig(body);
+    const cred = readAiConfig(body) ?? serverCred;
     if (!cred) return fail(400, 'MODEL_NOT_CONFIGURED', '请填写模型地址、密钥和模型名');
     const result = await testConnection(cred);
     return json(200, result);
@@ -198,7 +198,7 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
     if (action === 'ask' && req.method === 'POST') {
       const question = String(body.question ?? '').trim();
       if (!question) return fail(400, 'EMPTY_QUESTION', '问题不能为空');
-      const cred = serverCred ?? readAiConfig(body);
+      const cred = readAiConfig(body) ?? serverCred;
       if (!cred) return fail(400, 'MODEL_NOT_CONFIGURED', '没有模型配置就无法判定');
       try {
         const result = await rt.solo.ask(id, question, cred, { timeoutMs: 20000 });
