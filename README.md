@@ -141,7 +141,7 @@ npm run dev
 ## 测试
 
 ```bash
-npm test             # 单元 + 接口 + 验收测试（190 项，全部可离线跑）
+npm test             # 单元 + 接口 + 验收测试（196 项，全部可离线跑）
 HQ_LIVE=1 npm test   # 追加真实模型集成测试（默认指向 127.0.0.1:7863）
 ```
 
@@ -150,7 +150,7 @@ HQ_LIVE=1 npm test   # 追加真实模型集成测试（默认指向 127.0.0.1:7
 界面冒烟（真实浏览器，截图落在 `.tmp/screens/`）：
 
 ```bash
-node scripts/verify-router.ts   # 地址栏带 id、刷新不丢局、未登录登录后回到原局、任何页面能回首页（假模型即可）
+node scripts/verify-router.ts   # 地址栏带 id、刷新不丢局、登录回到原局、回首页、放弃揭晓与猜中结算（假模型即可）
 node scripts/verify-ui.ts       # 配置 → 开局 → 提问 → 猜 → 揭晓（需要真实模型）
 ```
 

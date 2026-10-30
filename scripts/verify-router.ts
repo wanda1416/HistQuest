@@ -118,6 +118,47 @@ await page.reload({ waitUntil: 'networkidle' });
 await page.waitForSelector('[data-action="start-game"]');
 console.log('11) 首页刷新后仍在首页，hash =', JSON.stringify(hash()));
 
+// ---------- 结算路径 ----------
+// 12) 放弃并揭晓：必须真的出人物卡（线上曾因服务端少 await 返回 {}，点了像没反应）
+await page.click('[data-action="start-game"]');
+await page.waitForSelector('[data-action="reveal"]');
+const id12 = new URL(page.url()).hash.split('/').pop();
+await page.click('[data-action="reveal"]');
+await page.waitForSelector('.reveal-card', { timeout: 20000 });
+const revealHash = new URL(page.url()).hash;
+console.log('12) 放弃并揭晓 → 人物卡出现，hash =', JSON.stringify(revealHash));
+if (revealHash !== `#/reveal/${id12}`) problems.push(`揭晓后地址不对：${revealHash}`);
+await page.screenshot({ path: `${OUT}/router-reveal.png`, fullPage: true });
+
+// 13) 模型答「猜中了」：应自动结算，不停在对局页
+await page.click('[data-action="new-game"]');
+await page.waitForSelector('[data-action="start-game"]');
+await page.click('[data-action="start-game"]');
+await page.waitForSelector('[data-role="ask-input"]');
+const id13 = new URL(page.url()).hash.split('/').pop();
+await page.route('**/api/solo/*/ask', async (route) => {
+  await route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      accepted: true,
+      seq: 1,
+      verdict: 'yes',
+      text: '没错，就是他。恭喜你猜中了！',
+      turnsLeft: 19,
+      status: 'won',
+    }),
+  });
+});
+await page.fill('[data-role="ask-input"]', '他是李白吗');
+await page.press('[data-role="ask-input"]', 'Enter');
+await page.waitForSelector('.reveal-card', { timeout: 20000 });
+const wonHash = new URL(page.url()).hash;
+console.log('13) 答「猜中了」→ 自动结算，hash =', JSON.stringify(wonHash));
+if (wonHash !== `#/reveal/${id13}`) problems.push(`猜中后没有结算到揭晓页：${wonHash}`);
+await page.screenshot({ path: `${OUT}/router-won.png`, fullPage: true });
+await page.unroute('**/api/solo/*/ask');
+
 await browser.close();
 server.close();
 await mock.close();
