@@ -41,6 +41,12 @@ export const config = {
   },
   wikiProvider: process.env.WIKI_PROVIDER ?? 'local',
   soloTurns: num(process.env.SOLO_TURNS, 20),
+  admin: {
+    /** 非回环访问管理接口时需要的令牌；为空则只允许本机访问 */
+    token: process.env.ADMIN_TOKEN ?? '',
+    backupDir: path.join(ROOT, 'data', 'backups'),
+    backupKeep: num(process.env.ADMIN_BACKUP_KEEP, 20),
+  },
 };
 
 /** 服务端是否具备可用模型（M2 多人模式依赖；M1 单人走 BYOK 不受影响） */

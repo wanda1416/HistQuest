@@ -48,13 +48,36 @@ npm start            # 单进程同时提供 API 与静态资源，:3000
 | `AI_TEMPERATURE` | `0.1` | |
 | `AI_TIMEOUT_MS` | `6000` | 超时后该次提问不计次数 |
 | `SOLO_TURNS` | `20` | 单人提问次数 |
+| `ADMIN_TOKEN` | 空 | 管理后台远程访问令牌；留空时只允许本机访问 |
+| `ADMIN_BACKUP_KEEP` | `20` | 后台保存前备份的保留份数 |
 
 模型地址填到域名即可，`https://api.deepseek.com` 和 `https://api.deepseek.com/v1` 都认。
+
+## 管理后台
+
+人物库自带一个本地后台，用来维护 `data/characters.json`——改错字、补生卒、加新人物、下线不合适的人物，都不用直接编辑 JSON。
+
+```bash
+npm run dev
+# 打开 http://127.0.0.1:5173/admin.html
+```
+
+生产构建后也可以访问 `http://127.0.0.1:3000/admin`（会重定向到 `admin.html`）。
+
+- **列表与检索**：按姓名 / 别名 / id 搜索，按朝代、难度、上下架状态筛选
+- **编辑**：字段分组表单，右侧实时显示「模型看到的资料卡」与「朝代判定预演」
+- **新增 / 软删除**：下线只是标记 `retired`，不再被抽到，但进行中的对局仍能正常揭晓
+- **数据健康**：朝代 × 难度分布矩阵、缺字段清单、别名重名、严格分期冲突
+- **导出**：一键下载当前人物库 JSON
+
+写入流程：校验 → 备份到 `data/backups/` → 原子写（临时文件 + rename）→ 重建索引并热替换，**保存立即生效、无需重启**。任何 error 级问题都会阻止写入，warning 只提示不拦截。
+
+访问控制：默认只允许本机（`127.0.0.1` / `::1`）访问 `/api/admin/*`；需要从别的机器维护时在 `.env` 配置 `ADMIN_TOKEN`，请求带 `Authorization: Bearer <token>`。所有管理请求还必须带 `X-HQ-Admin: 1`——浏览器跨站无法在不触发预检的情况下伪造该头。
 
 ## 测试
 
 ```bash
-npm test             # 单元 + 接口 + 验收测试（54 项，全部可离线跑）
+npm test             # 单元 + 接口 + 验收测试（111 项，全部可离线跑）
 HQ_LIVE=1 npm test   # 追加真实模型集成测试（默认指向 127.0.0.1:7863）
 ```
 
@@ -79,8 +102,8 @@ src/
 ├─ shared/     前后端共享类型与协议
 ├─ core/       ★ 纯逻辑（零 IO）：规则前置 / 解析 / 判定 / 表达 / 编排
 ├─ ai/         OpenAI 兼容客户端与提示词
-├─ server/     express 路由、单人状态机、DTO 投影
-└─ client/     Vite + 原生 DOM 界面
+├─ server/     express 路由、单人状态机、DTO 投影、人物库读写
+└─ client/     Vite + 原生 DOM 界面（index.html 玩家端 / admin.html 管理端）
 data/characters.json   130 位人物索引（人工核对）
 docs/TECH-DESIGN.md    技术方案与架构
 ```

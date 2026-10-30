@@ -1,4 +1,4 @@
-import type { Character } from '../shared/domain.ts';
+import { DYNASTIES, type Character } from '../shared/domain.ts';
 
 /**
  * 朝代归一与分组。
@@ -19,10 +19,8 @@ const DYNASTY_GROUPS: Record<string, string[]> = {
   民国: ['近代'],
 };
 
-const KNOWN_DYNASTIES = new Set([
-  '春秋', '战国', '秦', '西汉', '东汉', '三国', '西晋', '东晋', '南北朝',
-  '隋', '唐', '五代', '北宋', '南宋', '元', '明', '清', '近代',
-]);
+// 直接从领域枚举派生，避免两处维护导致漂移
+const KNOWN_DYNASTIES = new Set<string>(DYNASTIES);
 
 /** 把"唐朝 / 唐代 / 三国时期"归一为"唐 / 唐 / 三国"；无法识别返回 null */
 export function normalizeDynasty(input: string): string | null {
@@ -58,8 +56,12 @@ export class CharacterIndex {
     if (!Array.isArray(list) || list.length === 0) {
       throw new Error('人物索引为空');
     }
-    this.list = list;
+    // byId 收录全部（含软删除），保证在途对局还能揭晓；抽样池只用未下线的人物
     for (const c of list) this.byId.set(c.id, c);
+    this.list = list.filter((c) => !c.retired);
+    if (this.list.length === 0) {
+      throw new Error('人物索引为空（全部已下线）');
+    }
   }
 
   get size(): number {

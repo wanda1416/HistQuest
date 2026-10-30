@@ -5,7 +5,8 @@ export function log(event: string, detail: Record<string, unknown> = {}): void {
   const safe: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(detail)) {
     if (/key|token|secret|authorization/i.test(k)) {
-      safe[k] = '***';
+      // 只脱敏字符串值：布尔/数字状态量（如 adminToken: false）原样保留
+      safe[k] = typeof v === 'string' ? '***' : v;
       continue;
     }
     safe[k] = typeof v === 'string' ? scrubSecret(v) : v;

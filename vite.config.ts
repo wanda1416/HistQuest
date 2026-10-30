@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
@@ -7,6 +8,13 @@ export default defineConfig({
     outDir: '../../dist',
     emptyOutDir: true,
     target: 'es2022',
+    rollupOptions: {
+      // 玩家入口与管理入口分开打包：后台代码不能出现在玩家包里
+      input: {
+        main: path.resolve(import.meta.dirname, 'src/client/index.html'),
+        admin: path.resolve(import.meta.dirname, 'src/client/admin.html'),
+      },
+    },
   },
   server: {
     port: 5173,

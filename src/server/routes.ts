@@ -44,7 +44,7 @@ function toCredential(cfg: AiConfig): AiCredential {
   };
 }
 
-export function createRoutes(deps: { index: CharacterIndex; solo: SoloStore }): express.Router {
+export function createRoutes(deps: { getIndex: () => CharacterIndex; solo: SoloStore }): express.Router {
   const router = express.Router();
   const limiter = new RateLimiter(30, 0.5);
 
@@ -54,7 +54,7 @@ export function createRoutes(deps: { index: CharacterIndex; solo: SoloStore }): 
       difficulties: DIFFICULTIES,
       maxTurns: config.soloTurns,
       serverModelReady: serverModelReady(),
-      characterCount: deps.index.size,
+      characterCount: deps.getIndex().size,
     };
     res.json(meta);
   });

@@ -1,0 +1,488 @@
+import type { Character, Verdict } from '../shared/domain.ts';
+import { DYNASTIES } from '../shared/domain.ts';
+import { CharacterIndex } from '../core/index.ts';
+import { judgeByIndex } from '../core/judge.ts';
+import { charLen, type Issue } from '../core/schema.ts';
+
+/** 后台页面的状态与渲染（纯字符串模板，与玩家端 views.ts 同一套路） */
+
+export interface AdminMeta {
+  dynasties: string[];
+  difficulties: Array<{ level: number; label: string }>;
+  roles: string[];
+  provinces: string[];
+  total: number;
+  active: number;
+  tokenRequired: boolean;
+}
+
+export interface HealthItem extends Issue {
+  id: string;
+  name: string;
+}
+
+export interface HealthReport {
+  total: number;
+  active: number;
+  retired: number;
+  errors: number;
+  warnings: number;
+  items: HealthItem[];
+  matrix: Array<{ dynasty: string; levels: Record<string, number>; total: number }>;
+  emptyDynasties: string[];
+  emptyCombos: Array<{ dynasty: string; difficulty: number }>;
+}
+
+export interface Notice {
+  kind: 'ok' | 'err' | 'info';
+  text: string;
+}
+
+export interface AdminState {
+  ready: boolean;
+  error: string | null;
+  notice: Notice | null;
+  meta: AdminMeta | null;
+  list: Character[];
+  total: number;
+  filters: { q: string; dynasty: string; difficulty: string; retired: string };
+  view: 'list' | 'edit' | 'health';
+  draft: Character | null;
+  /** 正在编辑的原始 id；新建时为 null */
+  originalId: string | null;
+  issues: Issue[];
+  health: HealthReport | null;
+  token: string;
+  saving: boolean;
+}
+
+const esc = (value: unknown): string =>
+  String(value ?? '').replace(/[&<>"']/g, (c) =>
+    c === '&' ? '&amp;' : c === '<' ? '&lt;' : c === '>' ? '&gt;' : c === '"' ? '&quot;' : '&#39;',
+  );
+
+const VERDICT_LABEL: Record<Verdict, string> = { yes: '是', no: '否', unknown: '无法判断' };
+
+/* ---------------- 外壳 ---------------- */
+
+function shell(s: AdminState, body: string): string {
+  const meta = s.meta;
+  const stats = meta ? `人物库 ${meta.total} 位 · 在库 ${meta.active} 位` : '加载中';
+
+  return `
+  <header class="a-top">
+    <div class="a-brand">
+      <span class="a-seal">管</span>
+      <div>
+        <h1 class="a-title">人物库后台</h1>
+        <p class="a-sub">${esc(stats)}</p>
+      </div>
+    </div>
+    <nav class="a-tabs">
+      <button class="a-tab ${s.view === 'list' ? 'is-active' : ''}" data-action="go-list">人物</button>
+      <button class="a-tab ${s.view === 'health' ? 'is-active' : ''}" data-action="go-health">数据健康</button>
+    </nav>
+    ${
+      meta?.tokenRequired
+        ? `<div class="a-token">
+             <input type="password" data-field="token" placeholder="ADMIN_TOKEN" value="${esc(s.token)}" />
+             <button class="a-btn" data-action="save-token">应用</button>
+           </div>`
+        : '<span class="a-muted">仅本机可访问</span>'
+    }
+  </header>
+  ${s.notice ? `<div class="a-notice is-${s.notice.kind === 'ok' ? 'ok' : s.notice.kind === 'err' ? 'err' : ''}">${esc(s.notice.text)}</div>` : ''}
+  ${s.error ? `<div class="a-notice is-err">${esc(s.error)}</div>` : ''}
+  ${body}`;
+}
+
+/* ---------------- 列表 ---------------- */
+
+function filtersView(s: AdminState): string {
+  const meta = s.meta!;
+  const dynastyOptions = ['', ...meta.dynasties]
+    .map((d) => `<option value="${esc(d)}" ${s.filters.dynasty === d ? 'selected' : ''}>${esc(d || '全部朝代')}</option>`)
+    .join('');
+  const diffOptions = [
+    ['', '全部难度'],
+    ['1', '入门'],
+    ['2', '进阶'],
+    ['3', '考据'],
+  ]
+    .map(([v, label]) => `<option value="${v}" ${s.filters.difficulty === v ? 'selected' : ''}>${label}</option>`)
+    .join('');
+  const retireOptions = [
+    ['', '全部状态'],
+    ['0', '在库'],
+    ['1', '已下线'],
+  ]
+    .map(([v, label]) => `<option value="${v}" ${s.filters.retired === v ? 'selected' : ''}>${label}</option>`)
+    .join('');
+
+  return `
+  <div class="a-filters">
+    <input type="search" data-field="q" value="${esc(s.filters.q)}" placeholder="搜姓名 / 别名 / id" />
+    <select data-field="filter-dynasty">${dynastyOptions}</select>
+    <select data-field="filter-difficulty">${diffOptions}</select>
+    <select data-field="filter-retired">${retireOptions}</select>
+    <button class="a-btn" data-action="reload">刷新</button>
+    <button class="a-btn is-primary" data-action="create">新增人物</button>
+    <button class="a-btn" data-action="export">导出 JSON</button>
+  </div>`;
+}
+
+function listView(s: AdminState): string {
+  const rows = s.list
+    .map((c) => {
+      const lifespan = c.birth !== null && c.death !== null;
+      return `
+      <tr data-action="edit" data-id="${esc(c.id)}" class="${c.retired ? 'is-retired' : ''}">
+        <td>
+          <span class="a-name">${esc(c.name)}</span>
+          ${c.retired ? ' <span class="a-pill">已下线</span>' : ''}
+        </td>
+        <td class="a-muted">${esc(c.id)}</td>
+        <td>${esc(c.dynasty)}${c.dynastyAlt?.length ? `<span class="a-muted"> · ${esc(c.dynastyAlt.join('、'))}</span>` : ''}</td>
+        <td><div class="a-tagrow">${c.roles.map((r) => `<span class="a-pill">${esc(r)}</span>`).join('')}</div></td>
+        <td>${c.difficulty}</td>
+        <td>${lifespan ? `${c.birth} — ${c.death}` : '<span class="a-pill is-bad">生卒不全</span>'}</td>
+      </tr>`;
+    })
+    .join('');
+
+  return `
+  ${filtersView(s)}
+  <p class="a-muted">共 ${s.total} 条${s.list.length !== s.total ? `，当前显示 ${s.list.length} 条` : ''}</p>
+  <table class="a-table">
+    <thead>
+      <tr><th>姓名</th><th>id</th><th>朝代</th><th>身份</th><th>难度</th><th>生卒</th></tr>
+    </thead>
+    <tbody>${rows || '<tr><td colspan="6" class="a-muted">没有匹配的人物</td></tr>'}</tbody>
+  </table>`;
+}
+
+/* ---------------- 编辑 ---------------- */
+
+function fieldIssues(s: AdminState, field: string): string {
+  return s.issues
+    .filter((i) => i.field === field)
+    .map((i) => `<p class="a-issue is-${i.level}">${esc(i.message)}</p>`)
+    .join('');
+}
+
+function field(
+  s: AdminState,
+  name: string,
+  label: string,
+  control: string,
+  hint?: string,
+): string {
+  return `
+  <div class="a-field">
+    <label class="a-label" for="f-${name}">${esc(label)}</label>
+    ${control}
+    ${hint ? `<p class="a-hint">${esc(hint)}</p>` : ''}
+    ${fieldIssues(s, name)}
+  </div>`;
+}
+
+function textInput(s: AdminState, name: string, value: string, extra = ''): string {
+  return `<input class="a-input" id="f-${name}" data-field="${name}" value="${esc(value)}" ${extra} />`;
+}
+
+function roleChips(s: AdminState): string {
+  const selected = s.draft!.roles;
+  const chips = s.meta!.roles
+    .map(
+      (r) => `<button type="button" class="a-chip ${selected.includes(r) ? 'is-on' : ''}"
+        data-action="toggle-role" data-value="${esc(r)}">${esc(r)}</button>`,
+    )
+    .join('');
+  return `
+  <div class="a-chips">
+    ${chips}
+    <input class="a-input" id="f-role-custom" data-field="role-custom" placeholder="新增身份词" style="width:120px" />
+    <button type="button" class="a-btn" data-action="add-role">添加</button>
+  </div>
+  ${fieldIssues(s, 'roles')}`;
+}
+
+function altChips(s: AdminState): string {
+  const selected = s.draft!.dynastyAlt ?? [];
+  const chips = DYNASTIES.map(
+    (d) => `<button type="button" class="a-chip ${selected.includes(d) ? 'is-on' : ''}"
+      data-action="toggle-alt" data-value="${esc(d)}">${esc(d)}</button>`,
+  ).join('');
+  return `<div class="a-chips">${chips}</div>${fieldIssues(s, 'dynastyAlt')}`;
+}
+
+function checks(c: Character): Array<{ q: string; verdict: Verdict; expect: 'yes' | 'no' }> {
+  const out: Array<{ q: string; verdict: Verdict; expect: 'yes' | 'no' }> = [];
+  const yes = (query: { attr: string; value: unknown }, q: string): void => {
+    out.push({ q, verdict: judgeByIndex(c, query as never).verdict, expect: 'yes' });
+  };
+
+  if (c.dynasty) yes({ attr: 'dynasty', value: c.dynasty }, `他是「${c.dynasty}」人吗`);
+  for (const alt of c.dynastyAlt ?? []) yes({ attr: 'dynasty', value: alt }, `他是「${alt}」时期的人吗`);
+
+  if (c.dynasty === '东汉') {
+    out.push({
+      q: '他是三国人物吗（严格分期应为否）',
+      verdict: judgeByIndex(c, { attr: 'dynasty', value: '三国' }).verdict,
+      expect: 'no',
+    });
+  }
+  return out;
+}
+
+function previewPane(s: AdminState): string {
+  const c = s.draft!;
+  let profile = '';
+  try {
+    const idx = new CharacterIndex([{ ...c, retired: false }]);
+    profile = idx.brief({ ...c, retired: false });
+  } catch {
+    profile = '（人物资料不足，无法生成资料卡）';
+  }
+
+  const rows = checks(c)
+    .map((row) => {
+      const good = row.verdict === row.expect;
+      return `<div class="a-checkrow">
+        <span>${esc(row.q)}</span>
+        <span class="a-verdict ${good ? 'is-ok' : 'is-bad'}">${esc(VERDICT_LABEL[row.verdict])}</span>
+      </div>`;
+    })
+    .join('');
+
+  return `
+  <aside class="a-preview">
+    <div class="a-card">
+      <h3>模型看到的资料卡</h3>
+      <p class="a-profile">${esc(profile)}</p>
+    </div>
+    <div class="a-card">
+      <h3>朝代判定预演（索引强制裁定）</h3>
+      ${rows || '<p class="a-muted">填好朝代后显示</p>'}
+    </div>
+  </aside>`;
+}
+
+function editView(s: AdminState): string {
+  const c = s.draft!;
+  const isNew = s.originalId === null;
+  const meta = s.meta!;
+
+  const dynastyOptions = DYNASTIES.map(
+    (d) => `<option value="${esc(d)}" ${c.dynasty === d ? 'selected' : ''}>${esc(d)}</option>`,
+  ).join('');
+
+  const diffOptions = meta.difficulties
+    .map((d) => `<option value="${d.level}" ${c.difficulty === d.level ? 'selected' : ''}>${d.label}（${d.level}）</option>`)
+    .join('');
+
+  const provinceList = meta.provinces
+    .map((p) => `<option value="${esc(p)}"></option>`)
+    .join('');
+
+  const rootIssues = s.issues
+    .filter((i) => !['id', 'name', 'aliases', 'dynasty', 'dynastyAlt', 'gender', 'birth', 'death', 'birthplace', 'birthProvince', 'roles', 'tags', 'emperor', 'notable', 'difficulty', 'externalId'].includes(i.field))
+    .map((i) => `<p class="a-issue is-${i.level}">${esc(i.message)}</p>`)
+    .join('');
+
+  return `
+  <section class="a-edit">
+    <form class="a-form" onsubmit="return false">
+      <div class="a-form-head">
+        <h2>${isNew ? '新增人物' : esc(c.name || c.id)}</h2>
+        <span class="a-muted">${isNew ? '创建后 id 不可修改' : '在库' + (c.retired ? ' · 已下线' : '')}</span>
+      </div>
+      ${rootIssues}
+
+      <div class="a-section">
+        <h3>标识</h3>
+        <div class="a-grid2">
+          ${field(
+            s,
+            'id',
+            'id（小写字母/数字/下划线）',
+            textInput(s, 'id', c.id, isNew ? '' : 'disabled'),
+            isNew ? '保存后不可修改：进行中的对局靠它找回目标人物' : '已锁定',
+          )}
+          ${field(s, 'name', '姓名', textInput(s, 'name', c.name), '2–5 字，全库唯一')}
+        </div>
+        ${field(
+          s,
+          'aliases',
+          '别名（逗号分隔）',
+          textInput(s, 'aliases', c.aliases.join('、'), 'placeholder="如：李太白、诗仙"'),
+          '每项至少 2 字；单字别名会命中大量无关猜名',
+        )}
+        ${fieldIssues(s, 'aliases')}
+      </div>
+
+      <div class="a-section">
+        <h3>归属</h3>
+        <div class="a-grid2">
+          <div class="a-field">
+            <label class="a-label" for="f-dynasty">朝代</label>
+            <select class="a-select" id="f-dynasty" data-field="dynasty">${dynastyOptions}</select>
+            <p class="a-hint">索引会强制用这里裁定「他是 X 朝人吗」</p>
+            ${fieldIssues(s, 'dynasty')}
+          </div>
+          <div class="a-field">
+            <label class="a-label" for="f-gender">性别</label>
+            <select class="a-select" id="f-gender" data-field="gender">
+              <option value="male" ${c.gender === 'male' ? 'selected' : ''}>男</option>
+              <option value="female" ${c.gender === 'female' ? 'selected' : ''}>女</option>
+            </select>
+            ${fieldIssues(s, 'gender')}
+          </div>
+        </div>
+        <div class="a-field">
+          <span class="a-label">还经历过哪些时期（多选）</span>
+          ${altChips(s)}
+          <p class="a-hint">只放人物实际经历过的时期；按严格分期，东汉人物不能选三国</p>
+        </div>
+        <div class="a-field">
+          <label class="a-check">
+            <input type="checkbox" id="f-emperor" data-field="emperor" ${c.emperor ? 'checked' : ''} />
+            当过皇帝（须与身份里的「皇帝」一致）
+          </label>
+          ${fieldIssues(s, 'emperor')}
+        </div>
+      </div>
+
+      <div class="a-section">
+        <h3>生平</h3>
+        <div class="a-grid2">
+          ${field(s, 'birth', '生年（公元前用负数）', `<input class="a-input" id="f-birth" data-field="birth" type="number" step="1" value="${c.birth ?? ''}" />`)}
+          ${field(s, 'death', '卒年（公元前用负数）', `<input class="a-input" id="f-death" data-field="death" type="number" step="1" value="${c.death ?? ''}" />`)}
+        </div>
+        <div class="a-grid2">
+          ${field(s, 'birthplace', '籍贯（古地名 + 今地名）', textInput(s, 'birthplace', c.birthplace ?? ''), '如：沛国谯（今安徽亳州）')}
+          ${field(
+            s,
+            'birthProvince',
+            '今省份',
+            `<input class="a-input" id="f-birthProvince" data-field="birthProvince" list="province-list" value="${esc(c.birthProvince ?? '')}" />
+             <datalist id="province-list">${provinceList}</datalist>`,
+          )}
+        </div>
+      </div>
+
+      <div class="a-section">
+        <h3>内容</h3>
+        <div class="a-field">
+          <span class="a-label">身份（可多选）</span>
+          ${roleChips(s)}
+        </div>
+        ${field(s, 'tags', '关键词（逗号分隔）', textInput(s, 'tags', c.tags.join('、')), '会作为资料卡关键词与事迹匹配依据')}
+        ${field(
+          s,
+          'notable',
+          '代表事迹',
+          `<textarea class="a-textarea" id="f-notable" data-field="notable">${esc(c.notable)}</textarea>`,
+        )}
+        <div class="a-grid2">
+          <div class="a-field">
+            <label class="a-label" for="f-difficulty">难度</label>
+            <select class="a-select" id="f-difficulty" data-field="difficulty">${diffOptions}</select>
+            ${fieldIssues(s, 'difficulty')}
+          </div>
+          ${field(s, 'externalId', '外部 id（可选）', textInput(s, 'externalId', c.externalId ?? ''), '如 wikidata:Q7071')}
+        </div>
+      </div>
+
+      <div class="a-actions">
+        <button type="button" class="a-btn is-primary" data-action="save" ${s.saving ? 'disabled' : ''}>
+          ${s.saving ? '保存中…' : '保存'}
+        </button>
+        <button type="button" class="a-btn" data-action="go-list">取消</button>
+        <span class="a-spacer"></span>
+        ${
+          s.originalId
+            ? c.retired
+              ? `<button type="button" class="a-btn" data-action="retire" data-value="false">恢复上架</button>`
+              : `<button type="button" class="a-btn is-danger" data-action="retire" data-value="true">下线（不参与抽样）</button>`
+            : ''
+        }
+      </div>
+    </form>
+    ${previewPane(s)}
+  </section>`;
+}
+
+/* ---------------- 健康 ---------------- */
+
+function healthView(s: AdminState): string {
+  const h = s.health;
+  if (!h) return '<p class="a-muted">正在加载…</p>';
+
+  const header = `<tr><th>朝代</th><th>入门</th><th>进阶</th><th>考据</th><th>合计</th></tr>`;
+  const rows = h.matrix
+    .map((m) => {
+      const cell = (level: number): string =>
+        `<td class="${m.levels[String(level)] === 0 ? 'is-zero' : ''}">${m.levels[String(level)]}</td>`;
+      return `<tr>
+        <td>${esc(m.dynasty)}${m.total === 0 ? ' <span class="a-pill is-bad">无人物</span>' : ''}</td>
+        ${cell(1)}${cell(2)}${cell(3)}
+        <td>${m.total}</td>
+      </tr>`;
+    })
+    .join('');
+
+  const sorted = [...h.items].sort((a, b) => (a.level === b.level ? a.id.localeCompare(b.id) : a.level === 'error' ? -1 : 1));
+  const items = sorted
+    .map(
+      (i) => `<li>
+        <span class="a-who" data-action="edit" data-id="${esc(i.id)}">${esc(i.name)}</span>
+        <span class="a-pill ${i.level === 'error' ? 'is-bad' : ''}">${i.level === 'error' ? '错误' : '提醒'}</span>
+        <span>${esc(i.message)}</span>
+      </li>`,
+    )
+    .join('');
+
+  return `
+  <div class="a-stats">
+    <div class="a-stat"><b>${h.total}</b><span>人物总数</span></div>
+    <div class="a-stat"><b>${h.active}</b><span>在库（可被抽中）</span></div>
+    <div class="a-stat"><b>${h.retired}</b><span>已下线</span></div>
+    <div class="a-stat ${h.errors ? 'is-bad' : ''}"><b>${h.errors} / ${h.warnings}</b><span>错误 / 提醒</span></div>
+  </div>
+
+  ${
+    h.emptyDynasties.length
+      ? `<div class="a-notice is-err">这些朝代没有任何人物，玩家选中后会抽到别的朝代：${esc(h.emptyDynasties.join('、'))}</div>`
+      : ''
+  }
+
+  <div class="a-card" style="margin-bottom:16px">
+    <h3>朝代 × 难度分布（红色为 0，该组合会退化为跨难度抽样）</h3>
+    <table class="a-matrix">
+      <thead>${header}</thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>
+
+  <div class="a-card">
+    <h3>校验结果（${h.errors} 个错误、${h.warnings} 个提醒）</h3>
+    <ul class="a-issue-list">${items || '<li class="a-muted">没有发现问题</li>'}</ul>
+  </div>`;
+}
+
+/* ---------------- 入口 ---------------- */
+
+export function renderAdmin(s: AdminState): string {
+  if (!s.ready) {
+    return `<div class="a-top"><div class="a-brand"><span class="a-seal">管</span>
+      <div><h1 class="a-title">人物库后台</h1><p class="a-sub">正在载入…</p></div></div></div>`;
+  }
+
+  const body =
+    s.view === 'edit' && s.draft ? editView(s) : s.view === 'health' ? healthView(s) : listView(s);
+
+  return shell(s, body);
+}
+
+export { charLen };

@@ -40,7 +40,7 @@ export class SoloStore {
   private sessions = new Map<string, SoloSession>();
   private answerCache = new Map<string, AnswerRecord>();
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
-  private readonly index: CharacterIndex;
+  private index: CharacterIndex;
   private readonly opts: SoloStoreOptions;
 
   constructor(index: CharacterIndex, opts: SoloStoreOptions) {
@@ -219,6 +219,15 @@ export class SoloStore {
       }
     }, 200);
     this.saveTimer.unref?.();
+  }
+
+  /**
+   * 后台编辑后热替换索引。缓存必须一并清空：
+   * 否则同一问题还会拿到编辑前的旧答案。
+   */
+  reloadIndex(index: CharacterIndex): void {
+    this.index = index;
+    this.answerCache.clear();
   }
 
   /** 测试/优雅退出用 */

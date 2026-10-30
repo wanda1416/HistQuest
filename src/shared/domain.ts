@@ -29,6 +29,8 @@ export interface Character {
   notable: string;
   difficulty: number;
   externalId?: string;
+  /** 软删除：不再参与抽样，但在途对局仍可正常揭晓 */
+  retired?: boolean;
 }
 
 /** 受控属性枚举：只有这些属性允许被"确定性判定" */
