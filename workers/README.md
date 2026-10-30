@@ -74,3 +74,45 @@ npx wrangler deploy   # 首个请求会重新播种
 - 管理员：`GET /api/admin/history?user=&result=&q=`、`GET /api/admin/history/:id`
 - 已上线的库升级：再跑一次 `npx wrangler d1 execute hq --remote --file=schema.sql`
   （新增段都是 `CREATE TABLE IF NOT EXISTS`；v5 的 `ALTER TABLE sessions ADD COLUMN` 只需执行一次）
+
+## 对战房间（Durable Object）
+
+规则见 [`docs/MULTIPLAYER.md`](../docs/MULTIPLAYER.md)。每房一个 DO 实例，房间状态机是
+`src/core/room/reducer.ts` 的纯函数，`room-do.ts` 只做 IO（WS、storage、模型调用、alarm、账本）。
+
+首次（或换库）部署，`wrangler.toml` 需要这两段：
+
+```toml
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "RoomDo"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RoomDo"]     # SQLite 版 DO，免费档可用
+```
+
+已上线的库补一次表结构（`ALTER` 不可重复执行，所以单独放一个文件）：
+
+```bash
+cd workers
+npx wrangler d1 execute hq --remote --file=migrations/v8-rooms.sql
+npx wrangler deploy
+```
+
+接口：
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/rooms` | 大厅列表（D1 `rooms` 目录，只列 lobby/playing 且 `listed=1`） |
+| POST | `/api/rooms` | 建房，返回快照（含 `code`） |
+| POST | `/api/room/:code/join` | 加入：lobby 阶段是参赛者，playing/finished 阶段是观战者 |
+| GET | `/api/room/:code` | 快照（首屏 / 重连 / 轮询降级） |
+| POST | `/api/room/:code/cmd` | 与 WS 上行同一 dispatch（降级通道） |
+| WS | `/api/room/:code/ws` | 主通道（Hibernation API） |
+
+身份只从会话 cookie 解析，再以 `x-hq-user-id` 注入 DO；DO 不信任客户端自称的身份。
+
+数据分工：实时状态在 DO storage；`rooms` 只做大厅目录；结算时每位参赛者写一条
+`games` 行（带 `room_id` / `finish_rank`），逐条问答进 `game_turns`——所以对战局在
+"我的历史"和管理后台里与单人局同样可查，观战者不落账。

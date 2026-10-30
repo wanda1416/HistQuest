@@ -9,7 +9,7 @@ import { DatabaseSync } from 'node:sqlite';
  * 代价是要求宿主 Node ≥ 23.4（22.x 需 --experimental-sqlite）。
  */
 
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 export interface OpenOptions {
   file: string;
@@ -138,6 +138,45 @@ export function migrate(db: DatabaseSync): void {
     // 直接推断会把登录用户的局误标成游客。
     addColumn(db, 'games', 'attribution', 'TEXT');
     db.exec(`INSERT INTO schema_migrations (version, applied_at) VALUES (4, ${Date.now()})`);
+  }
+
+  if (current < 5) {
+    // v5：对战房间（规则见 docs/MULTIPLAYER.md）
+    // 与 Workers 侧 schema.sql v8 同构。房间实时状态在 Durable Object 里，
+    // 这张表只是大厅目录 + 结算后的复盘索引；对战局的逐条问答仍进 game_turns。
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS rooms (
+        id             TEXT PRIMARY KEY,
+        code           TEXT NOT NULL UNIQUE,
+        host_user_id   TEXT,
+        host_name      TEXT,
+        status         TEXT NOT NULL,
+        listed         INTEGER NOT NULL DEFAULT 1,
+        max_players    INTEGER NOT NULL DEFAULT 8,
+        turn_limit     INTEGER NOT NULL DEFAULT 20,
+        difficulty     INTEGER,
+        polity         TEXT,
+        region         TEXT,
+        world_era      TEXT,
+        cn_share       REAL,
+        mode           TEXT,
+        player_count   INTEGER NOT NULL DEFAULT 0,
+        target_id      TEXT,
+        started_at     INTEGER,
+        ended_at       INTEGER,
+        winner_user_id TEXT,
+        winner_name    TEXT,
+        end_reason     TEXT,
+        end_vote_json  TEXT,
+        created_at     INTEGER NOT NULL,
+        updated_at     INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_rooms_open ON rooms(status, created_at DESC);
+    `);
+    addColumn(db, 'games', 'room_id', 'TEXT');
+    addColumn(db, 'games', 'finish_rank', 'INTEGER');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_games_room ON games(room_id)');
+    db.exec(`INSERT INTO schema_migrations (version, applied_at) VALUES (5, ${Date.now()})`);
   }
 }
 

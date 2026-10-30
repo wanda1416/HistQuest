@@ -7,6 +7,9 @@
  *
  * 选 hash 而不是路径：管理端（admin.html）已是 hash 路由，这里保持同一套心智，
  * 也不必依赖 express / Vite / Workers assets 三处的 SPA 回退行为。
+ *
+ * 对战沿用同一套：`#/rooms` 大厅、`#/room/<code>` 房间、`#/race/<code>` 对抗、
+ * `#/review/<code>` 复盘。房号本身就是访问凭证，可以直接贴给朋友。
  */
 
 export type Route =
@@ -15,9 +18,15 @@ export type Route =
   | { view: 'lobby' }
   | { view: 'game'; id: string }
   | { view: 'reveal'; id: string }
-  | { view: 'history'; id: string | null };
+  | { view: 'history'; id: string | null }
+  | { view: 'rooms' }
+  | { view: 'room'; code: string }
+  | { view: 'race'; code: string }
+  | { view: 'review'; code: string };
 
 const ID_RE = /^[A-Za-z0-9-]{4,64}$/;
+/** 房号：与 workers/rooms-api.ts 的字母表一致（去掉 0/O/1/I） */
+const CODE_RE = /^[A-Z0-9]{4,12}$/i;
 
 /** 解析地址栏 hash；无法识别返回 null（调用方走默认视图） */
 export function parseRoute(rawHash: string): Route | null {
@@ -27,17 +36,25 @@ export function parseRoute(rawHash: string): Route | null {
 
   const parts = path.split('/').filter(Boolean);
   const head = parts[0];
-  const id = parts[1];
+  const tail = parts[1];
 
   if (head === 'setup' && parts.length === 1) return { view: 'setup' };
   if (head === 'auth' && parts.length === 1) return { view: 'auth' };
   if (head === 'lobby' && parts.length === 1) return { view: 'lobby' };
+  if (head === 'rooms' && parts.length === 1) return { view: 'rooms' };
   if (head === 'history' && parts.length === 1) return { view: 'history', id: null };
-  if (head === 'history' && parts.length === 2 && id && ID_RE.test(id)) {
-    return { view: 'history', id };
+  if (head === 'history' && parts.length === 2 && tail && ID_RE.test(tail)) {
+    return { view: 'history', id: tail };
   }
-  if (head === 'game' && parts.length === 2 && id && ID_RE.test(id)) return { view: 'game', id };
-  if (head === 'reveal' && parts.length === 2 && id && ID_RE.test(id)) return { view: 'reveal', id };
+  if (head === 'game' && parts.length === 2 && tail && ID_RE.test(tail)) return { view: 'game', id: tail };
+  if (head === 'reveal' && parts.length === 2 && tail && ID_RE.test(tail)) return { view: 'reveal', id: tail };
+
+  if (parts.length === 2 && tail && CODE_RE.test(tail)) {
+    const code = tail.toUpperCase();
+    if (head === 'room') return { view: 'room', code };
+    if (head === 'race') return { view: 'race', code };
+    if (head === 'review') return { view: 'review', code };
+  }
   return null;
 }
 
@@ -50,6 +67,14 @@ export function routeHash(route: Route): string {
       return `#/reveal/${route.id}`;
     case 'history':
       return route.id ? `#/history/${route.id}` : '#/history';
+    case 'rooms':
+      return '#/rooms';
+    case 'room':
+      return `#/room/${route.code}`;
+    case 'race':
+      return `#/race/${route.code}`;
+    case 'review':
+      return `#/review/${route.code}`;
     case 'setup':
       return '#/setup';
     case 'auth':
@@ -62,7 +87,12 @@ export function routeHash(route: Route): string {
 /** 这一屏是不是已经显示出来了（用于避免重复拉取；也用于前进后退时判断要不要重载） */
 export function isShowing(
   route: Route,
-  current: { view: string; gameId?: string | null; historyId?: string | null },
+  current: {
+    view: string;
+    gameId?: string | null;
+    historyId?: string | null;
+    roomCode?: string | null;
+  },
 ): boolean {
   switch (route.view) {
     case 'game':
@@ -71,7 +101,16 @@ export function isShowing(
       return current.view === 'reveal' && current.gameId === route.id;
     case 'history':
       return current.view === 'history' && (current.historyId ?? null) === (route.id ?? null);
+    case 'room':
+    case 'race':
+    case 'review':
+      return current.view === route.view && current.roomCode === route.code;
     default:
       return current.view === route.view;
   }
+}
+
+/** 这个路由是不是"在对战里"（需要保持实时通道） */
+export function isRoomRoute(route: Route | null): route is Extract<Route, { code: string }> {
+  return Boolean(route && (route.view === 'room' || route.view === 'race' || route.view === 'review'));
 }

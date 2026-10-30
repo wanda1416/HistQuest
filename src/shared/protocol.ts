@@ -143,6 +143,10 @@ export interface HistorySummary {
    * 进行中的局一律为 null——与对局中接口一致，不给扒答案的口子。
    */
   target: { name: string; polity: string; roles: string[] } | null;
+  /** 对战局才有：所属房间 id（ rooms.id，不是房号） */
+  roomId?: string | null;
+  /** 对战局才有：结算名次（1 = 赢家） */
+  finishRank?: number | null;
 }
 
 export interface HistoryDetail extends HistorySummary {

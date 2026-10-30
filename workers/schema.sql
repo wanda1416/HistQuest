@@ -149,3 +149,35 @@ CREATE TABLE IF NOT EXISTS game_turns (
 
 -- v7：归属来源（user / guest / NULL=迁移回填查不到），避免把登录玩家误标成游客
 -- 老库执行一次：ALTER TABLE games ADD COLUMN attribution TEXT;
+
+-- v8：对战房间（目录 + 对战局归属）
+-- 房间实时状态在 Durable Object 里；这里的 rooms 只做大户列表用的目录。
+-- 每位参赛者落一条 games 行（room_id 指回房间），复用人/后台/导出全部链路。
+-- 老库请改用 workers/migrations/v8-rooms.sql（ALTER 不可重复执行）。
+CREATE TABLE IF NOT EXISTS rooms (
+  id             TEXT PRIMARY KEY,
+  code           TEXT NOT NULL UNIQUE,
+  host_user_id   TEXT,
+  host_name      TEXT,
+  status         TEXT NOT NULL,
+  listed         INTEGER NOT NULL DEFAULT 1,
+  max_players    INTEGER NOT NULL DEFAULT 8,
+  turn_limit     INTEGER NOT NULL DEFAULT 20,
+  difficulty     INTEGER,
+  polity         TEXT,
+  region         TEXT,
+  world_era      TEXT,
+  cn_share       REAL,
+  mode           TEXT,
+  player_count   INTEGER NOT NULL DEFAULT 0,
+  target_id      TEXT,
+  started_at     INTEGER,
+  ended_at       INTEGER,
+  winner_user_id TEXT,
+  winner_name    TEXT,
+  end_reason     TEXT,
+  end_vote_json  TEXT,
+  created_at     INTEGER NOT NULL,
+  updated_at     INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_rooms_open ON rooms(status, created_at DESC);

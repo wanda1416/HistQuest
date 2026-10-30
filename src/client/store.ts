@@ -7,9 +7,24 @@ import type {
   RevealRes,
   SessionView,
 } from '../shared/protocol.ts';
+import type { RoomListItem, RoomSnapshot } from '../shared/room.ts';
 import type { AnswerMode, PronounStyle } from '../shared/domain.ts';
 
-export type ViewName = 'setup' | 'lobby' | 'game' | 'reveal' | 'auth' | 'history';
+export type ViewName =
+  | 'setup'
+  | 'lobby'
+  | 'game'
+  | 'reveal'
+  | 'auth'
+  | 'history'
+  /** 对战：大厅 */
+  | 'rooms'
+  /** 对战：房间（未开局） */
+  | 'room'
+  /** 对战：对抗中 */
+  | 'race'
+  /** 对战：复盘 */
+  | 'review';
 
 export interface Notice {
   kind: 'error' | 'info';
@@ -62,12 +77,39 @@ export interface State {
   /** 展开的那一局（含完整问答） */
   historyDetail: HistoryDetail | null;
   historyError: string | null;
+
+  /* ---------------- 对战（房间） ---------------- */
+
+  /** 当前房间码；地址栏之外的副本，用于"回到上次的房间" */
+  roomCode: string | null;
+  /** 房间快照（服务端投影，观战者拿到的没有他人的问答） */
+  room: RoomSnapshot | null;
+  roomError: string | null;
+  /** 实时通道：还没连 / 握手中 / WS / 降级轮询 */
+  roomChannel: 'off' | 'connecting' | 'ws' | 'polling';
+  /** 大厅列表 */
+  rooms: RoomListItem[] | null;
+  roomsError: string | null;
+  /** 输码加入框里的内容 */
+  joinCode: string;
+  /** 建房表单 */
+  roomTurnLimit: number;
+  roomDifficulty: number;
+  roomMode: AnswerMode;
+  roomScope: 'cn' | 'world' | 'mixed';
+  roomListed: boolean;
+  /** 猜答案弹窗（对战版，与单人的 guessOpen 分开） */
+  raceGuessOpen: boolean;
+  raceGuessError: string | null;
+  /** 命令在途：按钮防连点 */
+  roomBusy: boolean;
 }
 
 const CONFIG_KEY = 'hq.aiConfig';
 const PREFS_KEY = 'hq.prefs';
 const QUESTIONS_KEY = 'hq.questions';
 const GAME_KEY = 'hq.gameId';
+const ROOM_KEY = 'hq.roomCode';
 const SYNC_KEY = 'hq.sync';
 const SECRET_KEY = 'hq.vaultSecret';
 const DEK_KEY = 'hq.dataKey';
@@ -172,6 +214,24 @@ export function loadGameId(): string | null {
   }
 }
 
+/** 上次所在的房间码：裸域名进来时用来回到那张牌桌 */
+export function loadRoomCode(): string | null {
+  try {
+    return localStorage.getItem(ROOM_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function saveRoomCode(code: string | null): void {
+  try {
+    if (!code) localStorage.removeItem(ROOM_KEY);
+    else localStorage.setItem(ROOM_KEY, code);
+  } catch {
+    /* ignore */
+  }
+}
+
 export function saveGameId(id: string | null): void {
   try {
     if (!id) localStorage.removeItem(GAME_KEY);
@@ -228,6 +288,21 @@ let state: State = {
   historyTotal: 0,
   historyDetail: null,
   historyError: null,
+  roomCode: loadRoomCode(),
+  room: null,
+  roomError: null,
+  roomChannel: 'off',
+  rooms: null,
+  roomsError: null,
+  joinCode: '',
+  roomTurnLimit: 20,
+  roomDifficulty: 2,
+  roomMode: 'strict',
+  roomScope: 'mixed',
+  roomListed: true,
+  raceGuessOpen: false,
+  raceGuessError: null,
+  roomBusy: false,
 };
 
 type Listener = (s: State) => void;

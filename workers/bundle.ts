@@ -11,6 +11,11 @@ import { D1CharacterStore } from './d1-characters.ts';
 import { handleVault } from './vault.ts';
 import { handleAuth, currentUser, ensureAdmin, type AuthUser } from './auth.ts';
 import { takeUserQuota } from './quota.ts';
+import { handleRooms } from './rooms-api.ts';
+import { RoomDo } from './room-do.ts';
+
+/** Durable Object 必须在模块层导出，wrangler 才认得这个 class */
+export { RoomDo };
 
 /**
  * Cloudflare Worker 入口：纯 BS 一体化（TECH-DESIGN v1.5）。
@@ -33,6 +38,11 @@ interface Env {
   /** 预置管理员 */
   ADMIN_USER?: string;
   ADMIN_PASSWORD?: string;
+  /** 对战房间：每房一个 Durable Object 实例 */
+  ROOMS: {
+    idFromName(name: string): unknown;
+    get(id: unknown): { fetch(req: Request): Promise<Response> };
+  };
 }
 
 const DIFFICULTIES = [
@@ -536,7 +546,7 @@ async function handleAdmin(req: Request, url: URL, rt: Runtime): Promise<Respons
     return json(200, { ok: true });
   }
 
-  // 删除账号（不可逆）：与封禁分开一个端点；只删身份，不删账本；管理员拒绝（防自锁）
+  // 删除账号（不可逆）：只删身份，不删账本；管理员拒绝（防自锁）
   const userDelete = path.match(/^\/users\/([A-Za-z0-9-]+)\/delete$/);
   if (userDelete && req.method === 'POST') {
     const id = userDelete[1]!;
@@ -680,6 +690,13 @@ export default {
 
     if (url.pathname.startsWith('/api/')) {
       try {
+        // 对战房间走 Durable Object，不依赖单人的 SoloStore/ChatIndex 初始化，
+        // 所以放在 initRuntime 之前：房间请求不该被单人那套启动流程拖住。
+        if (url.pathname.startsWith('/api/room')) {
+          const roomRes = await handleRooms(req, url, env);
+          if (roomRes) return roomRes;
+        }
+
         const rt = await initRuntime(env);
         if (url.pathname.startsWith('/api/settings/vault')) {
           return handleVault(env.DB, req);

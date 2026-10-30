@@ -4,7 +4,7 @@ import type { HistorySummary, RecordView } from '../shared/protocol.ts';
 import { WORLD_ERAS } from '../shared/domain.ts';
 import { encodeManagementKey, keyFromBase64 } from './vault.ts';
 
-const esc = (s: unknown): string =>
+export const esc = (s: unknown): string =>
   String(s ?? '').replace(/[&<>"']/g, (c) =>
     c === '&' ? '&amp;' : c === '<' ? '&lt;' : c === '>' ? '&gt;' : c === '"' ? '&quot;' : '&#39;',
   );
@@ -55,7 +55,7 @@ function notice(s: State): string {
   return `<div class="notice notice-${s.notice.kind}">${esc(s.notice.text)}</div>`;
 }
 
-function shell(s: State, body: string): string {
+export function shell(s: State, body: string): string {
   return `${topbar(s)}<main class="stage">${notice(s)}${body}</main>`;
 }
 

@@ -92,6 +92,9 @@ export interface GameRow {
   started_at: number;
   ended_at: number | null;
   updated_at: number;
+  /** 对战局才有（Node v5 / D1 v8 迁移之后的列；老行是 undefined） */
+  room_id?: string | null;
+  finish_rank?: number | null;
 }
 
 export interface TurnRow {
@@ -120,7 +123,7 @@ export function resultOf(status: string, turnsLeft: number): GameResult {
 export function rowToSummary(r: GameRow): HistorySummary {
   const result = resultOf(r.status, r.turns_left);
   const finished = result !== 'playing';
-  return {
+  const summary: HistorySummary = {
     id: r.id,
     status: r.status as SessionStatus,
     result,
@@ -141,6 +144,10 @@ export function rowToSummary(r: GameRow): HistorySummary {
       ? { name: r.target_name, polity: r.polity ?? '', roles: safeRoles(r.target_roles) }
       : null,
   };
+  // 对战局的标记：前端据此显示"对战 · 第 N 名"，而不是让人困惑的"放弃"
+  if (r.room_id) summary.roomId = r.room_id;
+  if (typeof r.finish_rank === 'number') summary.finishRank = r.finish_rank;
+  return summary;
 }
 
 function safeRoles(raw: string | null | undefined): string[] {

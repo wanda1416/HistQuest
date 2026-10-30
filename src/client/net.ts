@@ -10,6 +10,7 @@ import type {
   SessionView,
   StartSoloReq,
 } from '../shared/protocol.ts';
+import type { RoomCommand, RoomCreateReq, RoomListRes, RoomSnapshot } from '../shared/room.ts';
 
 export class ApiError extends Error {
   readonly status: number;
@@ -36,6 +37,21 @@ const FRIENDLY: Record<string, string> = {
   NO_TURNS: '提问次数用完了',
   EMPTY_QUESTION: '先写下你的问题',
   SERVER_ERROR: '服务器出了点问题',
+  /* 对战 */
+  LOGIN_REQUIRED: '对战需要先登录',
+  ROOM_CLOSED: '房间已经关闭',
+  ROOM_FULL: '这个房间人满了',
+  SPECTATOR_FULL: '观战位满了',
+  NOT_MEMBER: '你不在这个房间里',
+  NOT_HOST: '只有房主能做这件事',
+  NOT_LOBBY: '对局已经开始，不能再改',
+  ASK_PENDING: '上一问还在等模型回答',
+  TOO_FEW_PLAYERS: '至少要两个人才开始',
+  ALREADY_VOTED: '你已经投过票了',
+  VOTE_OPEN: '已经有一个投票在进行',
+  NO_VOTE: '当前没有投票',
+  BAD_CODE: '房间码不合法',
+  CODE_EXHAUSTED: '房间码分配失败，请重试',
 };
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -98,4 +114,24 @@ export const api = {
 
   historyGame: (id: string) =>
     request<HistoryDetail>(`/api/history/mine/${encodeURIComponent(id)}`),
+
+  /* ---------------- 对战（房间） ---------------- */
+
+  rooms: () => request<RoomListRes>('/api/rooms'),
+
+  createRoom: (input: RoomCreateReq) => request<RoomSnapshot>('/api/rooms', jsonInit(input)),
+
+  joinRoom: (code: string) =>
+    request<RoomSnapshot>(`/api/room/${encodeURIComponent(code)}/join`, jsonInit({})),
+
+  roomSnapshot: (code: string) => request<RoomSnapshot>(`/api/room/${encodeURIComponent(code)}`),
+
+  roomCmd: (code: string, cmd: RoomCommand) =>
+    request<RoomSnapshot>(`/api/room/${encodeURIComponent(code)}/cmd`, jsonInit(cmd)),
 };
+
+/** 房间的 WebSocket 地址（同源，靠会话 cookie 鉴权） */
+export function roomSocketUrl(code: string): string {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${proto}//${location.host}/api/room/${encodeURIComponent(code)}/ws`;
+}

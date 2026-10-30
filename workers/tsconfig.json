@@ -11,6 +11,8 @@
     "./vault.ts",
     "./d1-history.ts",
     "./seed.ts",
+    "./room-do.ts",
+    "./rooms-api.ts",
     "../src/shared/**/*.ts",
     "../src/core/**/*.ts",
     "../src/ai/**/*.ts",
