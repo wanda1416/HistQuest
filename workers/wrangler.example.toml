@@ -29,12 +29,24 @@ database_name = "hq"
 # 从 `npx wrangler d1 create hq` 的输出里抄过来
 database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
 
+# 对战房间：每房一个 Durable Object（SQLite 存储版，免费套餐可用）。
+# class_name 必须与 bundle.ts 导出的 RoomDo 一致；migrations 段是 DO 类的
+# 首次登记，tag 保持 v1 不变——后续新增 DO 类才追加新段。
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "RoomDo"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RoomDo"]
+
 [vars]
 # 非密钥配置
 ADMIN_USER = "your-admin-name"
 AI_BASE_URL = "https://your-llm-endpoint/v1"
 AI_MODEL = "your-model"
 # SOLO_TURNS = "50"
+# ADMIN_TOKEN = "长随机串，远程访问管理接口用"
 
 # 以下密钥不要写进本文件：
 #   npx wrangler secret put AI_API_KEY
