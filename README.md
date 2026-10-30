@@ -106,6 +106,7 @@ src/
 └─ client/     Vite + 原生 DOM 界面（index.html 玩家端 / admin.html 管理端）
 data/characters.json   130 位人物索引（人工核对）
 docs/TECH-DESIGN.md    技术方案与架构
+docs/DATA-EXPANSION.md 人物库扩充方案（暂缓实施）
 ```
 
 `src/core` 不 import 任何 `fs` / `http`，事实与模型都由外部注入——所以它既能在 Node 服务里跑，也能原样塞进 Electron 主进程，这是为将来上架 Steam 预留的前提。
