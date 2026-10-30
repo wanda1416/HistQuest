@@ -103,7 +103,8 @@ function shell(s: AdminState, body: string): string {
 /* ---------------- 列表 ---------------- */
 
 function filtersView(s: AdminState): string {
-  const meta = s.meta!;
+  const meta = s.meta;
+  if (!meta) return '<p class="a-muted">先在顶栏填入 ADMIN_TOKEN 再试。</p>';
   const polityOptions = ['', ...meta.dynasties]
     .map((d) => `<option value="${esc(d)}" ${s.filters.polity === d ? 'selected' : ''}>${esc(d || '全部朝代')}</option>`)
     .join('');
@@ -284,7 +285,8 @@ function previewPane(s: AdminState): string {
 function editView(s: AdminState): string {
   const c = s.draft!;
   const isNew = s.originalId === null;
-  const meta = s.meta!;
+  const meta = s.meta;
+  if (!meta) return '<p class="a-muted">先在顶栏填入 ADMIN_TOKEN 再试。</p>';
 
   const polityValues = c.region === 'cn' ? [...DYNASTIES] : meta.polities;
   const polityOptions = polityValues
@@ -556,6 +558,16 @@ export function renderAdmin(s: AdminState): string {
   if (!s.ready) {
     return `<div class="a-top"><div class="a-brand"><span class="a-seal">管</span>
       <div><h1 class="a-title">人物库后台</h1><p class="a-sub">正在载入…</p></div></div></div>`;
+  }
+
+  // meta 未就绪（如远程访问未带令牌被 403）：给出可操作的引导，而不是死转
+  if (!s.meta) {
+    return `<div class="a-top"><div class="a-brand"><span class="a-seal">管</span>
+      <div><h1 class="a-title">人物库后台</h1><p class="a-sub">${esc(s.error ?? '未能加载')}</p></div></div>
+      <div class="a-token">
+        <input type="password" data-field="token" placeholder="ADMIN_TOKEN" value="${esc(s.token)}" />
+        <button class="a-btn" data-action="save-token">连接</button>
+      </div></div>`;
   }
 
   const body =
