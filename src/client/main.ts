@@ -5,9 +5,12 @@ import {
   loadConfig,
   loadGameId,
   loadPrefs,
+  loadQuestions,
+  normalizeQuestion,
   saveConfig,
   saveGameId,
   savePrefs,
+  saveQuestions,
   setState,
   subscribe,
 } from './store.ts';
@@ -294,6 +297,32 @@ root.addEventListener('click', (event) => {
       }
       break;
     }
+    case 'use-question': {
+      const input = root.querySelector<HTMLInputElement>('[data-role="ask-input"]');
+      if (input) {
+        input.value = el.dataset.value ?? '';
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+      }
+      break;
+    }
+    case 'save-question': {
+      const text = (el.dataset.value ?? '').trim();
+      if (!text) break;
+      const current = getState().saved;
+      if (current.some((q) => normalizeQuestion(q) === normalizeQuestion(text))) break;
+      const next = [text, ...current].slice(0, 24);
+      saveQuestions(next);
+      setState({ saved: next });
+      break;
+    }
+    case 'drop-question': {
+      const target = normalizeQuestion(el.dataset.value ?? '');
+      const next = getState().saved.filter((q) => normalizeQuestion(q) !== target);
+      saveQuestions(next);
+      setState({ saved: next });
+      break;
+    }
     default:
       break;
   }
@@ -360,7 +389,7 @@ async function boot(): Promise<void> {
 
   const config = loadConfig();
   const prefs = loadPrefs();
-  setState({ pronoun: prefs.pronoun });
+  setState({ pronoun: prefs.pronoun, saved: loadQuestions() });
   if (config) setState({ config, verified: true });
 
   const gameId = loadGameId();

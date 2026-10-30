@@ -1,4 +1,5 @@
 import type { State } from './store.ts';
+import { normalizeQuestion } from './store.ts';
 import type { RecordView } from '../shared/protocol.ts';
 
 const esc = (s: unknown): string =>
@@ -30,6 +31,7 @@ function topbar(s: State): string {
           ? `<span class="chip"><i class="chip-dot"></i>${esc(model)}</span>`
           : `<span class="chip chip-off"><i class="chip-dot"></i>未接模型</span>`
       }
+      <a class="btn btn-ghost" href="/admin.html" target="_blank" rel="noopener">管理</a>
       <button class="btn btn-ghost" data-action="go-setup">设置</button>
     </div>
   </header>`;
@@ -225,13 +227,16 @@ function lobbyView(s: State): string {
 
 /* ---------------- 对局 ---------------- */
 
-function turnView(r: RecordView): string {
+function turnView(r: RecordView, canSave: boolean): string {
   const isFormat = Boolean(r.invalid);
   const cls = isFormat ? 'v-format' : `v-${r.verdict}`;
   const label = isFormat ? '改问法' : (VERDICT_LABEL[r.verdict] ?? '');
   const hint = r.hint ? `<span class="hint">${esc(r.hint)}</span>` : '';
+  const save = canSave
+    ? `<button class="q-save" data-action="save-question" data-value="${esc(r.question)}" title="加入常用问题">＋常用</button>`
+    : '';
   return `
-    <div class="turn turn-q"><p>${esc(r.question)}</p></div>
+    <div class="turn turn-q"><p>${esc(r.question)}</p>${save}</div>
     <div class="turn turn-a ${isFormat ? 'is-format' : ''}">
       <span class="verdict ${cls}">${esc(label)}</span>
       <p>${esc(r.text)}${hint}</p>
@@ -252,9 +257,12 @@ function gameView(s: State): string {
   const max = s.meta?.maxTurns ?? 20;
   const ratio = Math.max(0, Math.min(1, session.turnsLeft / max));
   const asked = session.history.filter((h) => !h.invalid).length;
+  const savedSet = new Set(s.saved.map(normalizeQuestion));
 
   const log = session.history.length
-    ? session.history.map(turnView).join('')
+    ? session.history
+        .map((r) => turnView(r, !r.invalid && !savedSet.has(normalizeQuestion(r.question))))
+        .join('')
     : examples();
 
   const thinking = s.pending
@@ -313,9 +321,35 @@ function gameView(s: State): string {
           <button class="btn btn-send" type="submit" ${s.pending ? 'disabled' : ''}>问</button>
         </form>
       </section>
+
+      ${pinnedPanel(s)}
     </section>
     ${s.guessOpen ? guessDialog(s) : ''}`,
   );
+}
+
+function pinnedPanel(s: State): string {
+  // 空列表整栏不渲染：小屏上空状态会白占一屏高度
+  if (!s.saved.length) return '';
+
+  const items = s.saved
+    .map(
+      (q) => `
+      <li class="pinned-item">
+        <button class="pinned-q" data-action="use-question" data-value="${esc(q)}" title="填入输入框">${esc(q)}</button>
+        <button class="pinned-drop" data-action="drop-question" data-value="${esc(q)}" title="从常用问题移除">×</button>
+      </li>`,
+    )
+    .join('');
+
+  return `
+    <aside class="pinned">
+      <div class="pinned-head">
+        <span>常用问题</span>
+        <span class="pinned-count">${s.saved.length}</span>
+      </div>
+      <ul class="pinned-list">${items}</ul>
+    </aside>`;
 }
 
 function diffLabel(s: State): string {

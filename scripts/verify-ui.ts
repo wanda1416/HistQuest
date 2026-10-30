@@ -87,6 +87,17 @@ async function main(): Promise<void> {
   const gameCopy = await page.evaluate(() => navigator.clipboard.readText());
   await page.screenshot({ path: `${OUT}/05b-copied.png`, fullPage: true });
 
+  // 常用问题：把第一个问题存进右侧列表，再从列表点回输入框
+  const firstTurn = page.locator('.turn-q').first();
+  await firstTurn.hover();
+  await firstTurn.locator('.q-save').click();
+  await page.waitForSelector('.pinned-item', { timeout: 5000 });
+  await page.screenshot({ path: `${OUT}/05c-pinned.png`, fullPage: true });
+
+  await page.click('.pinned-q');
+  const filled = await page.inputValue('[data-role="ask-input"]');
+  console.log('--- 常用问题填入 ---\n' + filled);
+
   await page.click('[data-action="open-guess"]');
   await page.waitForSelector('[data-role="guess-input"]');
   await page.fill('[data-role="guess-input"]', '一个不存在的人');

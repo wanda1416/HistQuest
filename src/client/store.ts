@@ -21,6 +21,7 @@ export interface State {
   testResult: AiTestRes | null;
   guessOpen: boolean;
   copied: boolean;
+  saved: string[];
   guessError: string | null;
   difficulty: number;
   dynasty: string | null;
@@ -30,6 +31,7 @@ export interface State {
 
 const CONFIG_KEY = 'hq.aiConfig';
 const PREFS_KEY = 'hq.prefs';
+const QUESTIONS_KEY = 'hq.questions';
 const GAME_KEY = 'hq.gameId';
 
 export function loadConfig(): AiConfig | null {
@@ -83,6 +85,7 @@ let state: State = {
   testResult: null,
   guessOpen: false,
   copied: false,
+  saved: [],
   guessError: null,
   difficulty: 2,
   dynasty: null,
@@ -124,6 +127,34 @@ export function loadPrefs(): { pronoun: PronounStyle } {
 export function savePrefs(prefs: { pronoun: PronounStyle }): void {
   try {
     localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+  } catch {
+    /* ignore */
+  }
+}
+
+/** 去重用的归一化：忽略首尾标点与空白 */
+export function normalizeQuestion(text: string): string {
+  return String(text ?? '')
+    .trim()
+    .replace(/[？?！!。，,、；;：:\s]+$/g, '')
+    .replace(/\s+/g, '');
+}
+
+export function loadQuestions(): string[] {
+  try {
+    const raw = localStorage.getItem(QUESTIONS_KEY);
+    if (!raw) return [];
+    const list = JSON.parse(raw) as unknown;
+    if (!Array.isArray(list)) return [];
+    return list.filter((x): x is string => typeof x === 'string' && x.trim().length > 0).slice(0, 24);
+  } catch {
+    return [];
+  }
+}
+
+export function saveQuestions(list: string[]): void {
+  try {
+    localStorage.setItem(QUESTIONS_KEY, JSON.stringify(list.slice(0, 24)));
   } catch {
     /* ignore */
   }

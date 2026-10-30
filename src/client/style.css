@@ -156,6 +156,13 @@ input {
   cursor: not-allowed;
 }
 
+/* 顶栏里用链接呈现的按钮（如管理入口） */
+a.btn {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
 .btn-primary {
   background: var(--ink);
   color: #f8f3e9;
@@ -204,7 +211,7 @@ input {
 /* ---------- 布局 ---------- */
 .stage {
   width: 100%;
-  max-width: 1080px;
+  max-width: 1140px;
   margin: 0 auto;
   padding: 40px 28px 80px;
   flex: 1;
@@ -507,12 +514,14 @@ input {
 /* ---------- 对局 ---------- */
 .board {
   display: grid;
-  grid-template-columns: 286px minmax(0, 1fr);
-  gap: 40px;
+  grid-template-columns: 258px minmax(0, 1fr) 232px;
+  grid-template-areas: 'rail stream pinned';
+  gap: 34px;
   align-items: start;
 }
 
 .rail {
+  grid-area: rail;
   position: sticky;
   top: 24px;
 }
@@ -605,12 +614,100 @@ input {
 }
 
 .stream {
+  grid-area: stream;
   display: flex;
   flex-direction: column;
   min-width: 0;
   height: calc(100dvh - 214px);
   min-height: 440px;
 }
+
+/* 常用问题：对话右侧常驻栏 */
+.pinned {
+  grid-area: pinned;
+  align-self: stretch;
+  border-left: 1px solid var(--line-2);
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.pinned-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  letter-spacing: 0.22em;
+  color: var(--ink-3);
+  padding-bottom: 10px;
+}
+
+.pinned-count {
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.pinned-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pinned-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.pinned-q {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 8px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--ink-2);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.pinned-q:hover {
+  background: var(--paper-2);
+  color: var(--ink);
+}
+
+.pinned-drop {
+  flex: 0 0 auto;
+  border: 0;
+  background: none;
+  color: var(--ink-3);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1;
+  padding: 8px 4px;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.pinned-item:hover .pinned-drop {
+  opacity: 1;
+}
+
+.pinned-drop:hover {
+  color: var(--vermilion);
+}
+
 
 .stream-head {
   display: flex;
@@ -664,6 +761,38 @@ input {
 .turn-q {
   align-self: flex-end;
   margin-top: 20px;
+}
+
+/* 把问过的问题存进常用列表 */
+.q-save {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 2px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  color: var(--ink-3);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.turn-q:hover .q-save,
+.q-save:focus-visible {
+  opacity: 1;
+}
+
+.q-save:hover {
+  color: var(--vermilion);
+  border-color: rgba(178, 55, 43, 0.35);
+}
+
+@media (hover: none) {
+  .q-save {
+    opacity: 0.75;
+  }
 }
 
 .turn-q p {
@@ -1087,6 +1216,50 @@ input {
 }
 
 /* ---------- 响应式 ---------- */
+/* 中等屏幕：常用问题改为对话下方的一条横排 */
+@media (max-width: 1180px) {
+  .board {
+    grid-template-columns: 258px minmax(0, 1fr);
+    grid-template-areas: 'rail stream' 'pinned pinned';
+    gap: 24px 32px;
+  }
+
+  .pinned {
+    position: static;
+    border-left: none;
+    border-top: 1px solid var(--line-2);
+    padding-left: 0;
+    padding-top: 14px;
+    max-height: none;
+  }
+
+  .pinned-list {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+    overflow: visible;
+  }
+
+  .pinned-item {
+    align-items: center;
+    background: var(--paper-2);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding-right: 2px;
+  }
+
+  .pinned-q {
+    padding: 7px 6px 7px 12px;
+    font-size: 12px;
+    border-radius: 999px;
+  }
+
+  .pinned-drop {
+    opacity: 1;
+    padding: 6px 9px 6px 2px;
+  }
+}
+
 @media (max-width: 900px) {
   .split {
     grid-template-columns: 1fr;
@@ -1102,8 +1275,9 @@ input {
 
   .board {
     grid-template-columns: 1fr;
-    grid-template-rows: auto minmax(0, 1fr);
-    gap: 24px;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-areas: 'rail' 'pinned' 'stream';
+    gap: 20px;
     min-height: calc(100dvh - 190px);
     align-items: stretch;
   }
@@ -1177,6 +1351,7 @@ input {
 }
 
 @media (max-width: 620px) {
+
   .topbar {
     padding: 14px 16px;
   }
