@@ -353,19 +353,23 @@ root.addEventListener('click', async (event) => {
   switch (action) {
     case 'go-list':
       setState({ view: 'list', draft: null, originalId: null, issues: [], notice: null });
+      syncHash('list');
       void loadList();
       break;
     case 'go-users':
       await loadUsers();
       setState({ view: 'users' });
+      syncHash('users');
       break;
     case 'go-invites':
       await loadInvites();
       setState({ view: 'invites' });
+      syncHash('invites');
       break;
     case 'go-settings':
       await loadLlm();
       setState({ view: 'settings' });
+      syncHash('settings');
       break;
     case 'user-server-key':
     case 'user-ban': {
@@ -385,6 +389,7 @@ root.addEventListener('click', async (event) => {
       break;
     }
     case 'go-health':
+      syncHash('health');
       void loadHealth();
       break;
     case 'reload':
@@ -515,6 +520,40 @@ async function saveLlm(baseURL: string, model: string, apiKey: string): Promise<
   }
 }
 
+
+/* ---------------- hash 路由：刷新保持在当前页 ---------------- */
+
+const VIEW_HASH: Record<AdminState['view'], string> = {
+  list: 'data',
+  edit: 'data',
+  health: 'health',
+  users: 'users',
+  invites: 'invites',
+  settings: 'settings',
+};
+
+const HASH_VIEW: Record<string, AdminState['view']> = {
+  data: 'list',
+  health: 'health',
+  users: 'users',
+  invites: 'invites',
+  settings: 'settings',
+};
+
+function syncHash(view: AdminState['view']): void {
+  const h = '#' + (VIEW_HASH[view] ?? 'data');
+  if (location.hash !== h) history.replaceState(null, '', h);
+}
+
+async function viewFromHash(): Promise<void> {
+  const key = location.hash.replace('#', '') || 'data';
+  const view = HASH_VIEW[key] ?? 'list';
+  if (view === 'users') await loadUsers();
+  if (view === 'invites') await loadInvites();
+  if (view === 'settings') await loadLlm();
+  setState({ view, notice: null });
+}
+
 /* ---------------- 启动 ---------------- */
 
 async function boot(reinitialized = false): Promise<void> {
@@ -545,5 +584,10 @@ async function boot(reinitialized = false): Promise<void> {
   }
 }
 
-render();
-void boot();
+void (async () => {
+  await boot();
+  if (state.ready && !state.error) await viewFromHash();
+})();
+window.addEventListener('hashchange', () => {
+  if (state.ready) void viewFromHash();
+});

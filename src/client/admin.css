@@ -11,17 +11,23 @@
   font-family: var(--font-sans);
 }
 
-/* ---------- 顶栏 ---------- */
+/* ---------- 顶栏：两行式（品牌行 + tab 条） ---------- */
 .a-top {
   position: sticky;
   top: 0;
   z-index: 20;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+  margin: 0 -20px 20px;
+  padding: 0 20px;
+}
+
+.a-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 14px 0;
-  background: linear-gradient(var(--paper) 82%, rgba(245, 240, 230, 0));
+  padding: 14px 0 10px;
 }
 
 .a-brand {
@@ -57,29 +63,49 @@
 
 .a-tabs {
   display: flex;
-  gap: 6px;
+  align-items: flex-end;
+  gap: 2px;
+  overflow-x: auto;
 }
 
+.a-tabs-spacer {
+  flex: 1;
+  align-self: center;
+}
+
+/* 经典后台 tab：激活项嵌入顶栏分隔线（断线连接内容区） */
 .a-tab {
-  padding: 6px 14px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--paper-2);
-  color: var(--ink-2);
+  padding: 9px 14px 10px;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  margin-bottom: -1px;
+  background: transparent;
+  color: var(--ink-3);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 13.5px;
+  white-space: nowrap;
+  position: relative;
+}
+
+.a-tab:hover {
+  color: var(--ink);
+  background: var(--paper-2);
 }
 
 .a-tab.is-active {
-  border-color: var(--ink);
-  background: var(--ink);
-  color: var(--paper);
+  border-color: var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 500;
 }
 
 .a-tab.a-link {
-  border-style: dashed;
+  border: 0;
   background: transparent;
   text-decoration: none;
+  align-self: center;
+  color: var(--ink-3);
 }
 
 .a-token {

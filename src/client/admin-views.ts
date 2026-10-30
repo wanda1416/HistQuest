@@ -120,29 +120,32 @@ function shell(s: AdminState, body: string): string {
 
   return `
   <header class="a-top">
-    <div class="a-brand">
-      <span class="a-seal">管</span>
-      <div>
-        <h1 class="a-title">${esc(head.title)}</h1>
-        <p class="a-sub">${esc(head.sub)}</p>
+    <div class="a-topbar">
+      <div class="a-brand">
+        <span class="a-seal">管</span>
+        <div>
+          <h1 class="a-title">${esc(head.title)}</h1>
+          <p class="a-sub">${esc(head.sub)}</p>
+        </div>
       </div>
+      ${
+        meta?.tokenRequired
+          ? `<div class="a-token">
+               <input type="password" data-field="token" placeholder="ADMIN_TOKEN" value="${esc(s.token)}" />
+               <button class="a-btn" data-action="save-token">应用</button>
+             </div>`
+          : '<span class="a-muted">仅本机可访问</span>'
+      }
     </div>
     <nav class="a-tabs">
-      <button class="a-tab ${s.view === 'list' || s.view === 'edit' ? 'is-active' : ''}" data-action="go-list">人物</button>
+      <button class="a-tab ${s.view === 'list' || s.view === 'edit' ? 'is-active' : ''}" data-action="go-list">数据管理</button>
       <button class="a-tab ${s.view === 'health' ? 'is-active' : ''}" data-action="go-health">数据健康</button>
-      <button class="a-tab ${s.view === 'users' ? 'is-active' : ''}" data-action="go-users">用户</button>
+      <button class="a-tab ${s.view === 'users' ? 'is-active' : ''}" data-action="go-users">用户管理</button>
       <button class="a-tab ${s.view === 'invites' ? 'is-active' : ''}" data-action="go-invites">邀请码</button>
-      <button class="a-tab ${s.view === 'settings' ? 'is-active' : ''}" data-action="go-settings">系统</button>
+      <button class="a-tab ${s.view === 'settings' ? 'is-active' : ''}" data-action="go-settings">系统设置</button>
+      <span class="a-tabs-spacer"></span>
       <a class="a-tab a-link" href="/">返回游戏</a>
     </nav>
-    ${
-      meta?.tokenRequired
-        ? `<div class="a-token">
-             <input type="password" data-field="token" placeholder="ADMIN_TOKEN" value="${esc(s.token)}" />
-             <button class="a-btn" data-action="save-token">应用</button>
-           </div>`
-        : '<span class="a-muted">仅本机可访问</span>'
-    }
   </header>
   ${s.notice ? `<div class="a-notice is-${s.notice.kind === 'ok' ? 'ok' : s.notice.kind === 'err' ? 'err' : ''}">${esc(s.notice.text)}</div>` : ''}
   ${s.error ? `<div class="a-notice is-err">${esc(s.error)}</div>` : ''}
@@ -605,18 +608,17 @@ function healthView(s: AdminState): string {
 
 export function renderAdmin(s: AdminState): string {
   if (!s.ready) {
-    return `<div class="a-top"><div class="a-brand"><span class="a-seal">管</span>
-      <div><h1 class="a-title">管理后台</h1><p class="a-sub">正在载入…</p></div></div></div>`;
+    return `<div class="a-top"><div class="a-topbar"><div class="a-brand"><span class="a-seal">管</span><div><h1 class="a-title">管理后台</h1><p class="a-sub">正在载入…</p></div></div></div></div>`;
   }
 
   // meta 未就绪（如远程访问未带令牌被 403）：给出可操作的引导，而不是死转
   if (!s.meta) {
-    return `<div class="a-top"><div class="a-brand"><span class="a-seal">管</span>
+    return `<div class="a-top"><div class="a-topbar"><div class="a-brand"><span class="a-seal">管</span>
       <div><h1 class="a-title">管理后台</h1><p class="a-sub">${esc(s.error ?? '未能加载')}</p></div></div>
       <div class="a-token">
         <input type="password" data-field="token" placeholder="ADMIN_TOKEN" value="${esc(s.token)}" />
         <button class="a-btn" data-action="save-token">连接</button>
-      </div></div>`;
+      </div></div></div>`;
   }
 
   const body =
