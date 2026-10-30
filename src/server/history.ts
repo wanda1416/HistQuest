@@ -59,7 +59,7 @@ export interface HistoryStore {
 export interface GameRecorder {
   /** 开局：写入对局骨架 */
   start(session: SoloSession, target: TargetSnapshot): void | Promise<void>;
-  /** 一条问答落账（含无效提问与失败调用，那些也是真实对话） */
+  /** 一条问答落账（含被纠正的问法与超时/坏 JSON 这类重试记录，那些也是真实对话） */
   turn(session: SoloSession, target: TargetSnapshot, record: AnswerRecord): void | Promise<void>;
   /** 状态变化（猜测、揭晓、次数用尽）时同步对局行 */
   sync(session: SoloSession, target: TargetSnapshot): void | Promise<void>;

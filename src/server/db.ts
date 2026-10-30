@@ -196,7 +196,7 @@ function migrateV3(db: DatabaseSync): void {
     CREATE INDEX IF NOT EXISTS idx_games_started ON games(started_at DESC);
     CREATE INDEX IF NOT EXISTS idx_games_target  ON games(target_id);
 
-    -- 对话账本：一问一行，含无效提问与失败调用（那是真实的对话记录）
+    -- 对话账本：一问一行，含被纠正的问法与重试型失败（那是真实的对话记录）
     CREATE TABLE IF NOT EXISTS game_turns (
       game_id   TEXT NOT NULL REFERENCES games(id) ON DELETE CASCADE,
       seq       INTEGER NOT NULL,

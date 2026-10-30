@@ -63,6 +63,7 @@ interface LlmSettings {
 | **后台缺导入入口** | 服务端有 `importFrom`，UI 只提供导出 |
 | **dev.sh 无执行位** | Git 记录 100644，macOS/Linux 需 `chmod +x` 后重提交 |
 | **旧 JSON 会话未迁移** | 24h TTL 自然过期，可忽略；SQLite 库在迁移 v3 时已自动把在途会话连同问答搬进账本 |
+| **抛错类失败不入历史** | `core/engine.ts` 对 AUTH / UNSUPPORTED / NETWORK 直接 throw，这一问不进会话也不进账本；只有 TIMEOUT / BAD_JSON / EMPTY 会以 transient 记录留痕。要对"模型挂了"做统计，得另建失败事件表 |
 | **Workers 端历史排序靠 started_at** | 管理员列表按开局时间倒序；若要"最近活动优先"需记录 `updated_at` 排序 |
 
 ---
