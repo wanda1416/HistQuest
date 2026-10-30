@@ -5,7 +5,7 @@
  * 参考 lvjiang 的 dev 脚本结构：
  * 1. 先自检环境（Node 版本、依赖、.env），不合格直接给出修复步骤
  * 2. 服务端端口固定（默认 3000），被占用时直接报错，不隐式换端口
- * 3. 子进程互相看护：任一退出就一起收摊，不留孤儿进程
+ * 3. 服务端把非 /api 请求代理给 Vite，3000 是唯一入口；子进程互相看护
  * 4. 分级彩色输出，出错信息落在 stderr
  *
  * 用法：
@@ -186,17 +186,21 @@ async function main() {
   process.on('SIGINT', () => shutdown(0));
   process.on('SIGTERM', () => shutdown(0));
 
-  info(`服务端 http://127.0.0.1:${port}`);
+  info(`入口   http://127.0.0.1:${port}`);
   if (!opts.noVite) {
-    info('前端   http://127.0.0.1:5173（端口占用时 Vite 会自动顺延）');
-    info('管理台 http://127.0.0.1:5173/admin.html');
+    info('前端由 Vite 提供、经 3000 反向代理；HMR 走 5173');
+    info(`管理台 http://127.0.0.1:${port}/admin.html`);
   } else {
     warn('已跳过 Vite，仅提供 API 与（若存在）dist 静态资源');
   }
   info('按 Ctrl+C 停止');
 
   const env = { PORT: String(port), HQ_SERVER_PORT: String(port) };
-  launch('server', ['--watch', 'src/server/index.ts'], env);
+  launch('server', ['--watch', 'src/server/index.ts'], {
+    ...env,
+    // 告诉服务端把非 /api 请求转给 Vite，使 3000 成为唯一入口
+    ...(opts.noVite ? {} : { HQ_DEV_PROXY: '5173' }),
+  });
   if (!opts.noVite) launch('vite', [viteBin], env);
 }
 

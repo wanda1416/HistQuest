@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import http from 'node:http';
 import path from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import express from 'express';
@@ -14,6 +15,37 @@ import { createRoutes } from './routes.ts';
 import { createSettingsRoutes } from './settings.ts';
 import { SoloStore } from './solo.ts';
 import { log } from './util.ts';
+
+/**
+ * 开发期反向代理：把非 /api 请求转给 Vite，让 3000 成为唯一入口。
+ * HMR 的 WebSocket 由浏览器直连 Vite（见 vite.config 的 hmr.clientPort），不经过这里。
+ */
+function mountDevProxy(app: express.Express, port: number): void {
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.path.startsWith('/api')) return next();
+
+    const proxyReq = http.request(
+      {
+        host: '127.0.0.1',
+        port,
+        path: req.originalUrl,
+        method: req.method,
+        headers: { ...req.headers, host: `127.0.0.1:${port}` },
+      },
+      (proxyRes) => {
+        res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);
+        proxyRes.pipe(res);
+      },
+    );
+
+    proxyReq.on('error', () => {
+      if (res.headersSent) return;
+      res.status(502).type('text/plain').send('Vite 还没准备好，稍等一秒再刷新');
+    });
+
+    req.pipe(proxyReq);
+  });
+}
 
 export interface AppOptions {
   charactersFile?: string;
@@ -93,7 +125,11 @@ export function createApp(options: AppOptions = {}): CreatedApp {
     res.redirect('/admin.html');
   });
 
-  if (fs.existsSync(config.paths.dist)) {
+  const devProxyPort = Number(process.env.HQ_DEV_PROXY) || 0;
+  if (devProxyPort > 0) {
+    // 开发模式：前端由 Vite 提供，3000 作为唯一入口
+    mountDevProxy(app, devProxyPort);
+  } else if (fs.existsSync(config.paths.dist)) {
     app.use(express.static(config.paths.dist, { index: 'index.html' }));
     app.get(/^\/(?!api).*/, (_req: Request, res: Response) => {
       res.sendFile(path.join(config.paths.dist, 'index.html'));
@@ -128,7 +164,8 @@ if (import.meta.filename === process.argv[1] || process.env.HQ_STANDALONE === '1
       characters: store.activeCount,
       store: db ? 'sqlite' : 'json',
       serverModelReady: serverModelReady(),
-      distServed: fs.existsSync(config.paths.dist),
+      devProxy: process.env.HQ_DEV_PROXY ?? '',
+      distServed: !process.env.HQ_DEV_PROXY && fs.existsSync(config.paths.dist),
       adminToken: Boolean(config.admin.token),
     });
   });

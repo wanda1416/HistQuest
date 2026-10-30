@@ -23,6 +23,10 @@ export default defineConfig({
     // 固定 IPv4 回环：与 README 和 dev 脚本里打印的地址一致
     host: '127.0.0.1',
     port: 5173,
+    // 端口被占用时直接报错：3000 的代理固定指向 5173，不能静默顺延
+    strictPort: true,
+    // 页面由 3000 代理提供，HMR 的 ws 让浏览器直连 5173
+    hmr: { host: '127.0.0.1', clientPort: 5173 },
     proxy: {
       '/api': {
         target: `http://127.0.0.1:${serverPort}`,

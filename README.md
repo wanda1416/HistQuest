@@ -39,7 +39,9 @@ npm run dev -- --port 4000    # 服务端改用 4000
 npm run dev -- -h             # 查看全部参数
 ```
 
-打开 http://127.0.0.1:5173 ，首次进入会要求填写模型地址与密钥，点"测试连接"通过后即可开局。
+打开 http://127.0.0.1:3000 。首次进入会要求填写模型地址与密钥，点"测试连接"通过后即可开局。
+
+开发时 Vite 在 5173 提供 HMR，页面请求由 3000 反向代理，所以地址栏始终是 3000；管理台在 http://127.0.0.1:3000/admin.html 。
 
 生产模式：
 
@@ -144,6 +146,7 @@ data/characters.json   184 位人物索引（迁移种子 / 导出物）
 data/hq.db             SQLite 主库（人物 + 会话）
 docs/TECH-DESIGN.md    技术方案与架构
 docs/DATA-EXPANSION.md 人物库扩充方案（暂缓实施）
+docs/BACKLOG.md        待办与已知问题
 ```
 
 `src/core` 不 import 任何 `fs` / `http`，事实与模型都由外部注入——所以它既能在 Node 服务里跑，也能原样塞进 Electron 主进程，这是为将来上架 Steam 预留的前提。
