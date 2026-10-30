@@ -5,7 +5,7 @@ import { CharacterIndex } from '../src/core/index.ts';
 import { SoloStore, SoloError } from '../src/server/solo.ts';
 import { projectSession } from '../src/server/dto.ts';
 import { AiError, testConnection } from '../src/ai/client.ts';
-import { D1Database, D1SessionPersistence } from './d1.ts';
+import { D1SessionPersistence, type D1Database } from './d1.ts';
 import { D1HistoryStore } from './d1-history.ts';
 import { D1CharacterStore } from './d1-characters.ts';
 import { handleVault } from './vault.ts';

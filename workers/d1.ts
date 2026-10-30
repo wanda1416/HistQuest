@@ -22,7 +22,12 @@ export interface D1Database {
 
 /** D1 版会话持久化：行结构与 Node 版 SqliteSessionPersistence 完全一致 */
 export class D1SessionPersistence implements SessionPersistence {
-  constructor(private readonly db: D1Database) {}
+  // 不用参数属性：本项目要求 .ts 能被 Node 直接擦除运行（见 shared/domain.ts 开头）
+  private readonly db: D1Database;
+
+  constructor(db: D1Database) {
+    this.db = db;
+  }
 
   async load(): Promise<SoloSession[]> {
     const since = Date.now() - SESSION_TTL_MS;
