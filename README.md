@@ -29,6 +29,16 @@ npm install
 npm run dev          # 服务端 :3000 + 前端 :5173（带 HMR）
 ```
 
+也可以直接双击根目录的 `dev.cmd`（Windows），或在终端执行 `./dev.sh`（macOS / Linux）。
+
+启动器会先自检 Node 版本与依赖；服务端默认固定 3000 端口，被占用时直接报错并给出处置方式：
+
+```bash
+npm run dev -- --no-vite      # 只起服务端（调试 API）
+npm run dev -- --port 4000    # 服务端改用 4000
+npm run dev -- -h             # 查看全部参数
+```
+
 打开 http://127.0.0.1:5173 ，首次进入会要求填写模型地址与密钥，点"测试连接"通过后即可开局。
 
 生产模式：
