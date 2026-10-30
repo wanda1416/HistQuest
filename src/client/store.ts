@@ -20,6 +20,7 @@ export interface State {
   notice: Notice | null;
   testResult: AiTestRes | null;
   guessOpen: boolean;
+  copied: boolean;
   guessError: string | null;
   difficulty: number;
   dynasty: string | null;
@@ -81,6 +82,7 @@ let state: State = {
   notice: null,
   testResult: null,
   guessOpen: false,
+  copied: false,
   guessError: null,
   difficulty: 2,
   dynasty: null,

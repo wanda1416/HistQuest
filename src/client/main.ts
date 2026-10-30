@@ -12,6 +12,7 @@ import {
   subscribe,
 } from './store.ts';
 import { renderApp } from './views.ts';
+import { transcriptForGame, transcriptForReview } from './format.ts';
 
 const root = document.getElementById('app')!;
 
@@ -178,6 +179,54 @@ async function doReveal(): Promise<void> {
   }
 }
 
+/** 剪贴板：优先 Clipboard API，非安全上下文回落 execCommand */
+async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    try {
+      const area = document.createElement('textarea');
+      area.value = text;
+      area.style.position = 'fixed';
+      area.style.opacity = '0';
+      document.body.appendChild(area);
+      area.select();
+      const ok = document.execCommand('copy');
+      area.remove();
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+}
+
+let copyTimer: ReturnType<typeof setTimeout> | null = null;
+
+async function copyTranscript(withTarget: boolean): Promise<void> {
+  const s = getState();
+  const history = (withTarget ? s.reveal?.history : s.session?.history) ?? s.session?.history ?? [];
+  if (!history.length) {
+    setState({ notice: { kind: 'info', text: '还没有可复制的问答' } });
+    return;
+  }
+
+  const text =
+    withTarget && s.reveal
+      ? transcriptForReview(history, s.reveal.character, s.reveal.turnsUsed)
+      : transcriptForGame(history);
+
+  const ok = await copyText(text);
+  if (!ok) {
+    setState({ notice: { kind: 'error', text: '复制失败，浏览器不允许访问剪贴板' } });
+    return;
+  }
+
+  setState({ copied: true, notice: null });
+  if (copyTimer) clearTimeout(copyTimer);
+  copyTimer = setTimeout(() => setState({ copied: false }), 1600);
+}
+
 /* ---------------- 事件 ---------------- */
 
 root.addEventListener('click', (event) => {
@@ -226,6 +275,12 @@ root.addEventListener('click', (event) => {
       break;
     case 'reveal':
       void doReveal();
+      break;
+    case 'copy-log':
+      void copyTranscript(false);
+      break;
+    case 'copy-review':
+      void copyTranscript(true);
       break;
     case 'new-game':
       saveGameId(null);

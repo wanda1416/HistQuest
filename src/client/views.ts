@@ -295,6 +295,11 @@ function gameView(s: State): string {
           <span>${esc(diffLabel(s))}</span>
           ${session.dynasty ? `<i class="dot"></i><span>${esc(session.dynasty)}</span>` : ''}
           ${session.mode === 'guided' ? '<i class="dot"></i><span>解说</span>' : ''}
+          ${
+            session.history.length
+              ? `<button class="btn btn-text btn-copy" data-action="copy-log">${s.copied ? '已复制' : '复制记录'}</button>`
+              : ''
+          }
         </div>
 
         <div class="log" data-role="log">
@@ -358,10 +363,15 @@ function revealView(s: State): string {
         .map((h) => {
           const cls = h.invalid ? 'v-format' : `v-${h.verdict}`;
           const label = h.invalid ? '改问法' : VERDICT_LABEL[h.verdict];
+          const hint = h.hint ? `<p class="review-hint">${esc(h.hint)}</p>` : '';
           return `
-        <li>
-          <span class="review-q">${esc(h.question)}</span>
-          <span class="verdict ${cls}">${esc(label)}</span>
+        <li class="review-item">
+          <div class="review-line">
+            <span class="review-q">${esc(h.question)}</span>
+            <span class="verdict ${cls}">${esc(label)}</span>
+          </div>
+          <p class="review-a">${esc(h.text)}</p>
+          ${hint}
         </li>`;
         })
         .join('')
@@ -385,7 +395,10 @@ function revealView(s: State): string {
       </div>
 
       <div class="review">
-        <h3>对局回顾 <span class="muted">· 用了 ${r.turnsUsed} 问</span></h3>
+        <div class="review-title">
+          <h3>对局回顾 <span class="muted">· 用了 ${r.turnsUsed} 问</span></h3>
+          <button class="btn btn-text btn-copy" data-action="copy-review">${s.copied ? '已复制' : '复制记录'}</button>
+        </div>
         <ol class="review-list">${review}</ol>
       </div>
     </section>`,

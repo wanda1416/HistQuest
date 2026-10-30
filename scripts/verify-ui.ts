@@ -44,7 +44,11 @@ async function main(): Promise<void> {
     page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
   };
 
-  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  const context = await browser.newContext({
+    viewport: { width: 1280, height: 900 },
+    permissions: ['clipboard-read', 'clipboard-write'],
+  });
+  const page = await context.newPage();
   watch(page);
   await page.goto(base, { waitUntil: 'networkidle' });
   await page.screenshot({ path: `${OUT}/01-setup.png`, fullPage: true });
@@ -75,6 +79,14 @@ async function main(): Promise<void> {
   }
   await page.screenshot({ path: `${OUT}/05-game-answers.png`, fullPage: true });
 
+  // 对局中复制：只应有问答，不能出现答案
+  await page.click('[data-action="copy-log"]');
+  await page.waitForFunction(() => document.body.innerText.includes('已复制'), undefined, {
+    timeout: 5000,
+  });
+  const gameCopy = await page.evaluate(() => navigator.clipboard.readText());
+  await page.screenshot({ path: `${OUT}/05b-copied.png`, fullPage: true });
+
   await page.click('[data-action="open-guess"]');
   await page.waitForSelector('[data-role="guess-input"]');
   await page.fill('[data-role="guess-input"]', '一个不存在的人');
@@ -85,6 +97,15 @@ async function main(): Promise<void> {
   await page.click('[data-action="reveal"]');
   await page.waitForSelector('.reveal-card', { timeout: 10000 });
   await page.screenshot({ path: `${OUT}/07-reveal.png`, fullPage: true });
+
+  await page.click('[data-action="copy-review"]');
+  await page.waitForFunction(() => document.body.innerText.includes('已复制'), undefined, {
+    timeout: 5000,
+  });
+  const reviewCopy = await page.evaluate(() => navigator.clipboard.readText());
+
+  console.log('--- 对局中复制 ---\n' + gameCopy);
+  console.log('--- 揭晓后复制 ---\n' + reviewCopy);
 
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForSelector('.reveal-card', { timeout: 10000 });
