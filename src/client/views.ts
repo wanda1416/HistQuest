@@ -500,6 +500,21 @@ function revealView(s: State): string {
   const r = s.reveal;
   if (!r) return gameView(s);
   const c = r.character;
+  // 残缺响应（例如服务端把 Promise 序列化成了 {}）不能让整页渲染抛错卡死
+  if (!c) {
+    return shell(
+      s,
+      `<section class="panel">
+         <p class="eyebrow">揭晓</p>
+         <h2>这一局的揭晓数据不完整</h2>
+         <p class="muted">刷新页面，或到「历史」里找到这一局查看完整问答。</p>
+         <div class="actions">
+           <button class="btn btn-primary" data-action="go-history">打开历史</button>
+           <button class="btn btn-ghost" data-action="go-home">首页</button>
+         </div>
+       </section>`,
+    );
+  }
   const won = r.status === 'won';
 
   const facts = [

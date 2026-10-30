@@ -173,6 +173,11 @@ async function doGuess(): Promise<void> {
 
   try {
     const res = await api.guess(s.session.gameId, name);
+    // 服务端返回空对象时（历史上少过一个 await）不能一路往下走成 NaN
+    if (typeof res?.correct !== 'boolean') {
+      setState({ guessError: '服务器没有返回判定结果，请再试一次' });
+      return;
+    }
     if (res.correct) {
       setState({ guessOpen: false, guessError: null, session: { ...s.session, status: res.status } });
       await doReveal();
@@ -195,6 +200,14 @@ async function doReveal(): Promise<void> {
   if (!s.session) return;
   try {
     const reveal = await api.reveal(s.session.gameId);
+    // 空/残缺响应必须挡住：渲染层读 reveal.character 会抛错，整页就卡死在这里
+    if (!reveal?.character) {
+      setState({
+        notice: { kind: 'error', text: '揭晓数据不完整，刷新页面或到「历史」里查看这一局' },
+        pending: false,
+      });
+      return;
+    }
     setState({ reveal, view: 'reveal', notice: null, guessOpen: false });
     // 局结束了就把地址换成 reveal：刷新仍回到这张人物卡
     syncUrl({ view: 'reveal', id: s.session.gameId }, { replace: true });
@@ -307,6 +320,7 @@ async function applyRoute(force = false): Promise<void> {
         } else {
           try {
             const reveal = await api.reveal(route.id);
+            if (!reveal?.character) throw new Error('INCOMPLETE_REVEAL');
             setState({ session, reveal, view: 'reveal', pending: false });
           } catch {
             setState({ session, view: 'game', pending: false });
