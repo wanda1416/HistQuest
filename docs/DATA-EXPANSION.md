@@ -124,7 +124,7 @@ Wikidata 没有"朝代"字段，两条路：
 1. **优先 P27**（country of citizenship，如"唐朝""清朝"）直接映射到 `DYNASTIES`；
 2. **缺失时用生卒年推导**：[core/dynasty.ts](../src/core/dynasty.ts) 已有完整朝代区间 `SPANS` 与 `periodsLived()`，可算出"经历过哪些时期"，再按主要活动期选主朝代。
 
-注意边界：曹操（155–220）用"生卒覆盖"会同时命中东汉与三国。规则应是**取卒年所在时期**或**活动期重心**，不能简单取并集，否则会重现当年那次分期争议。参考 [docs/TECH-DESIGN.md](TECH-DESIGN.md) 的分期铁律与 `core/schema.ts` 中"卒于 220 年前的东汉人物不得标注三国"的校验。
+注意边界：曹操（155–220）用"生卒覆盖"会同时命中东汉与三国。规则应是**取卒年所在时期**或**活动期重心**，不能简单取并集，否则会重现当年那次分期争议。参考 [docs/DECISIONS.md](DECISIONS.md) 的分期铁律与 `core/schema.ts` 中"卒于 220 年前的东汉人物不得标注三国"的校验。
 
 ### 4.2 难度分级
 
@@ -255,4 +255,4 @@ SELECT (COUNT(DISTINCT ?p) AS ?n) WHERE {
 - [src/core/dynasty.ts](../src/core/dynasty.ts) — 朝代区间与生卒覆盖计算
 - [src/core/index.ts](../src/core/index.ts) — 索引构建与抽样
 - [src/server/characters.ts](../src/server/characters.ts) — 读写、备份、热更新
-- [docs/TECH-DESIGN.md](TECH-DESIGN.md) — 技术方案与史学分期规则
+- [docs/ARCHITECTURE.md](ARCHITECTURE.md) — 架构总览与判定链路；[docs/DECISIONS.md](DECISIONS.md) — 分期铁律的来龙去脉

@@ -1,7 +1,7 @@
 # 对战（房间）设计方案 v2
 
 > 状态：规则与状态机已定稿并落地（`src/core/room/`，33 条测试）；通道层（Durable Object / WebSocket / 前端）待实现。
-> 取代 `TECH-DESIGN.md` §8 的旧 M2 描述（那里的"房主 BYOK + 轮流提问 + 共享预算 12–30"已全部作废）。
+> 取代旧 TECH-DESIGN §8 的 M2 描述（"房主 BYOK + 轮流提问 + 共享预算 12–30"已作废，见 [DECISIONS.md](DECISIONS.md) 否决清单）。
 
 ---
 
@@ -346,6 +346,7 @@ CREATE INDEX IF NOT EXISTS idx_games_room ON games(room_id);
 | `workers/room-do.ts` Durable Object | ✅ 已上线验证 |
 | `workers/rooms-api.ts` 路由与身份注入 | ✅ 已上线验证 |
 | `workers/schema.sql` v8 迁移 + Node 侧 `db.ts` v5 | ✅ 已执行 |
+| `workers/wrangler.example.toml` 同步 ROOMS 绑定与 migrations 段 | ✅（与真实配置逐段核对过） |
 | 大厅目录与结算账本双写 | ✅ `rooms` + 每位参赛者一条 `games` |
 | `src/client/live.ts` WS 客户端（心跳/重连/降级轮询） | ✅ |
 | `src/client/room-views.ts` 四屏 + `room-app.ts` 交互 | ✅ 已上线验证 |

@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 项目依赖 Node 原生 TypeScript 类型擦除与 node:sqlite（≥23.4）
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      # 两个 tsconfig：根（含 Node 专属 server/）与 workers（WebWorker lib、无 node types）
+      - run: npm run typecheck
+
+      # 247 项测试全部离线可跑（模型是 test/fixtures/mock-llm.ts 假服务器）
+      # 注：不用 `npm test` 的 spawn 模式在受限沙箱会 EPERM；GitHub runner 没有此限制
+      - run: npm test
+
+      # 前端能打包（不部署，只验证产物可生成）
+      - run: npm run build
