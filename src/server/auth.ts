@@ -222,6 +222,40 @@ export function findUserRole(db: DatabaseSync, id: string): string | null {
   return row?.role ?? null;
 }
 
+export interface DeleteUserResult {
+  ok: boolean;
+  error?: 'NOT_FOUND' | 'ADMIN_PROTECTED';
+  message?: string;
+  username?: string;
+}
+
+/**
+ * 删除账号（不可逆）。
+ *
+ * 只删身份，不删账本：
+ * - users 行删掉，旧 cookie 立刻失效（readUser 查不到人）
+ * - 进行中的会话一并清掉（否则残留一局还能继续问）
+ * - invites.used_by 置空，邀请码重新可用
+ * - games / game_turns 保留：历史是账本，用户名与目标人物都是快照，
+ *   后台照旧能看到「这个人以前打过哪些局」
+ *
+ * 管理员账号一律拒绝：与封禁/关停一样，避免把管理台自己锁死。
+ */
+export function deleteUser(db: DatabaseSync, id: string): DeleteUserResult {
+  const row = db.prepare('SELECT username, role FROM users WHERE id = ?').get(id) as
+    | { username?: string; role?: string }
+    | undefined;
+  if (!row) return { ok: false, error: 'NOT_FOUND', message: '用户不存在' };
+  if (row.role === 'admin') {
+    return { ok: false, error: 'ADMIN_PROTECTED', message: '管理员账号不能删除' };
+  }
+
+  db.prepare('UPDATE invites SET used_by = NULL, used_at = NULL WHERE used_by = ?').run(id);
+  db.prepare('DELETE FROM sessions WHERE user_id = ?').run(id);
+  db.prepare('DELETE FROM users WHERE id = ?').run(id);
+  return { ok: true, username: row.username ?? '' };
+}
+
 export function setUserFlag(
   db: DatabaseSync,
   id: string,

@@ -765,6 +765,7 @@ function usersView(s: AdminState): string {
   const rows = s.users
     .map((u) => {
       const isAdmin = u.role === 'admin';
+      // 管理员：不可操作，用徽标说明原因
       const actions = isAdmin
         ? '<span class="a-muted">管理员不受限</span>'
         : `
@@ -773,14 +774,34 @@ function usersView(s: AdminState): string {
         </button>
         <button class="a-btn a-btn-sm" data-action="user-ban" data-id="${esc(u.id)}" data-on="${u.banned ? '0' : '1'}">
           ${u.banned ? '解封' : '封禁'}
+        </button>
+        <span class="a-actions-gap"></span>
+        <button class="a-btn a-btn-sm is-danger" data-action="user-delete" data-id="${esc(u.id)}" data-name="${esc(u.username)}">
+          删除
         </button>`;
       const quotaCell = isAdmin ? '∞' : `
         <input class="a-input a-input-sm" type="number" min="-1" max="10000"
           value="${u.dailyQuota ?? -1}" data-field="user-quota" data-id="${esc(u.id)}"
           title="-1=默认500，0=禁用，>0=自定义" />`;
+      const stateBadges = [
+        u.banned ? '<span class="a-pill is-bad">已封禁</span>' : '',
+        !u.allowServerKey && !isAdmin ? '<span class="a-pill">站方模型已关</span>' : '',
+      ]
+        .filter(Boolean)
+        .join(' ');
       return `
-    <tr>
-      <td>${esc(u.username)}${isAdmin ? ' <span class="a-tag" title="管理员账号">管</span>' : ''}</td>
+    <tr${u.banned ? ' class="is-banned"' : ''}>
+      <td>
+        <span class="a-user">
+          <span class="a-avatar" aria-hidden="true">${esc(u.username.slice(0, 1).toUpperCase())}</span>
+          <span class="a-user-main">
+            <span class="a-user-name">${esc(u.username)}${
+              isAdmin ? '<span class="a-shield" title="管理员账号" aria-label="管理员">🛡</span>' : ''
+            }</span>
+            <span class="a-user-sub">${stateBadges || '&nbsp;'}</span>
+          </span>
+        </span>
+      </td>
       <td>${u.asksToday}</td>
       <td>${quotaCell}</td>
       <td>${isAdmin ? '—' : u.allowServerKey ? '允许' : '禁止'}</td>
@@ -797,6 +818,7 @@ function usersView(s: AdminState): string {
       <thead><tr><th>用户名</th><th>今日已问</th><th>每日配额</th><th>站方模型</th><th>操作</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
+    <p class="a-hint">「删除」不可恢复：账号立即失效、进行中的对局被清掉、邀请码释放；历史账本保留（历史里的人物名是快照）。管理员账号受保护，不可删除。</p>
   </section>`;
 }
 

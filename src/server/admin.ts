@@ -11,6 +11,7 @@ import type { AuthUser } from './auth.ts';
 import {
   changePassword,
   createInvites,
+  deleteUser,
   findUserRole,
   listInvites,
   listUsers,
@@ -262,6 +263,17 @@ export function createAdminRoutes(deps: AdminDeps): express.Router {
       setUserFlag(deps.db, id, kind, Boolean(body?.on));
     }
     log('admin.user.flag', { id, kind });
+    res.json({ ok: true });
+  });
+
+  // 删除账号（不可逆）：与封禁分开一个端点，前端也放在独立的危险区里
+  router.post('/users/:id/delete', (req: Request, res: Response) => {
+    if (!deps.db) return fail(res, 503, 'AUTH_DISABLED', 'JSON 存储模式下没有账号系统');
+    const result = deleteUser(deps.db, String(req.params.id));
+    if (!result.ok) {
+      return fail(res, result.error === 'NOT_FOUND' ? 404 : 403, result.error ?? 'DELETE_FAILED', result.message ?? '删除失败');
+    }
+    log('admin.user.delete', { id: String(req.params.id), username: result.username ?? '' });
     res.json({ ok: true });
   });
 

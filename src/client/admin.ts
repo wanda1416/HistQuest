@@ -435,6 +435,27 @@ root.addEventListener('click', async (event) => {
       setState({ view: 'users', notice: { kind: 'ok', text: kind === 'ban' ? (on ? '已封禁' : '已解封') : (on ? '已开启站方模型' : '已关闭站方模型') } });
       break;
     }
+    case 'user-delete': {
+      // 不可逆操作：确认框里写清楚后果，且按钮与「关闭/封禁」拉开距离
+      const id = el.dataset.id ?? '';
+      const name = el.dataset.name ?? '';
+      const confirmed = window.confirm(
+        `确定删除用户「${name}」吗？\n\n` +
+          '· 账号立即失效，无法登录\n' +
+          '· 进行中的对局会被清掉\n' +
+          '· 该用户用掉的邀请码会释放\n' +
+          '· 历史对局记录保留\n\n此操作不可恢复。',
+      );
+      if (!confirmed) break;
+      try {
+        await request(`/api/admin/users/${id}/delete`, { method: 'POST', body: JSON.stringify({}) });
+        await loadUsers();
+        setState({ view: 'users', notice: { kind: 'ok', text: `已删除用户「${name}」` } });
+      } catch (err) {
+        setState({ view: 'users', notice: { kind: 'err', text: (err as Error).message } });
+      }
+      break;
+    }
     case 'invite-create': {
       const count = Number(el.dataset.count) || 1;
       const res = await request<{ codes: string[] }>('/api/admin/invites', { method: 'POST', body: JSON.stringify({ count }) });

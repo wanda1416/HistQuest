@@ -576,3 +576,84 @@
     display: none;
   }
 }
+
+/* ---------------- 用户管理：身份列与危险操作 ---------------- */
+
+/* 用户名列：头像 + 名称/状态两行 */
+.a-user {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.a-avatar {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  font-family: var(--font-serif);
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+tr.is-banned .a-avatar {
+  opacity: 0.45;
+}
+
+.a-user-main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.a-user-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.a-user-sub {
+  display: flex;
+  gap: 4px;
+  min-height: 16px;
+}
+
+/* 管理员徽标：盾形图标，替代原先的「管」字 */
+.a-shield {
+  font-size: 12px;
+  line-height: 1;
+  cursor: help;
+}
+
+/* 「删除」与「关闭/封禁」之间的视觉隔离 */
+.a-actions-gap {
+  display: inline-block;
+  width: 18px;
+}
+
+td .a-btn + .a-btn {
+  margin-left: 6px;
+}
+
+/* 危险操作按钮：描边警示色，不靠填充抢眼 */
+.a-btn.is-danger {
+  color: var(--vermilion);
+  border-color: rgba(178, 55, 43, 0.45);
+}
+
+.a-btn.is-danger:hover {
+  background: rgba(178, 55, 43, 0.08);
+  border-color: var(--vermilion);
+}
+
+/* 封禁行整行淡出 */
+tr.is-banned td {
+  color: var(--ink-3);
+}

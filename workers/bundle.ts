@@ -536,6 +536,26 @@ async function handleAdmin(req: Request, url: URL, rt: Runtime): Promise<Respons
     return json(200, { ok: true });
   }
 
+  // 删除账号（不可逆）：与封禁分开一个端点；只删身份，不删账本；管理员拒绝（防自锁）
+  const userDelete = path.match(/^\/users\/([A-Za-z0-9-]+)\/delete$/);
+  if (userDelete && req.method === 'POST') {
+    const id = userDelete[1]!;
+    const target = await rt.env.DB
+      .prepare('SELECT username, role FROM users WHERE id = ?')
+      .bind(id)
+      .first<{ username: string; role: string }>();
+    if (!target) return fail(404, 'NOT_FOUND', '用户不存在');
+    if (target.role === 'admin') return fail(403, 'ADMIN_PROTECTED', '管理员账号不能删除');
+
+    await rt.env.DB.batch([
+      rt.env.DB.prepare('UPDATE invites SET used_by = NULL, used_at = NULL WHERE used_by = ?').bind(id),
+      rt.env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(id),
+      rt.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(id),
+    ]);
+    console.log('admin.user.delete', { id, username: target.username });
+    return json(200, { ok: true });
+  }
+
   // ---------- 管理员改密 ----------
   if (path === '/change-password' && req.method === 'POST') {
     const me = rt.env.SESSION_SECRET
