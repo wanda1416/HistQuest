@@ -1,0 +1,68 @@
+import { normalizeDynasty } from './index.ts';
+
+/**
+ * 朝代年代区间（史学分期，与索引口径一致）。
+ * 用于回答"他生活在唐朝之前吗"这类相对时序问题。
+ */
+export interface Span {
+  start: number;
+  end: number;
+}
+
+const SPANS: Record<string, Span> = {
+  春秋: { start: -770, end: -476 },
+  战国: { start: -475, end: -221 },
+  秦: { start: -221, end: -207 },
+  西汉: { start: -202, end: 9 },
+  东汉: { start: 25, end: 220 },
+  三国: { start: 220, end: 280 },
+  西晋: { start: 265, end: 316 },
+  东晋: { start: 317, end: 420 },
+  南北朝: { start: 420, end: 589 },
+  隋: { start: 581, end: 618 },
+  唐: { start: 618, end: 907 },
+  五代: { start: 907, end: 960 },
+  北宋: { start: 960, end: 1127 },
+  南宋: { start: 1127, end: 1279 },
+  元: { start: 1271, end: 1368 },
+  明: { start: 1368, end: 1644 },
+  清: { start: 1644, end: 1912 },
+  近代: { start: 1840, end: 1949 },
+};
+
+/** 组合朝代的整体区间（问"汉朝之前"时用） */
+const GROUP_SPANS: Record<string, Span> = {
+  汉: { start: -202, end: 220 },
+  晋: { start: 265, end: 420 },
+  宋: { start: 960, end: 1279 },
+  周: { start: -1046, end: -221 },
+  五代十国: { start: 907, end: 979 },
+  先秦: { start: -2070, end: -221 },
+};
+
+export function spanOf(input: string): Span | null {
+  const canon = normalizeDynasty(input);
+  if (!canon) return null;
+  if (SPANS[canon]) return SPANS[canon];
+  if (GROUP_SPANS[canon]) return GROUP_SPANS[canon];
+  return null;
+}
+
+const MULTI = ['南北朝', '北宋', '南宋', '西汉', '东汉', '西晋', '东晋', '春秋', '战国', '三国', '五代'];
+const SINGLE = ['唐', '宋', '元', '明', '清', '汉', '晋', '周', '秦', '隋'];
+
+/**
+ * 从问句里取"玩家问的是哪个朝代"。
+ * 模型返回的 dynasty.value 有歧义（可能是"人物所属朝代"），所以判罚口径必须靠问句本身定。
+ * 单字朝代要求带"朝/代"后缀，避免"公元前"里的"元"、"元宵"之类误命中。
+ */
+export function extractDynasty(question: string): string | null {
+  const q = String(question ?? '').replace(/公元前|公元/g, '');
+  for (const name of MULTI) {
+    if (q.includes(name)) return name;
+  }
+  for (const name of SINGLE) {
+    if (new RegExp(`${name}(朝|代)`).test(q)) return name;
+  }
+  return null;
+}
