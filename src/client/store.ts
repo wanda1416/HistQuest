@@ -24,9 +24,18 @@ export interface State {
   saved: string[];
   guessError: string | null;
   difficulty: number;
-  dynasty: string | null;
+  /** 中国朝代筛选 */
+  polity: string | null;
+  /** 开局范围：中国 / 世界 / 混合 */
+  scope: 'cn' | 'world' | 'mixed';
+  /** 世界模式下选中的时期 */
+  worldEra: string | null;
+  /** 混合模式下中国人物占比 0–1 */
+  cnShare: number;
   mode: AnswerMode;
   pronoun: PronounStyle;
+  /** 本局提问轮次；null = 跟随服务端默认 */
+  turns: number | null;
 }
 
 const CONFIG_KEY = 'hq.aiConfig';
@@ -88,9 +97,13 @@ let state: State = {
   saved: [],
   guessError: null,
   difficulty: 2,
-  dynasty: null,
+  polity: null,
+  scope: 'mixed',
+  worldEra: null,
+  cnShare: 0.5,
   mode: 'strict',
   pronoun: 'neutral',
+  turns: null,
 };
 
 type Listener = (s: State) => void;
@@ -105,28 +118,39 @@ export function setState(patch: Partial<State>): void {
   for (const fn of listeners) fn(state);
 }
 
+/** 静默更新：只改数据不重渲染，用于滑块这类高频输入 */
+export function setStateSilent(patch: Partial<State>): void {
+  state = { ...state, ...patch };
+}
+
 export function subscribe(fn: Listener): () => void {
   listeners.add(fn);
   return () => listeners.delete(fn);
 }
 
 /** 问答偏好：只影响新开的局 */
-export function loadPrefs(): { pronoun: PronounStyle } {
+export function loadPrefs(): { pronoun: PronounStyle; turns: number | null } {
   try {
     const raw = localStorage.getItem(PREFS_KEY);
     if (raw) {
-      const p = JSON.parse(raw) as { pronoun?: string };
-      return { pronoun: p.pronoun === 'normal' ? 'normal' : 'neutral' };
+      const p = JSON.parse(raw) as { pronoun?: string; turns?: unknown };
+      const turns =
+        typeof p.turns === 'number' && Number.isFinite(p.turns) && p.turns >= 10
+          ? Math.round(p.turns)
+          : null;
+      return { pronoun: p.pronoun === 'normal' ? 'normal' : 'neutral', turns };
     }
   } catch {
     /* 隐私模式下不可读，用默认值 */
   }
-  return { pronoun: 'neutral' };
+  return { pronoun: 'neutral', turns: null };
 }
 
-export function savePrefs(prefs: { pronoun: PronounStyle }): void {
+export function savePrefs(prefs: { pronoun?: PronounStyle; turns?: number | null }): void {
   try {
-    localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+    const raw = localStorage.getItem(PREFS_KEY);
+    const prev: Record<string, unknown> = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+    localStorage.setItem(PREFS_KEY, JSON.stringify({ ...prev, ...prefs }));
   } catch {
     /* ignore */
   }

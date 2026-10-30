@@ -163,6 +163,14 @@ a.btn {
   text-decoration: none;
 }
 
+/* 混合模式的中国人物占比滑块 */
+.share-range {
+  width: 100%;
+  max-width: 420px;
+  accent-color: var(--ink);
+  margin-top: 4px;
+}
+
 .btn-primary {
   background: var(--ink);
   color: #f8f3e9;

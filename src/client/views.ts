@@ -1,6 +1,7 @@
 import type { State } from './store.ts';
 import { normalizeQuestion } from './store.ts';
 import type { RecordView } from '../shared/protocol.ts';
+import { WORLD_ERAS } from '../shared/domain.ts';
 
 const esc = (s: unknown): string =>
   String(s ?? '').replace(/[&<>"']/g, (c) =>
@@ -85,17 +86,11 @@ function setupView(s: State): string {
             <p class="field-hint">只存在本机 localStorage；不会出现在日志、地址栏或任何分享内容里。</p>
           </div>
 
-          <div class="field-row">
-            <div class="field">
-              <label class="field-label" for="model">模型名</label>
-              <input class="input" id="model" name="model" placeholder="deepseek-chat"
-                value="${esc(c?.model ?? '')}" autocomplete="off" spellcheck="false" />
-            </div>
-            <div class="field field-narrow">
-              <label class="field-label" for="temperature">温度</label>
-              <input class="input" id="temperature" name="temperature" type="number" min="0" max="1" step="0.1"
-                value="${esc(c?.temperature ?? 0.1)}" />
-            </div>
+          <div class="field">
+            <label class="field-label" for="model">模型名</label>
+            <input class="input" id="model" name="model" placeholder="deepseek-chat"
+              value="${esc(c?.model ?? '')}" autocomplete="off" spellcheck="false" />
+            <p class="field-hint">判定调用固定用温度 0，保证同一问题答案稳定。</p>
           </div>
 
           ${testLine}
@@ -153,13 +148,36 @@ function lobbyView(s: State): string {
     )
     .join('');
 
-  const dynasties = ['不限', ...(meta?.dynasties ?? [])];
-  const dynChips = dynasties
+  const polities = ['不限', ...(meta?.dynasties ?? [])];
+  const polityChips = polities
     .map((d) => {
       const value = d === '不限' ? '' : d;
-      const active = d === '不限' ? s.dynasty === null : s.dynasty === d;
+      const active = d === '不限' ? s.polity === null : s.polity === d;
       return `<button class="chip-select chip-sm ${active ? 'is-active' : ''}"
-        data-action="pick-dynasty" data-value="${esc(value)}">${esc(d)}</button>`;
+        data-action="pick-polity" data-value="${esc(value)}">${esc(d)}</button>`;
+    })
+    .join('');
+
+  const scopeChips = [
+    { value: 'cn', title: '中国', desc: '只抽中国人物' },
+    { value: 'world', title: '世界', desc: '只抽外国人物' },
+    { value: 'mixed', title: '混合', desc: '中外按比例' },
+  ]
+    .map(
+      (m) => `
+      <button class="chip-select ${s.scope === m.value ? 'is-active' : ''}"
+        data-action="pick-scope" data-value="${m.value}">
+        <b>${esc(m.title)}</b><span>${esc(m.desc)}</span>
+      </button>`,
+    )
+    .join('');
+
+  const eraChips = ['不限', ...WORLD_ERAS]
+    .map((era) => {
+      const value = era === '不限' ? '' : era;
+      const active = era === '不限' ? s.worldEra === null : s.worldEra === era;
+      return `<button class="chip-select chip-sm ${active ? 'is-active' : ''}"
+        data-action="pick-era" data-value="${esc(value)}">${esc(era)}</button>`;
     })
     .join('');
 
@@ -173,6 +191,17 @@ function lobbyView(s: State): string {
         data-action="pick-mode" data-value="${m.value}">
         <b>${esc(m.title)}</b><span>${esc(m.desc)}</span>
       </button>`,
+    )
+    .join('');
+
+  const maxTurns = meta?.maxTurns ?? 20;
+  const turnOptions = [10, 15, 20, 30, 40, 50].filter((t) => t <= maxTurns);
+  const turns = s.turns ?? maxTurns;
+  const turnChips = turnOptions
+    .map(
+      (t) => `
+      <button class="chip-select chip-sm ${turns === t ? 'is-active' : ''}"
+        data-action="pick-turns" data-value="${t}">${t} 问</button>`,
     )
     .join('');
 
@@ -198,15 +227,39 @@ function lobbyView(s: State): string {
         </div>
 
         <div class="group">
-          <span class="group-label">朝代</span>
-          <div class="chips chips-wrap">${dynChips}</div>
+          <span class="group-label">人物范围</span>
+          <div class="chips">${scopeChips}</div>
+        </div>
+
+        ${
+          s.scope === 'mixed'
+            ? `<div class="group">
+                 <span class="group-label">中国人物占比 <b data-role="cn-share-label">${Math.round(s.cnShare * 100)}%</b></span>
+                 <input class="share-range" type="range" min="0" max="100" step="10"
+                   value="${Math.round(s.cnShare * 100)}" data-field="cn-share" />
+               </div>`
+            : ''
+        }
+
+        ${
+          s.scope === 'mixed'
+            ? ''
+            : `<div class="group">
+                 <span class="group-label">时期</span>
+                 <div class="chips chips-wrap">${s.scope === 'cn' ? polityChips : eraChips}</div>
+               </div>`
+        }
+
+        <div class="group">
+          <span class="group-label">提问轮次</span>
+          <div class="chips">${turnChips}</div>
         </div>
 
         <div class="lobby-actions">
           <button class="btn btn-primary btn-lg" data-action="start-game" ${s.pending ? 'disabled' : ''}>
             ${s.pending ? '正在开局…' : '开局'}
           </button>
-          <span class="muted">默认 ${meta?.maxTurns ?? 20} 问</span>
+          <span class="muted">本局 ${turns} 问，上限 ${maxTurns}</span>
         </div>
       </div>
 
@@ -219,7 +272,7 @@ function lobbyView(s: State): string {
           <li>主观评价会被直接挡掉</li>
         </ol>
         <h3>小技巧</h3>
-        <p>先定朝代和性别，再收窄到身份，最后一问确认代表作——二十问通常够用。</p>
+        <p>先定时期和性别，再收窄到身份，最后一问确认代表作——通常够用。</p>
       </aside>
     </section>`,
   );
@@ -301,7 +354,7 @@ function gameView(s: State): string {
           <span>第 <b>${asked + (s.pending ? 1 : 0)}</b> 问</span>
           <i class="dot"></i>
           <span>${esc(diffLabel(s))}</span>
-          ${session.dynasty ? `<i class="dot"></i><span>${esc(session.dynasty)}</span>` : ''}
+          ${session.polity ? `<i class="dot"></i><span>${esc(session.polity)}</span>` : ''}
           ${session.mode === 'guided' ? '<i class="dot"></i><span>解说</span>' : ''}
           ${
             session.history.length
@@ -384,7 +437,7 @@ function revealView(s: State): string {
   const won = r.status === 'won';
 
   const facts = [
-    ['朝代', c.dynastyAlt?.length ? `${c.dynasty}（亦经历 ${c.dynastyAlt.join('、')}）` : c.dynasty],
+    ['政权', c.polityAlt?.length ? `${c.polity}（亦经历 ${c.polityAlt.join('、')}）` : c.polity],
     ['身份', c.roles.join('、') || '—'],
     ['生卒', `${fmtYear(c.birth)} — ${fmtYear(c.death)}`],
     ['籍贯', c.birthplace ?? '不详'],
@@ -419,7 +472,7 @@ function revealView(s: State): string {
         <span class="ribbon">${won ? '猜中' : '揭晓'}</span>
         <div class="seal seal-lg">${esc(c.name.slice(0, 1))}</div>
         <h2 class="reveal-name">${esc(c.name)}</h2>
-        <p class="reveal-identity">${esc(c.dynasty)}${c.aliases.length ? ` · 又称 ${esc(c.aliases.slice(0, 2).join('、'))}` : ''}</p>
+        <p class="reveal-identity">${esc(c.polity)}${c.country ? ` · 今属 ${esc(c.country)}` : ''}${c.aliases.length ? ` · 又称 ${esc(c.aliases.slice(0, 2).join('、'))}` : ''}</p>
         <dl class="facts">${facts}</dl>
         <p class="notable">${esc(c.notable)}</p>
         <div class="reveal-actions">

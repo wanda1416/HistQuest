@@ -10,21 +10,85 @@ export const DYNASTIES = [
 
 export type Dynasty = (typeof DYNASTIES)[number];
 
+/** 文明圈：决定抽样权重与筛选，不参与问答判定 */
+export const REGIONS = [
+  'cn',
+  'europe',
+  'west-asia',
+  'south-asia',
+  'east-asia',
+  'africa',
+  'americas',
+  'oceania',
+] as const;
+
+export type Region = (typeof REGIONS)[number];
+
+/**
+ * 世界人物的时期划分（仅单选「世界」时用于筛选）。
+ * 按史学常用的文明高峰与时代分期，数量与中国朝代相当。
+ */
+export const WORLD_ERAS = [
+  '古埃及',
+  '两河流域',
+  '古希腊',
+  '古罗马',
+  '古波斯',
+  '古印度',
+  '中世纪',
+  '蒙古与奥斯曼',
+  '日本战国',
+  '朝鲜王朝',
+  '文艺复兴',
+  '大航海时代',
+  '科学革命',
+  '启蒙时代',
+  '19 世纪上半叶',
+  '19 世纪下半叶',
+  '20 世纪初',
+] as const;
+
+export type WorldEra = (typeof WORLD_ERAS)[number];
+
+export const REGION_LABELS: Record<Region, string> = {
+  cn: '中国',
+  europe: '欧洲',
+  'west-asia': '西亚北非',
+  'south-asia': '南亚',
+  'east-asia': '东亚（中国以外）',
+  africa: '撒哈拉以南非洲',
+  americas: '美洲',
+  oceania: '大洋洲',
+};
+
 export type Gender = 'male' | 'female';
 
 export interface Character {
   id: string;
   name: string;
   aliases: string[];
-  dynasty: string;
-  dynastyAlt?: string[];
+  /** 文明圈：中国区为 cn，世界人物按大区归类 */
+  region: Region;
+  /**
+   * 所属政权/朝代。
+   * 中国区取 DYNASTIES 中的值（唐/宋/明…）；世界区取政权名（罗马共和国/美国…）。
+   */
+  polity: string;
+  /** 人物实际经历过的其他时期/政权 */
+  polityAlt?: string[];
+  /** 世界人物的时期划分；中国人物不使用 */
+  worldEra?: WorldEra;
   gender: Gender;
   birth: number | null;
   death: number | null;
   birthplace: string | null;
+  /** 今属国家/地区；世界人物必填，中国人物可留空 */
+  country?: string | null;
+  /** 中国区的今属省份；世界人物留空 */
   birthProvince: string | null;
   roles: string[];
   tags: string[];
+  /** 是否为君主（皇帝/国王/法老/苏丹/沙皇等） */
   emperor: boolean;
   notable: string;
   difficulty: number;
@@ -46,6 +110,7 @@ export const ATTRS = [
   'nameLength',
   'nameContains',
   'lifespan',
+  'century',
   'alive',
   'nationality',
   'event',
@@ -88,6 +153,7 @@ export type Basis =
   | 'index.nameLength'
   | 'index.nameContains'
   | 'index.lifespan'
+  | 'index.century'
   | 'index.alive'
   | 'index.nationality'
   | 'index.event'
@@ -123,7 +189,14 @@ export interface SoloSession {
   /** 服务端唯一持有，任何下行 DTO 都不得包含 */
   targetId: string;
   difficulty: number;
-  dynasty: string | null;
+  /** 玩家筛选的政权（中国朝代），null = 不限 */
+  polity: string | null;
+  /** 开局锁定的文明圈筛选，null = 不限 */
+  region: Region | null;
+  /** 世界模式下锁定的时期，null = 不限 */
+  worldEra: string | null;
+  /** 混合模式下中国人物占比 0–1 */
+  cnShare: number;
   mode: AnswerMode;
   pronoun: PronounStyle;
   turnsLeft: number;

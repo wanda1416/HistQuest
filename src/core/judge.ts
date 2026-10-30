@@ -61,10 +61,34 @@ export function judgeByIndex(c: Character, q: ParsedQuery): JudgeOutcome {
   switch (q.attr) {
     case 'dynasty': {
       const scope = dynastyScope(String(q.value ?? ''));
-      if (!scope) return { verdict: 'unknown', basis: 'index.dynasty', note: '朝代名无法识别' };
+      // 非中国朝代（如“罗马帝国”）不做硬裁定，交给模型知识
+      if (!scope) return { verdict: 'unknown', basis: 'index.dynasty', note: '非中国朝代，交由模型判断' };
       const hit =
-        scope.includes(c.dynasty) || (c.dynastyAlt ?? []).some((d) => scope.includes(d));
+        scope.includes(c.polity) || (c.polityAlt ?? []).some((p) => scope.includes(p));
       return { verdict: hit ? 'yes' : 'no', basis: 'index.dynasty' };
+    }
+
+    case 'century': {
+      const want = Number(q.value);
+      if (!Number.isInteger(want) || want === 0) return { verdict: 'unknown', basis: 'index.century' };
+      const birth = c.birth !== null && Number.isFinite(c.birth) ? c.birth : null;
+      const death = c.death !== null && Number.isFinite(c.death) ? c.death : null;
+      if (birth === null && death === null) {
+        return { verdict: 'unknown', basis: 'index.century', note: '生卒年记载不全' };
+      }
+      let start: number;
+      let end: number;
+      if (want > 0) {
+        start = (want - 1) * 100 + 1;
+        end = want * 100;
+      } else {
+        const n = -want;
+        start = -n * 100;
+        end = -(n - 1) * 100 - 1;
+      }
+      const from = birth ?? death!;
+      const to = death ?? birth!;
+      return { verdict: from <= end && to >= start ? 'yes' : 'no', basis: 'index.century' };
     }
 
     case 'eraBefore': {
@@ -165,7 +189,8 @@ export function judgeByIndex(c: Character, q: ParsedQuery): JudgeOutcome {
     case 'nationality': {
       const wanted = asBool(q.value);
       if (wanted === null) return { verdict: 'unknown', basis: 'index.nationality' };
-      return { verdict: wanted ? 'yes' : 'no', basis: 'index.nationality' };
+      const isChinese = c.region === 'cn';
+      return { verdict: wanted === isChinese ? 'yes' : 'no', basis: 'index.nationality' };
     }
 
     case 'event': {

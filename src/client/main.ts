@@ -12,6 +12,7 @@ import {
   savePrefs,
   saveQuestions,
   setState,
+  setStateSilent,
   subscribe,
 } from './store.ts';
 import { renderApp } from './views.ts';
@@ -61,13 +62,7 @@ function readFormConfig(): AiConfig | null {
   const apiKey = val('apiKey');
   const model = val('model');
   if (!baseURL || !apiKey || !model) return null;
-  const t = Number(val('temperature'));
-  return {
-    baseURL,
-    apiKey,
-    model,
-    ...(Number.isFinite(t) ? { temperature: Math.min(1, Math.max(0, t)) } : {}),
-  };
+  return { baseURL, apiKey, model };
 }
 
 async function testAi(): Promise<void> {
@@ -99,9 +94,13 @@ async function startGame(): Promise<void> {
   try {
     const session = await api.startSolo({
       difficulty: s.difficulty,
-      dynasty: s.dynasty,
+      polity: s.scope === 'cn' ? s.polity : null,
+      region: null,
+      worldEra: s.scope === 'world' ? s.worldEra : null,
+      cnShare: s.scope === 'cn' ? 1 : s.scope === 'world' ? 0 : s.cnShare,
       mode: s.mode,
       pronoun: s.pronoun,
+      ...(s.turns ? { turns: s.turns } : {}),
       aiConfig: s.config,
     });
     saveGameId(session.gameId);
@@ -261,9 +260,29 @@ root.addEventListener('click', (event) => {
     case 'pick-mode':
       setState({ mode: el.dataset.value === 'guided' ? 'guided' : 'strict' });
       break;
-    case 'pick-dynasty':
-      setState({ dynasty: el.dataset.value || null });
+    case 'pick-turns': {
+      const t = Number(el.dataset.value);
+      if (Number.isFinite(t) && t >= 10) {
+        setState({ turns: Math.round(t) });
+        savePrefs({ turns: Math.round(t) });
+      }
       break;
+    }
+    case 'pick-polity':
+      setState({ polity: el.dataset.value || null });
+      break;
+    case 'pick-era':
+      setState({ worldEra: el.dataset.value || null });
+      break;
+    case 'pick-scope': {
+      const value = el.dataset.value;
+      setState({
+        scope: value === 'cn' || value === 'world' ? value : 'mixed',
+        ...(value === 'cn' ? { worldEra: null } : {}),
+        ...(value === 'world' ? { polity: null } : {}),
+      });
+      break;
+    }
     case 'start-game':
       void startGame();
       break;
@@ -362,6 +381,15 @@ root.addEventListener('submit', (event) => {
   }
 });
 
+root.addEventListener('input', (event) => {
+  const el = event.target as HTMLInputElement;
+  if (el?.getAttribute('data-field') !== 'cn-share') return;
+  // 滑块不重渲染，否则会丢失拖拽焦点
+  setStateSilent({ cnShare: Number(el.value) / 100 });
+  const label = root.querySelector<HTMLElement>('[data-role="cn-share-label"]');
+  if (label) label.textContent = `${el.value}%`;
+});
+
 root.addEventListener('keydown', (event) => {
   const target = event.target as HTMLElement;
   if (event.key !== 'Enter') return;
@@ -389,7 +417,7 @@ async function boot(): Promise<void> {
 
   const config = loadConfig();
   const prefs = loadPrefs();
-  setState({ pronoun: prefs.pronoun, saved: loadQuestions() });
+  setState({ pronoun: prefs.pronoun, turns: prefs.turns, saved: loadQuestions() });
   if (config) setState({ config, verified: true });
 
   const gameId = loadGameId();

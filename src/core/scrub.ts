@@ -30,7 +30,7 @@ const GROUP_OF: Record<string, string> = {
 
 function dynastyMentions(c: Character): string[] {
   const out: string[] = [];
-  const all = [c.dynasty, ...(c.dynastyAlt ?? [])];
+  const all = [c.polity, ...(c.polityAlt ?? [])];
   for (const name of all) {
     if (MULTI_DYNASTY.includes(name)) out.push(name);
     else if (SINGLE_DYNASTY.includes(name)) {

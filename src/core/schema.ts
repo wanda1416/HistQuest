@@ -1,4 +1,4 @@
-import { DYNASTIES, type Character } from '../shared/domain.ts';
+import { DYNASTIES, REGIONS, WORLD_ERAS, type Character } from '../shared/domain.ts';
 
 /**
  * 人物数据的规范化、校验与序列化（纯函数，前后端共用）。
@@ -23,12 +23,15 @@ export const CHARACTER_KEY_ORDER: Array<keyof Character> = [
   'id',
   'name',
   'aliases',
-  'dynasty',
-  'dynastyAlt',
+  'region',
+  'polity',
+  'polityAlt',
+  'worldEra',
   'gender',
   'birth',
   'death',
   'birthplace',
+  'country',
   'birthProvince',
   'roles',
   'tags',
@@ -40,10 +43,12 @@ export const CHARACTER_KEY_ORDER: Array<keyof Character> = [
 ];
 
 const DYNASTY_SET = new Set<string>(DYNASTIES);
+const REGION_SET = new Set<string>(REGIONS);
+const ERA_SET = new Set<string>(WORLD_ERAS);
 const GENDERS = new Set(['male', 'female']);
 const ID_RE = /^[a-z][a-z0-9_]{1,31}$/;
 const NAME_MIN = 2;
-const NAME_MAX = 5;
+const NAME_MAX = 8;
 
 const GENDER_LABEL: Record<string, string> = { male: '男', female: '女' };
 
@@ -80,21 +85,28 @@ function bool(value: unknown): boolean {
 export function normalizeCharacter(raw: unknown): Character {
   const o = (raw ?? {}) as Record<string, unknown>;
   const aliases = strList(o.aliases);
-  const alt = strList(o.dynastyAlt);
+  const alt = strList(o.polityAlt ?? o.dynastyAlt);
   const externalId = str(o.externalId);
   const difficulty = Number(o.difficulty);
+  const region = str(o.region);
+  const country = str(o.country);
+  const worldEra = str(o.worldEra);
 
   return {
     id: str(o.id),
     name: str(o.name),
     aliases,
-    dynasty: str(o.dynasty),
+    // 旧数据只有 dynasty 字段：迁移期自动落到中国区
+    region: (REGIONS as readonly string[]).includes(region) ? (region as Character['region']) : 'cn',
+    polity: str(o.polity) || str(o.dynasty),
     // 空数组不写入：否则序列化会把所有没有分期的人物行都改一遍
-    ...(alt.length ? { dynastyAlt: alt } : {}),
+    ...(alt.length ? { polityAlt: alt } : {}),
+    ...(worldEra ? { worldEra: worldEra as Character['worldEra'] } : {}),
     gender: str(o.gender) as Character['gender'],
     birth: year(o.birth),
     death: year(o.death),
     birthplace: str(o.birthplace) || null,
+    ...(country ? { country } : {}),
     birthProvince: str(o.birthProvince) || null,
     roles: strList(o.roles),
     tags: strList(o.tags),
@@ -142,11 +154,15 @@ export function validateCharacter(c: Character, opts: ValidateOptions): Issue[] 
 
   for (const alias of c.aliases) {
     const len = charLen(alias);
+    const hasSpace = /\s/.test(alias);
     if (len < 2) {
       err('aliases', 'alias_too_short', `别名「${alias}」不足 2 字：会命中大量无关猜名，解说也会被整段丢弃`);
     }
-    if (len > 12) warn('aliases', 'alias_too_long', `别名「${alias}」超过 12 字，可能不是常用称呼`);
-    if (/\s/.test(alias)) err('aliases', 'alias_space', `别名「${alias}」含空白字符`);
+    // 西文名天然带空格且较长，这两项只对中文别名（中国区）有意义
+    if (!hasSpace && len > 12) warn('aliases', 'alias_too_long', `别名「${alias}」超过 12 字，可能不是常用称呼`);
+    if (hasSpace && c.region === 'cn') {
+      warn('aliases', 'alias_space', `别名「${alias}」含空白字符`);
+    }
     if (alias === c.name) err('aliases', 'alias_same_as_name', `别名「${alias}」与姓名重复`);
 
     const owner = opts.others.find((o) => o.name === alias || o.aliases.includes(alias));
@@ -157,42 +173,61 @@ export function validateCharacter(c: Character, opts: ValidateOptions): Issue[] 
     }
   }
 
-  /* ---------------- 朝代（唯一被索引强制裁定的维度） ---------------- */
-  if (!DYNASTY_SET.has(c.dynasty)) {
-    err(
-      'dynasty',
-      'dynasty_unknown',
-      `朝代「${c.dynasty || '空'}」不在受控枚举内：所有「他是 X 朝人吗」都会绕过索引，可能答得与揭晓卡矛盾`,
-    );
-  }
-  for (const alt of c.dynastyAlt ?? []) {
-    if (!DYNASTY_SET.has(alt)) err('dynastyAlt', 'dynasty_alt_unknown', `分期「${alt}」不在受控枚举内`);
-    if (alt === c.dynasty) warn('dynastyAlt', 'dynasty_alt_self', `分期与主朝代相同（「${alt}」），属于冗余`);
-  }
-  // 卒于三国建立（220 年）之前的东汉人物不得标注三国；蔡文姬卒年 249，允许同时标注
-  if (
-    c.dynasty === '东汉' &&
-    (c.dynastyAlt ?? []).includes('三国') &&
-    c.death !== null &&
-    c.death <= 220
-  ) {
-    err(
-      'dynastyAlt',
-      'dynasty_alt_three_kingdoms',
-      '按严格史学分期，卒于 220 年前的东汉人物不能标注三国（曹操、关羽、周瑜均属此例）',
-    );
+  /* ---------------- 归属（中国区是唯一被索引强制裁定的维度） ---------------- */
+  if (!REGION_SET.has(c.region)) {
+    err('region', 'region_unknown', `文明圈「${c.region || '空'}」不在受控枚举内`);
   }
 
-  /* ---------------- 性别 / 皇帝 ---------------- */
+  if (c.region === 'cn') {
+    if (!DYNASTY_SET.has(c.polity)) {
+      err(
+        'polity',
+        'polity_unknown',
+        `朝代「${c.polity || '空'}」不在受控枚举内：所有「他是 X 朝人吗」都会绕过索引，可能答得与揭晓卡矛盾`,
+      );
+    }
+    for (const alt of c.polityAlt ?? []) {
+      if (!DYNASTY_SET.has(alt)) err('polityAlt', 'polity_alt_unknown', `分期「${alt}」不在受控枚举内`);
+      if (alt === c.polity) warn('polityAlt', 'polity_alt_self', `分期与主朝代相同（「${alt}」），属于冗余`);
+    }
+    // 卒于三国建立（220 年）之前的东汉人物不得标注三国；蔡文姬卒年 249，允许同时标注
+    if (
+      c.polity === '东汉' &&
+      (c.polityAlt ?? []).includes('三国') &&
+      c.death !== null &&
+      c.death <= 220
+    ) {
+      err(
+        'polityAlt',
+        'polity_alt_three_kingdoms',
+        '按严格史学分期，卒于 220 年前的东汉人物不能标注三国（曹操、关羽、周瑜均属此例）',
+      );
+    }
+    if (c.worldEra) warn('worldEra', 'world_era_on_cn', '中国人物不需要世界时期字段');
+  } else {
+    // 世界区不做政权硬裁定：只要求非空，避免词表不全卡住录入
+    if (!c.polity) err('polity', 'polity_empty', '世界人物必须填写所属政权/国家');
+    if (!c.country) warn('country', 'country_missing', '世界人物建议填写今属国家：资料卡会多一条校对信息');
+    if (!c.worldEra) {
+      warn('worldEra', 'world_era_missing', '未划分时期：单选「世界」时无法按时期筛选');
+    } else if (!ERA_SET.has(c.worldEra)) {
+      err('worldEra', 'world_era_unknown', `时期「${c.worldEra}」不在受控枚举内`);
+    }
+  }
+
+  /* ---------------- 性别 / 君主 ---------------- */
   if (!GENDERS.has(c.gender)) err('gender', 'gender_invalid', '性别只能是 male（男）或 female（女）');
 
-  const roleEmperor = c.roles.includes('皇帝');
-  if (c.emperor !== roleEmperor) {
-    warn(
-      'emperor',
-      'emperor_role_mismatch',
-      c.emperor ? '标记为皇帝，但身份里没有「皇帝」' : '身份里含「皇帝」，但未标记为皇帝',
-    );
+  // 身份与「是否君主」的一致性只对中国区提示：世界区有国王、法老、苏丹等不同称谓
+  if (c.region === 'cn') {
+    const roleEmperor = c.roles.includes('皇帝');
+    if (c.emperor !== roleEmperor) {
+      warn(
+        'emperor',
+        'emperor_role_mismatch',
+        c.emperor ? '标记为皇帝，但身份里没有「皇帝」' : '身份里含「皇帝」，但未标记为皇帝',
+      );
+    }
   }
 
   /* ---------------- 生卒 ---------------- */
@@ -206,7 +241,7 @@ export function validateCharacter(c: Character, opts: ValidateOptions): Issue[] 
 
   /* ---------------- 籍贯 ---------------- */
   if (!c.birthplace) warn('birthplace', 'birthplace_missing', '籍贯未填：资料卡缺此项，模型只能凭自身知识判断');
-  if (c.birthplace && !c.birthProvince) {
+  if (c.region === 'cn' && c.birthplace && !c.birthProvince) {
     warn('birthProvince', 'province_missing', '有籍贯但缺省份，筛选项和省级问法都会受影响');
   }
 
@@ -280,15 +315,26 @@ export function serializeCharacters(list: Character[]): string {
 }
 
 /** 从现有数据聚合下拉选项：身份词与省份不设硬编码表，跟着数据长 */
-export function collectVocab(list: Character[]): { roles: string[]; provinces: string[] } {
+export function collectVocab(list: Character[]): {
+  roles: string[];
+  provinces: string[];
+  polities: string[];
+} {
   const roles = new Set<string>();
   const provinces = new Set<string>();
+  const polities = new Set<string>();
   for (const c of list) {
     for (const role of c.roles) roles.add(role);
     if (c.birthProvince) provinces.add(c.birthProvince);
+    // 中国朝代由 DYNASTIES 提供，这里只收集世界政权建议值
+    if (c.region !== 'cn' && c.polity) polities.add(c.polity);
   }
   const byLocale = (a: string, b: string): number => a.localeCompare(b, 'zh');
-  return { roles: [...roles].sort(byLocale), provinces: [...provinces].sort(byLocale) };
+  return {
+    roles: [...roles].sort(byLocale),
+    provinces: [...provinces].sort(byLocale),
+    polities: [...polities].sort(byLocale),
+  };
 }
 
 /** 给前端展示用：性别中文名 */

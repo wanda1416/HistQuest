@@ -26,8 +26,8 @@ const errorsOf = (c: Character, others: Character[]): string[] =>
     .filter((i) => i.level === 'error')
     .map((i) => i.code);
 
-test('现有 130 人全部没有 error 级问题', () => {
-  assert.equal(list.length, 130);
+test('全库没有 error 级问题', () => {
+  assert.ok(list.length >= 184, `应包含 130 位中国人物 + 世界人物，实际 ${list.length}`);
   for (const c of list) {
     assert.deepEqual(errorsOf(c, othersOf(c)), [], `${c.name} 触发了错误级校验`);
   }
@@ -38,7 +38,8 @@ test('合法的新增人物可以通过', () => {
     id: 'test_person',
     name: '测试君',
     aliases: ['测试郎'],
-    dynasty: '唐',
+    region: 'cn',
+    polity: '唐',
     gender: 'male',
     birth: 700,
     death: 760,
@@ -62,14 +63,14 @@ test('id 格式与唯一性', () => {
 });
 
 test('朝代不在受控枚举内 → error（会让索引裁定失效）', () => {
-  const c = normalizeCharacter({ ...byName('李白'), dynasty: '魏国' });
-  assert.ok(errorsOf(c, othersOf(c)).includes('dynasty_unknown'));
+  const c = normalizeCharacter({ ...byName('李白'), polity: '魏国' });
+  assert.ok(errorsOf(c, othersOf(c)).includes('polity_unknown'));
 });
 
 test('严格史学分期：卒于 220 年前的东汉人物不能标注三国', () => {
   const caocao = byName('曹操');
-  const c = normalizeCharacter({ ...caocao, dynastyAlt: ['三国'] });
-  assert.ok(errorsOf(c, othersOf(c)).includes('dynasty_alt_three_kingdoms'));
+  const c = normalizeCharacter({ ...caocao, polityAlt: ['三国'] });
+  assert.ok(errorsOf(c, othersOf(c)).includes('polity_alt_three_kingdoms'));
 
   // 蔡文姬卒于 249 年，确实经历过三国，允许同时标注
   const caiwenji = byName('蔡文姬');

@@ -2,7 +2,7 @@ import express from 'express';
 import type { Request, Response } from 'express';
 import { AiError, testConnection } from '../ai/client.ts';
 import type { AiCredential } from '../shared/domain.ts';
-import { DYNASTIES } from '../shared/domain.ts';
+import { DYNASTIES, REGIONS, REGION_LABELS, type Region } from '../shared/domain.ts';
 import type { AiConfig, MetaRes } from '../shared/protocol.ts';
 import type { CharacterIndex } from '../core/index.ts';
 import { config, serverModelReady } from '../config.ts';
@@ -49,12 +49,21 @@ export function createRoutes(deps: { getIndex: () => CharacterIndex; solo: SoloS
   const limiter = new RateLimiter(30, 0.5);
 
   router.get('/meta', (_req: Request, res: Response) => {
+    const index = deps.getIndex();
+    const counts = new Map<string, number>();
+    for (const c of index.list) counts.set(c.region, (counts.get(c.region) ?? 0) + 1);
+
     const meta: MetaRes = {
       dynasties: [...DYNASTIES],
       difficulties: DIFFICULTIES,
       maxTurns: config.soloTurns,
       serverModelReady: serverModelReady(),
-      characterCount: deps.getIndex().size,
+      characterCount: index.size,
+      regions: REGIONS.filter((value) => (counts.get(value) ?? 0) > 0).map((value) => ({
+        value: value as Region,
+        label: REGION_LABELS[value],
+        count: counts.get(value) ?? 0,
+      })),
     };
     res.json(meta);
   });
@@ -71,13 +80,32 @@ export function createRoutes(deps: { getIndex: () => CharacterIndex; solo: SoloS
     const cfg = readAiConfig(req.body);
     if (!cfg) return fail(res, 400, 'MODEL_NOT_CONFIGURED', '没有模型配置就无法开局');
 
-    const body = req.body as { difficulty?: unknown; dynasty?: unknown; mode?: unknown; pronoun?: unknown };
+    const body = req.body as {
+      difficulty?: unknown;
+      polity?: unknown;
+      region?: unknown;
+      worldEra?: unknown;
+      cnShare?: unknown;
+      mode?: unknown;
+      pronoun?: unknown;
+      turns?: unknown;
+    };
     const difficulty = Math.min(3, Math.max(1, Number(body?.difficulty) || 1));
-    const dynasty = typeof body?.dynasty === 'string' && body.dynasty ? body.dynasty : null;
+    const polity = typeof body?.polity === 'string' && body.polity ? body.polity : null;
+    const region =
+      typeof body?.region === 'string' && body.region
+        ? (body.region as (typeof REGIONS)[number])
+        : null;
+    const share = Number(body?.cnShare);
+    const cnShare = Number.isFinite(share) ? Math.min(1, Math.max(0, share)) : 0.5;
+    const worldEra =
+      typeof body?.worldEra === 'string' && body.worldEra ? body.worldEra : null;
     const mode = body?.mode === 'guided' ? 'guided' : 'strict';
     const pronoun = body?.pronoun === 'neutral' ? 'neutral' : 'normal';
+    const turnsRaw = Number(body?.turns);
+    const turns = Number.isFinite(turnsRaw) && turnsRaw > 0 ? Math.round(turnsRaw) : undefined;
 
-    const session = deps.solo.create({ difficulty, dynasty, mode, pronoun });
+    const session = deps.solo.create({ difficulty, polity, region, worldEra, cnShare, mode, pronoun, turns });
     res.status(201).json(projectSession(session));
   });
 

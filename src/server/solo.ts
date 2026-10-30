@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
-import type { AiCredential, AnswerMode, AnswerRecord, PronounStyle, SoloSession } from '../shared/domain.ts';
+import type { AiCredential, AnswerMode, AnswerRecord, PronounStyle, Region, SoloSession } from '../shared/domain.ts';
 import type { AskRes, GuessRes, RevealRes } from '../shared/protocol.ts';
 import type { CharacterIndex } from '../core/index.ts';
 import { guessMatches } from '../core/judge.ts';
@@ -21,6 +21,7 @@ export class SoloError extends Error {
 }
 
 export interface SoloStoreOptions {
+  /** 服务端允许的最大轮次上限；每局可在 10 到该值之间自选 */
   turns: number;
   /** 传 null 关闭持久化（测试用） */
   file?: string | null;
@@ -28,9 +29,18 @@ export interface SoloStoreOptions {
 
 export interface CreateInput {
   difficulty: number;
-  dynasty: string | null;
+  /** 中国朝代筛选 */
+  polity?: string | null;
+  /** 文明圈筛选 */
+  region?: Region | null;
+  /** 世界时期筛选 */
+  worldEra?: string | null;
+  /** 混合模式下中国人物占比 0–1 */
+  cnShare?: number;
   mode?: AnswerMode;
   pronoun?: PronounStyle;
+  /** 本局提问轮次，10 到 opts.turns 之间；缺省用 opts.turns */
+  turns?: number;
   rng?: () => number;
 }
 
@@ -50,21 +60,29 @@ export class SoloStore {
   }
 
   create(input: CreateInput): SoloSession {
+    const cnShare = Math.min(1, Math.max(0, input.cnShare ?? 0.5));
     const target = this.index.pick({
       difficulty: input.difficulty,
-      dynasty: input.dynasty,
+      polity: input.polity ?? null,
+      region: input.region ?? null,
+      worldEra: input.worldEra ?? null,
+      cnShare,
       rng: input.rng,
     });
 
+    const turns = Math.min(this.opts.turns, Math.max(10, Math.round(input.turns ?? this.opts.turns)));
     const now = Date.now();
     const session: SoloSession = {
       id: randomBytes(12).toString('hex'),
       targetId: target.id,
       difficulty: input.difficulty,
-      dynasty: input.dynasty,
+      polity: input.polity ?? null,
+      region: input.region ?? null,
+      worldEra: input.worldEra ?? null,
+      cnShare,
       mode: input.mode ?? 'strict',
       pronoun: input.pronoun ?? 'normal',
-      turnsLeft: this.opts.turns,
+      turnsLeft: turns,
       status: 'playing',
       history: [],
       createdAt: now,
@@ -73,7 +91,14 @@ export class SoloStore {
 
     this.sessions.set(session.id, session);
     this.persist();
-    log('solo.create', { id: session.id, difficulty: input.difficulty, dynasty: input.dynasty, mode: session.mode });
+    log('solo.create', {
+      id: session.id,
+      difficulty: input.difficulty,
+      polity: session.polity,
+      region: session.region,
+      cnShare: session.cnShare,
+      mode: session.mode,
+    });
     return session;
   }
 

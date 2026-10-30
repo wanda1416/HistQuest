@@ -43,7 +43,7 @@ test('验收3：问"他是唐朝人吗"与索引一致', () => {
 });
 
 test('朝代：北宋人物答"宋朝"应为是', () => {
-  assert.equal(qingzhao.dynasty, '北宋');
+  assert.equal(qingzhao.polity, '北宋');
   assert.equal(v(qingzhao, 'dynasty', '宋'), 'yes');
   assert.equal(v(qingzhao, 'dynasty', '南宋'), 'yes');
 });
@@ -54,7 +54,7 @@ test('无法识别的朝代 → unknown，不瞎猜', () => {
 
 test('严格史学分期：曹操算东汉，不算三国', () => {
   const caocao = byName('曹操');
-  assert.equal(caocao.dynasty, '东汉');
+  assert.equal(caocao.polity, '东汉');
   assert.equal(v(caocao, 'dynasty', '三国'), 'no');
   assert.equal(v(caocao, 'dynasty', '东汉'), 'yes');
   assert.equal(v(caocao, 'dynasty', '汉'), 'yes');
@@ -142,8 +142,8 @@ test('猜测归一化与别名匹配', () => {
 });
 
 test('索引能按朝代取样', () => {
-  const c = index.pick({ dynasty: '唐', difficulty: 1, rng: () => 0.5 });
-  assert.ok(['唐'].includes(c.dynasty));
+  const c = index.pick({ polity: '唐', difficulty: 1, rng: () => 0.5 });
+  assert.ok(['唐'].includes(c.polity));
 });
 
 test('问句朝代提取：不会被公元前里的元误导', () => {
@@ -169,9 +169,10 @@ test('跨朝代人物：按生卒年与朝代重叠判定', () => {
 test('数据一致性：朝代标注与生卒年覆盖的时期必须吻合', () => {
   const bad: string[] = [];
   for (const c of list) {
+    if (c.region !== 'cn') continue;
     if (c.birth === null || c.death === null) continue;
     const lived = periodsLived(c.birth, c.death);
-    const declared = new Set([c.dynasty, ...(c.dynastyAlt ?? [])]);
+    const declared = new Set([c.polity, ...(c.polityAlt ?? [])]);
     const missing = lived.filter((d) => !declared.has(d));
     const extra = [...declared].filter((d) => !lived.includes(d));
     if (missing.length || extra.length) {

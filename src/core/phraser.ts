@@ -52,6 +52,8 @@ export function clarify(query: ParsedQuery, verdict: Verdict, note?: string): st
       const raw = String(query.value ?? '').replace(/(朝|代|时期|时代)$/g, '');
       return DYNASTY_NOTES[raw] ?? '按生卒年与朝代起止时间，判断他是否经历过这个时期。';
     }
+    case 'century':
+      return '按生卒年与该世纪是否有重叠判断。';
     case 'role':
       return '身份按主要社会角色计，兼擅某项不算。';
     case 'birthplace':
@@ -63,7 +65,7 @@ export function clarify(query: ParsedQuery, verdict: Verdict, note?: string): st
     case 'birthEra':
       return '以出生年份是否早于公元元年为准。';
     case 'emperor':
-      return '以是否正式称帝为准，追尊不算。';
+      return '以是否正式即位为君主为准（皇帝、国王、法老、苏丹等）。';
     case 'alive':
       return '索引内均为已故历史人物。';
     case 'nationality':

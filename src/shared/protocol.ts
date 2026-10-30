@@ -1,5 +1,5 @@
 /** REST 契约：前端与后端共用，避免字段漂移。 */
-import type { AnswerMode, AnswerRecord, Character, PronounStyle, SessionStatus, Verdict } from './domain.ts';
+import type { AnswerMode, AnswerRecord, Character, PronounStyle, Region, SessionStatus, Verdict } from './domain.ts';
 
 export interface AiConfig {
   baseURL: string;
@@ -11,16 +11,28 @@ export interface AiConfig {
 export interface MetaRes {
   dynasties: string[];
   difficulties: Array<{ level: number; label: string; desc: string }>;
+  /** 服务端允许的最大轮次；每局可在 10 到该值之间自选 */
   maxTurns: number;
   serverModelReady: boolean;
   characterCount: number;
+  /** 可选文明圈与各自人数 */
+  regions: Array<{ value: Region; label: string; count: number }>;
 }
 
 export interface StartSoloReq {
   difficulty: number;
-  dynasty: string | null;
+  /** 中国朝代筛选，null = 不限 */
+  polity: string | null;
+  /** 文明圈筛选，null = 不限 */
+  region: Region | null;
+  /** 世界时期筛选（仅世界模式），null = 不限 */
+  worldEra: string | null;
+  /** 混合模式下中国人物占比 0–1 */
+  cnShare: number;
   mode: AnswerMode;
   pronoun: PronounStyle;
+  /** 本局提问轮次（10–maxTurns），缺省 = maxTurns */
+  turns?: number;
   aiConfig: AiConfig;
 }
 
@@ -83,7 +95,10 @@ export interface SessionView {
   status: SessionStatus;
   turnsLeft: number;
   difficulty: number;
-  dynasty: string | null;
+  polity: string | null;
+  region: Region | null;
+  worldEra: string | null;
+  cnShare: number;
   mode: AnswerMode;
   pronoun: PronounStyle;
   history: RecordView[];

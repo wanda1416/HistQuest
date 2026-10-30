@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { DYNASTIES, type Character } from '../shared/domain.ts';
+import { DYNASTIES, REGIONS, type Character } from '../shared/domain.ts';
 import { CharacterIndex } from '../core/index.ts';
 import {
   collectVocab,
@@ -44,9 +44,10 @@ export interface HealthReport {
   errors: number;
   warnings: number;
   items: HealthItem[];
-  matrix: Array<{ dynasty: string; levels: Record<string, number>; total: number }>;
+  matrix: Array<{ polity: string; levels: Record<string, number>; total: number }>;
+  regionMatrix: Array<{ region: string; levels: Record<string, number>; total: number }>;
   emptyDynasties: string[];
-  emptyCombos: Array<{ dynasty: string; difficulty: number }>;
+  emptyCombos: Array<{ polity: string; difficulty: number }>;
 }
 
 const BACKUP_RE = /^characters-\d{8}-\d{6}-\d{3}(-\d+)?\.json$/;
@@ -142,24 +143,36 @@ export class CharacterStore {
     }
 
     const active = this.idx.list;
-    const matrix = DYNASTIES.map((dynasty) => {
+    const matrix = DYNASTIES.map((polity) => {
       const levels: Record<string, number> = { '1': 0, '2': 0, '3': 0 };
       let total = 0;
       for (const c of active) {
-        if (c.dynasty !== dynasty) continue;
+        if (c.region !== 'cn' || c.polity !== polity) continue;
         total += 1;
         const key = String(c.difficulty);
         if (levels[key] !== undefined) levels[key] += 1;
       }
-      return { dynasty, levels, total };
+      return { polity, levels, total };
     });
 
-    const emptyDynasties = matrix.filter((m) => m.total === 0).map((m) => m.dynasty);
-    const emptyCombos: Array<{ dynasty: string; difficulty: number }> = [];
+    const regionMatrix = REGIONS.map((region) => {
+      const levels: Record<string, number> = { '1': 0, '2': 0, '3': 0 };
+      let total = 0;
+      for (const c of active) {
+        if (c.region !== region) continue;
+        total += 1;
+        const key = String(c.difficulty);
+        if (levels[key] !== undefined) levels[key] += 1;
+      }
+      return { region, levels, total };
+    });
+
+    const emptyDynasties = matrix.filter((m) => m.total === 0).map((m) => m.polity);
+    const emptyCombos: Array<{ polity: string; difficulty: number }> = [];
     for (const m of matrix) {
       if (m.total === 0) continue;
       for (const level of [1, 2, 3]) {
-        if (m.levels[String(level)] === 0) emptyCombos.push({ dynasty: m.dynasty, difficulty: level });
+        if (m.levels[String(level)] === 0) emptyCombos.push({ polity: m.polity, difficulty: level });
       }
     }
 
@@ -171,6 +184,7 @@ export class CharacterStore {
       warnings: items.filter((i) => i.level === 'warning').length,
       items,
       matrix,
+      regionMatrix,
       emptyDynasties,
       emptyCombos,
     };
@@ -181,7 +195,7 @@ export class CharacterStore {
     return serializeCharacters(this.all);
   }
 
-  vocab(): { roles: string[]; provinces: string[] } {
+  vocab(): { roles: string[]; provinces: string[]; polities: string[] } {
     return collectVocab(this.all);
   }
 
@@ -256,7 +270,7 @@ function clone(c: Character): Character {
   return {
     ...c,
     aliases: [...c.aliases],
-    ...(c.dynastyAlt ? { dynastyAlt: [...c.dynastyAlt] } : {}),
+    ...(c.polityAlt ? { polityAlt: [...c.polityAlt] } : {}),
     roles: [...c.roles],
     tags: [...c.tags],
   };

@@ -1,4 +1,4 @@
-import { DYNASTIES, type Character } from '../shared/domain.ts';
+import { DYNASTIES, REGION_LABELS, type Character, type Region } from '../shared/domain.ts';
 
 /**
  * 朝代归一与分组。
@@ -44,7 +44,14 @@ export function dynastyScope(asked: string): string[] | null {
 
 export interface PickOptions {
   difficulty?: number | null;
-  dynasty?: string | null;
+  /** 玩家选中的中国朝代（唐/宋…）；指定后忽略 cnShare */
+  polity?: string | null;
+  /** 玩家选中的文明圈；指定后忽略 cnShare */
+  region?: Region | null;
+  /** 玩家选中的世界时期（仅世界模式） */
+  worldEra?: string | null;
+  /** 混合模式下中国人物占比（0–1），默认 0.5 */
+  cnShare?: number;
   rng?: () => number;
 }
 
@@ -73,27 +80,49 @@ export class CharacterIndex {
   }
 
   /**
-   * 按难度/朝代取样。过滤器宁可放宽也不报空：
-   * 先按精确条件，再退到"难度最接近"，最后退到全量。
+   * 抽样：先按政权/文明圈/难度筛选，再按 cnShare 加权。
+   * 过滤器宁可放宽也不报空，但已限定的条件不会被放宽。
    */
   pick(opts: PickOptions = {}): Character {
     const rng = opts.rng ?? Math.random;
-    const scope = opts.dynasty ? dynastyScope(opts.dynasty) : null;
+    let pool = this.list;
 
-    const inScope = scope
-      ? this.list.filter(
-          (c) => scope.includes(c.dynasty) || (c.dynastyAlt ?? []).some((d) => scope.includes(d)),
-        )
-      : this.list;
-
-    const pool = inScope.length > 0 ? inScope : this.list;
-
-    if (opts.difficulty) {
-      const exact = pool.filter((c) => c.difficulty === opts.difficulty);
-      if (exact.length > 0) return exact[Math.floor(rng() * exact.length)]!;
+    // 1) 政权筛选：中国朝代先按分组（宋=北京+南宋）匹配
+    if (opts.polity) {
+      const scope = dynastyScope(opts.polity);
+      pool = scope
+        ? pool.filter(
+            (c) => scope.includes(c.polity) || (c.polityAlt ?? []).some((p) => scope.includes(p)),
+          )
+        : pool.filter((c) => c.polity === opts.polity);
     }
 
-    return pool[Math.floor(rng() * pool.length)]!;
+    // 2) 文明圈筛选
+    if (opts.region) pool = pool.filter((c) => c.region === opts.region);
+
+    // 3) 世界时期筛选（仅世界人物有该字段）
+    if (opts.worldEra) pool = pool.filter((c) => c.worldEra === opts.worldEra);
+
+    // 4) 已限定政权 / 文明圈 / 时期时，中国占比不再生效
+    const limited = Boolean(opts.polity || opts.region || opts.worldEra);
+    if (pool.length === 0) pool = this.list;
+
+    // 3) 难度：先精确，池内无该难度时退回不区分难度
+    const exact = opts.difficulty ? pool.filter((c) => c.difficulty === opts.difficulty) : [];
+    const candidates = exact.length > 0 ? exact : pool;
+    // 5) 玩家已限定政权或文明圈时，中国占比不再生效
+    if (limited) {
+      return candidates[Math.floor(rng() * candidates.length)]!;
+    }
+
+    const cnShare = Math.min(1, Math.max(0, opts.cnShare ?? 0.5));
+    const cn = candidates.filter((c) => c.region === 'cn');
+    const world = candidates.filter((c) => c.region !== 'cn');
+    if (cn.length === 0) return world[Math.floor(rng() * world.length)]!;
+    if (world.length === 0) return cn[Math.floor(rng() * cn.length)]!;
+
+    const target = rng() < cnShare ? cn : world;
+    return target[Math.floor(rng() * target.length)]!;
   }
 
   /** 去名化：把人物名与所有别名替换为「该人物」，供任何需要交给模型的文本使用 */
@@ -108,7 +137,8 @@ export class CharacterIndex {
   /** 结构化事实表（已去名），用于揭晓卡与可选的取证判定 */
   evidence(c: Character): string {
     const rows: string[] = [];
-    rows.push(`朝代：${c.dynasty}`);
+    rows.push(`文明圈：${REGION_LABELS[c.region] ?? c.region}`);
+    rows.push(`政权：${c.polity}`);
     rows.push(`性别：${c.gender === 'female' ? '女' : '男'}`);
     if (c.birth !== null || c.death !== null) {
       rows.push(`生卒：${fmtYear(c.birth)}—${fmtYear(c.death)}`);
@@ -128,7 +158,11 @@ export class CharacterIndex {
   brief(c: Character): string {
     const rows: string[] = [`姓名：${c.name}`];
     if (c.aliases.length) rows.push(`别称：${c.aliases.join('、')}`);
-    rows.push(`朝代：${c.dynasty}${c.dynastyAlt?.length ? `（也活跃于 ${c.dynastyAlt.join('、')}）` : ''}`);
+    rows.push(`文明圈：${REGION_LABELS[c.region] ?? c.region}`);
+    rows.push(
+      `政权：${c.polity}${c.polityAlt?.length ? `（也活跃于 ${c.polityAlt.join('、')}）` : ''}`,
+    );
+    if (c.country) rows.push(`今属：${c.country}`);
     rows.push(`性别：${c.gender === 'female' ? '女' : '男'}`);
     if (c.birth !== null || c.death !== null) {
       rows.push(`生卒：${fmtYear(c.birth)}—${fmtYear(c.death)}`);

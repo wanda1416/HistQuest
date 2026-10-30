@@ -1,7 +1,7 @@
 import express from 'express';
 import type { Request, Response } from 'express';
 import { timingSafeEqual } from 'node:crypto';
-import { DYNASTIES } from '../shared/domain.ts';
+import { DYNASTIES, REGIONS, REGION_LABELS, type Region } from '../shared/domain.ts';
 import type { Character } from '../shared/domain.ts';
 import type { Issue } from '../core/schema.ts';
 import type { CharacterStore } from './characters.ts';
@@ -94,6 +94,8 @@ export function createAdminRoutes(deps: AdminDeps): express.Router {
       difficulties: DIFFICULTIES,
       roles: vocab.roles,
       provinces: vocab.provinces,
+      polities: vocab.polities,
+      regions: REGIONS.map((value) => ({ value, label: REGION_LABELS[value] })),
       total: deps.store.total,
       active: deps.store.activeCount,
       tokenRequired: Boolean(deps.token),
@@ -102,7 +104,8 @@ export function createAdminRoutes(deps: AdminDeps): express.Router {
 
   router.get('/characters', (req: Request, res: Response) => {
     const q = String(req.query.q ?? '').trim().toLowerCase();
-    const dynasty = String(req.query.dynasty ?? '').trim();
+    const polity = String(req.query.polity ?? '').trim();
+    const region = String(req.query.region ?? '').trim();
     const difficulty = Number(req.query.difficulty);
     const retired = String(req.query.retired ?? '');
 
@@ -112,7 +115,8 @@ export function createAdminRoutes(deps: AdminDeps): express.Router {
         [c.id, c.name, ...c.aliases].some((v) => v.toLowerCase().includes(q)),
       );
     }
-    if (dynasty) items = items.filter((c) => c.dynasty === dynasty || (c.dynastyAlt ?? []).includes(dynasty));
+    if (polity) items = items.filter((c) => c.polity === polity || (c.polityAlt ?? []).includes(polity));
+    if (region) items = items.filter((c) => c.region === (region as Region));
     if ([1, 2, 3].includes(difficulty)) items = items.filter((c) => c.difficulty === difficulty);
     if (retired === '1') items = items.filter((c) => c.retired);
     if (retired === '0') items = items.filter((c) => !c.retired);

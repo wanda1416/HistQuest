@@ -27,7 +27,7 @@ export function formatTranscript(history: RecordView[], opts: TranscriptOptions 
     const head: string[] = [opts.title];
     if (opts.character) {
       const c = opts.character;
-      const dyn = c.dynastyAlt?.length ? `${c.dynasty}（亦经历 ${c.dynastyAlt.join('、')}）` : c.dynasty;
+      const dyn = c.polityAlt?.length ? `${c.polity}（亦经历 ${c.polityAlt.join('、')}）` : c.polity;
       head.push(`目标：${c.name}（${dyn}）`);
       head.push(`生卒：${fmtYear(c.birth)} — ${fmtYear(c.death)}`);
       if (typeof opts.turnsUsed === 'number') head.push(`有效提问：${opts.turnsUsed} 次`);

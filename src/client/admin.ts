@@ -13,7 +13,7 @@ let state: AdminState = {
   meta: null,
   list: [],
   total: 0,
-  filters: { q: '', dynasty: '', difficulty: '', retired: '' },
+  filters: { q: '', polity: '', region: '', difficulty: '', retired: '' },
   view: 'list',
   draft: null,
   originalId: null,
@@ -73,7 +73,8 @@ async function loadMeta(): Promise<void> {
 async function loadList(): Promise<void> {
   const qs = new URLSearchParams();
   if (state.filters.q) qs.set('q', state.filters.q);
-  if (state.filters.dynasty) qs.set('dynasty', state.filters.dynasty);
+  if (state.filters.polity) qs.set('polity', state.filters.polity);
+  if (state.filters.region) qs.set('region', state.filters.region);
   if (state.filters.difficulty) qs.set('difficulty', state.filters.difficulty);
   if (state.filters.retired) qs.set('retired', state.filters.retired);
 
@@ -111,8 +112,17 @@ function syncDraftField(field: string, el: HTMLInputElement | HTMLSelectElement 
     case 'tags':
       d.tags = splitList(el.value);
       break;
-    case 'dynasty':
-      d.dynasty = el.value;
+    case 'polity':
+      d.polity = el.value;
+      break;
+    case 'worldEra':
+      d.worldEra = (el.value || undefined) as Character['worldEra'];
+      break;
+    case 'region':
+      d.region = el.value as Character['region'];
+      break;
+    case 'country':
+      d.country = el.value.trim() || null;
       break;
     case 'gender':
       d.gender = el.value as Character['gender'];
@@ -158,8 +168,13 @@ function handleField(el: HTMLElement): void {
     state.filters.q = (el as HTMLInputElement).value.trim();
     return;
   }
-  if (field === 'filter-dynasty') {
-    state.filters.dynasty = (el as HTMLSelectElement).value;
+  if (field === 'filter-polity') {
+    state.filters.polity = (el as HTMLSelectElement).value;
+    void loadList();
+    return;
+  }
+  if (field === 'filter-region') {
+    state.filters.region = (el as HTMLSelectElement).value;
     void loadList();
     return;
   }
@@ -189,7 +204,8 @@ function newDraft(): void {
       id: `h${Math.random().toString(16).slice(2, 8)}`,
       name: '',
       aliases: [],
-      dynasty: '唐',
+      region: 'cn',
+      polity: '唐',
       gender: 'male',
       birth: null,
       death: null,
@@ -330,8 +346,8 @@ root.addEventListener('click', (event) => {
       const d = state.draft;
       const value = el.dataset.value ?? '';
       if (!d || !value) break;
-      const list = d.dynastyAlt ?? [];
-      d.dynastyAlt = list.includes(value) ? list.filter((x) => x !== value) : [...list, value];
+      const list = d.polityAlt ?? [];
+      d.polityAlt = list.includes(value) ? list.filter((x: string) => x !== value) : [...list, value];
       render();
       break;
     }

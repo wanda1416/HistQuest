@@ -86,8 +86,8 @@ test('缺少 X-HQ-Admin 头一律拒绝', async () => {
 test('meta 返回朝代/身份词表与统计', async () => {
   const { status, body } = await api('/api/admin/meta');
   assert.equal(status, 200);
-  assert.equal(body.total, 130);
-  assert.equal(body.active, 130);
+  assert.equal(body.total, 184);
+  assert.equal(body.active, 184);
   assert.ok(body.dynasties.includes('蒙古'), '朝代枚举应已包含蒙古');
   assert.ok(body.roles.includes('诗人'));
 });
@@ -99,7 +99,8 @@ test('非法人物被拒绝，且文件不被改写', async () => {
     body: JSON.stringify({
       id: 'bad_person',
       name: '坏数据',
-      dynasty: '魏国',
+      region: 'cn',
+      polity: '魏国',
       gender: 'male',
       roles: [],
       notable: '',
@@ -109,7 +110,7 @@ test('非法人物被拒绝，且文件不被改写', async () => {
 
   assert.equal(status, 400);
   assert.equal(body.error, 'VALIDATION_FAILED');
-  assert.ok(body.issues.some((i: { code: string }) => i.code === 'dynasty_unknown'));
+  assert.ok(body.issues.some((i: { code: string }) => i.code === 'polity_unknown'));
   assert.equal(fs.readFileSync(charactersFile, 'utf8'), before);
 });
 
@@ -127,7 +128,8 @@ test('新增 → 查询 → 修改 → 导出 → 下线', async () => {
     id: 'test_person',
     name: '测试君',
     aliases: ['测试郎'],
-    dynasty: '唐',
+    region: 'cn',
+    polity: '唐',
     gender: 'male',
     birth: 700,
     death: 760,
@@ -149,7 +151,7 @@ test('新增 → 查询 → 修改 → 导出 → 下线', async () => {
 
   const fetched = await api('/api/admin/characters/test_person');
   assert.equal(fetched.status, 200);
-  assert.equal(fetched.body.character.dynasty, '唐');
+  assert.equal(fetched.body.character.polity, '唐');
 
   const updated = await api('/api/admin/characters/test_person', {
     method: 'PUT',
@@ -171,15 +173,15 @@ test('新增 → 查询 → 修改 → 导出 → 下线', async () => {
   assert.equal(retired.status, 200);
 
   const meta = await api('/api/meta', {}, false);
-  assert.equal(meta.body.characterCount, 130, '下线后不应计入可抽人物');
+  assert.equal(meta.body.characterCount, 184, '下线后不应计入可抽人物');
 });
 
 test('健康报告可访问且返回矩阵', async () => {
   const { status, body } = await api('/api/admin/health');
   assert.equal(status, 200);
-  assert.equal(body.total, 131);
-  assert.equal(body.active, 130);
+  assert.equal(body.total, 185);
+  assert.equal(body.active, 184);
   assert.equal(body.retired, 1);
   assert.ok(Array.isArray(body.matrix));
-  assert.ok(body.matrix.some((row: { dynasty: string }) => row.dynasty === '西晋'));
+  assert.ok(body.matrix.some((row: { polity: string }) => row.polity === '西晋'));
 });

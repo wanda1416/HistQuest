@@ -40,7 +40,8 @@ export const config = {
     timeoutMs: num(process.env.AI_TIMEOUT_MS, 6000),
   },
   wikiProvider: process.env.WIKI_PROVIDER ?? 'local',
-  soloTurns: num(process.env.SOLO_TURNS, 20),
+  /** 服务端允许的轮次上限；每局可在 10 到该值之间自选 */
+  soloTurns: num(process.env.SOLO_TURNS, 50),
   admin: {
     /** 非回环访问管理接口时需要的令牌；为空则只允许本机访问 */
     token: process.env.ADMIN_TOKEN ?? '',

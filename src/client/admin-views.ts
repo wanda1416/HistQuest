@@ -1,5 +1,5 @@
 import type { Character, Verdict } from '../shared/domain.ts';
-import { DYNASTIES } from '../shared/domain.ts';
+import { DYNASTIES, WORLD_ERAS } from '../shared/domain.ts';
 import { CharacterIndex } from '../core/index.ts';
 import { judgeByIndex } from '../core/judge.ts';
 import { charLen, type Issue } from '../core/schema.ts';
@@ -11,6 +11,8 @@ export interface AdminMeta {
   difficulties: Array<{ level: number; label: string }>;
   roles: string[];
   provinces: string[];
+  polities: string[];
+  regions: Array<{ value: string; label: string }>;
   total: number;
   active: number;
   tokenRequired: boolean;
@@ -28,9 +30,10 @@ export interface HealthReport {
   errors: number;
   warnings: number;
   items: HealthItem[];
-  matrix: Array<{ dynasty: string; levels: Record<string, number>; total: number }>;
+  matrix: Array<{ polity: string; levels: Record<string, number>; total: number }>;
+  regionMatrix: Array<{ region: string; levels: Record<string, number>; total: number }>;
   emptyDynasties: string[];
-  emptyCombos: Array<{ dynasty: string; difficulty: number }>;
+  emptyCombos: Array<{ polity: string; difficulty: number }>;
 }
 
 export interface Notice {
@@ -45,7 +48,7 @@ export interface AdminState {
   meta: AdminMeta | null;
   list: Character[];
   total: number;
-  filters: { q: string; dynasty: string; difficulty: string; retired: string };
+  filters: { q: string; polity: string; region: string; difficulty: string; retired: string };
   view: 'list' | 'edit' | 'health';
   draft: Character | null;
   /** 正在编辑的原始 id；新建时为 null */
@@ -101,8 +104,14 @@ function shell(s: AdminState, body: string): string {
 
 function filtersView(s: AdminState): string {
   const meta = s.meta!;
-  const dynastyOptions = ['', ...meta.dynasties]
-    .map((d) => `<option value="${esc(d)}" ${s.filters.dynasty === d ? 'selected' : ''}>${esc(d || '全部朝代')}</option>`)
+  const polityOptions = ['', ...meta.dynasties]
+    .map((d) => `<option value="${esc(d)}" ${s.filters.polity === d ? 'selected' : ''}>${esc(d || '全部朝代')}</option>`)
+    .join('');
+  const regionOptions = ['', ...meta.regions.map((r) => r.value)]
+    .map((value) => {
+      const label = value ? (meta.regions.find((r) => r.value === value)?.label ?? value) : '全部文明圈';
+      return `<option value="${esc(value)}" ${s.filters.region === value ? 'selected' : ''}>${esc(label)}</option>`;
+    })
     .join('');
   const diffOptions = [
     ['', '全部难度'],
@@ -123,7 +132,8 @@ function filtersView(s: AdminState): string {
   return `
   <div class="a-filters">
     <input type="search" data-field="q" value="${esc(s.filters.q)}" placeholder="搜姓名 / 别名 / id" />
-    <select data-field="filter-dynasty">${dynastyOptions}</select>
+    <select data-field="filter-polity">${polityOptions}</select>
+    <select data-field="filter-region">${regionOptions}</select>
     <select data-field="filter-difficulty">${diffOptions}</select>
     <select data-field="filter-retired">${retireOptions}</select>
     <button class="a-btn" data-action="reload">刷新</button>
@@ -143,7 +153,7 @@ function listView(s: AdminState): string {
           ${c.retired ? ' <span class="a-pill">已下线</span>' : ''}
         </td>
         <td class="a-muted">${esc(c.id)}</td>
-        <td>${esc(c.dynasty)}${c.dynastyAlt?.length ? `<span class="a-muted"> · ${esc(c.dynastyAlt.join('、'))}</span>` : ''}</td>
+        <td>${esc(c.polity)}${c.country ? `<span class="a-muted"> · ${esc(c.country)}</span>` : ''}${c.polityAlt?.length ? `<span class="a-muted"> · ${esc(c.polityAlt.join('、'))}</span>` : ''}</td>
         <td><div class="a-tagrow">${c.roles.map((r) => `<span class="a-pill">${esc(r)}</span>`).join('')}</div></td>
         <td>${c.difficulty}</td>
         <td>${lifespan ? `${c.birth} — ${c.death}` : '<span class="a-pill is-bad">生卒不全</span>'}</td>
@@ -209,12 +219,12 @@ function roleChips(s: AdminState): string {
 }
 
 function altChips(s: AdminState): string {
-  const selected = s.draft!.dynastyAlt ?? [];
+  const selected = s.draft!.polityAlt ?? [];
   const chips = DYNASTIES.map(
     (d) => `<button type="button" class="a-chip ${selected.includes(d) ? 'is-on' : ''}"
       data-action="toggle-alt" data-value="${esc(d)}">${esc(d)}</button>`,
   ).join('');
-  return `<div class="a-chips">${chips}</div>${fieldIssues(s, 'dynastyAlt')}`;
+  return `<div class="a-chips">${chips}</div>${fieldIssues(s, 'polityAlt')}`;
 }
 
 function checks(c: Character): Array<{ q: string; verdict: Verdict; expect: 'yes' | 'no' }> {
@@ -223,15 +233,17 @@ function checks(c: Character): Array<{ q: string; verdict: Verdict; expect: 'yes
     out.push({ q, verdict: judgeByIndex(c, query as never).verdict, expect: 'yes' });
   };
 
-  if (c.dynasty) yes({ attr: 'dynasty', value: c.dynasty }, `他是「${c.dynasty}」人吗`);
-  for (const alt of c.dynastyAlt ?? []) yes({ attr: 'dynasty', value: alt }, `他是「${alt}」时期的人吗`);
+  if (c.region === 'cn' && c.polity) {
+    yes({ attr: 'dynasty', value: c.polity }, `他是「${c.polity}」人吗`);
+    for (const alt of c.polityAlt ?? []) yes({ attr: 'dynasty', value: alt }, `他是「${alt}」时期的人吗`);
 
-  if (c.dynasty === '东汉') {
-    out.push({
-      q: '他是三国人物吗（严格分期应为否）',
-      verdict: judgeByIndex(c, { attr: 'dynasty', value: '三国' }).verdict,
-      expect: 'no',
-    });
+    if (c.polity === '东汉') {
+      out.push({
+        q: '他是三国人物吗（严格分期应为否）',
+        verdict: judgeByIndex(c, { attr: 'dynasty', value: '三国' }).verdict,
+        expect: 'no',
+      });
+    }
   }
   return out;
 }
@@ -274,9 +286,17 @@ function editView(s: AdminState): string {
   const isNew = s.originalId === null;
   const meta = s.meta!;
 
-  const dynastyOptions = DYNASTIES.map(
-    (d) => `<option value="${esc(d)}" ${c.dynasty === d ? 'selected' : ''}>${esc(d)}</option>`,
-  ).join('');
+  const polityValues = c.region === 'cn' ? [...DYNASTIES] : meta.polities;
+  const polityOptions = polityValues
+    .map((d) => `<option value="${esc(d)}" ${c.polity === d ? 'selected' : ''}>${esc(d)}</option>`)
+    .join('');
+  const regionOptions = meta.regions
+    .map(
+      (r) =>
+        `<option value="${esc(r.value)}" ${c.region === r.value ? 'selected' : ''}>${esc(r.label)}</option>`,
+    )
+    .join('');
+  const polityList = meta.polities.map((p) => `<option value="${esc(p)}"></option>`).join('');
 
   const diffOptions = meta.difficulties
     .map((d) => `<option value="${d.level}" ${c.difficulty === d.level ? 'selected' : ''}>${d.label}（${d.level}）</option>`)
@@ -287,7 +307,7 @@ function editView(s: AdminState): string {
     .join('');
 
   const rootIssues = s.issues
-    .filter((i) => !['id', 'name', 'aliases', 'dynasty', 'dynastyAlt', 'gender', 'birth', 'death', 'birthplace', 'birthProvince', 'roles', 'tags', 'emperor', 'notable', 'difficulty', 'externalId'].includes(i.field))
+    .filter((i) => !['id', 'name', 'aliases', 'region', 'polity', 'polityAlt', 'worldEra', 'gender', 'birth', 'death', 'birthplace', 'country', 'birthProvince', 'roles', 'tags', 'emperor', 'notable', 'difficulty', 'externalId'].includes(i.field))
     .map((i) => `<p class="a-issue is-${i.level}">${esc(i.message)}</p>`)
     .join('');
 
@@ -326,10 +346,43 @@ function editView(s: AdminState): string {
         <h3>归属</h3>
         <div class="a-grid2">
           <div class="a-field">
-            <label class="a-label" for="f-dynasty">朝代</label>
-            <select class="a-select" id="f-dynasty" data-field="dynasty">${dynastyOptions}</select>
-            <p class="a-hint">索引会强制用这里裁定「他是 X 朝人吗」</p>
-            ${fieldIssues(s, 'dynasty')}
+            <label class="a-label" for="f-region">文明圈</label>
+            <select class="a-select" id="f-region" data-field="region">${regionOptions}</select>
+            <p class="a-hint">决定抽样权重与筛选；只有中国区做朝代硬裁定</p>
+            ${fieldIssues(s, 'region')}
+          </div>
+          <div class="a-field">
+            <label class="a-label" for="f-polity">${c.region === 'cn' ? '朝代' : '政权 / 国家'}</label>
+            ${
+              c.region === 'cn'
+                ? `<select class="a-select" id="f-polity" data-field="polity">${polityOptions}</select>`
+                : `<input class="a-input" id="f-polity" data-field="polity" list="polity-list" value="${esc(c.polity)}" />
+                   <datalist id="polity-list">${polityList}</datalist>`
+            }
+            <p class="a-hint">${c.region === 'cn' ? '索引会强制用这里裁定「他是 X 朝人吗」' : '世界政权的判定交给模型，这里只做资料卡'}</p>
+            ${fieldIssues(s, 'polity')}
+          </div>
+          ${
+            c.region === 'cn'
+              ? ''
+              : `<div class="a-field">
+                   <label class="a-label" for="f-worldEra">时期</label>
+                   <select class="a-select" id="f-worldEra" data-field="worldEra">
+                     ${['', ...WORLD_ERAS]
+                       .map(
+                         (e) =>
+                           `<option value="${esc(e)}" ${(c.worldEra ?? '') === e ? 'selected' : ''}>${esc(e || '未划分')}</option>`,
+                       )
+                       .join('')}
+                   </select>
+                   <p class="a-hint">单选「世界」开局时按这里筛选</p>
+                   ${fieldIssues(s, 'worldEra')}
+                 </div>`
+          }
+          <div class="a-field">
+            <label class="a-label" for="f-country">今属国家/地区</label>
+            <input class="a-input" id="f-country" data-field="country" value="${esc(c.country ?? '')}" />
+            ${fieldIssues(s, 'country')}
           </div>
           <div class="a-field">
             <label class="a-label" for="f-gender">性别</label>
@@ -340,11 +393,15 @@ function editView(s: AdminState): string {
             ${fieldIssues(s, 'gender')}
           </div>
         </div>
-        <div class="a-field">
-          <span class="a-label">还经历过哪些时期（多选）</span>
-          ${altChips(s)}
-          <p class="a-hint">只放人物实际经历过的时期；按严格分期，东汉人物不能选三国</p>
-        </div>
+        ${
+          c.region === 'cn'
+            ? `<div class="a-field">
+                 <span class="a-label">还经历过哪些朝代（多选）</span>
+                 ${altChips(s)}
+                 <p class="a-hint">只放人物实际经历过的时期；按严格分期，东汉人物不能选三国</p>
+               </div>`
+            : ''
+        }
         <div class="a-field">
           <label class="a-check">
             <input type="checkbox" id="f-emperor" data-field="emperor" ${c.emperor ? 'checked' : ''} />
@@ -426,7 +483,20 @@ function healthView(s: AdminState): string {
       const cell = (level: number): string =>
         `<td class="${m.levels[String(level)] === 0 ? 'is-zero' : ''}">${m.levels[String(level)]}</td>`;
       return `<tr>
-        <td>${esc(m.dynasty)}${m.total === 0 ? ' <span class="a-pill is-bad">无人物</span>' : ''}</td>
+        <td>${esc(m.polity)}${m.total === 0 ? ' <span class="a-pill is-bad">无人物</span>' : ''}</td>
+        ${cell(1)}${cell(2)}${cell(3)}
+        <td>${m.total}</td>
+      </tr>`;
+    })
+    .join('');
+
+  const regionRows = h.regionMatrix
+    .map((m) => {
+      const label = s.meta?.regions.find((r) => r.value === m.region)?.label ?? m.region;
+      const cell = (level: number): string =>
+        `<td class="${m.levels[String(level)] === 0 ? 'is-zero' : ''}">${m.levels[String(level)]}</td>`;
+      return `<tr>
+        <td>${esc(label)}${m.total === 0 ? ' <span class="a-pill is-bad">无人物</span>' : ''}</td>
         ${cell(1)}${cell(2)}${cell(3)}
         <td>${m.total}</td>
       </tr>`;
@@ -463,6 +533,14 @@ function healthView(s: AdminState): string {
     <table class="a-matrix">
       <thead>${header}</thead>
       <tbody>${rows}</tbody>
+    </table>
+  </div>
+
+  <div class="a-card" style="margin-bottom:16px">
+    <h3>文明圈 × 难度分布（混合模式按中国占比加权）</h3>
+    <table class="a-matrix">
+      <thead><tr><th>文明圈</th><th>入门</th><th>进阶</th><th>考据</th><th>合计</th></tr></thead>
+      <tbody>${regionRows}</tbody>
     </table>
   </div>
 
