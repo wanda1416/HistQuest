@@ -50,7 +50,7 @@ export function clarify(query: ParsedQuery, verdict: Verdict, note?: string): st
   switch (query.attr) {
     case 'dynasty': {
       const raw = String(query.value ?? '').replace(/(朝|代|时期|时代)$/g, '');
-      return DYNASTY_NOTES[raw] ?? '按人物的主要活动朝代归类。';
+      return DYNASTY_NOTES[raw] ?? '按生卒年与朝代起止时间，判断他是否经历过这个时期。';
     }
     case 'role':
       return '身份按主要社会角色计，兼擅某项不算。';

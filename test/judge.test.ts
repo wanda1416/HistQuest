@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import type { Character } from '../src/shared/domain.ts';
 import { judgeByIndex, guessMatches, normalizeGuess } from '../src/core/judge.ts';
 import { CharacterIndex, dynastyScope, normalizeDynasty } from '../src/core/index.ts';
-import { extractDynasty } from '../src/core/dynasty.ts';
+import { extractDynasty, periodsLived } from '../src/core/dynasty.ts';
 
 const list = JSON.parse(
   fs.readFileSync(new URL('../data/characters.json', import.meta.url), 'utf8'),
@@ -153,4 +153,30 @@ test('问句朝代提取：不会被公元前里的元误导', () => {
   assert.equal(extractDynasty('他是北宋人吗'), '北宋');
   assert.equal(extractDynasty('他是三国人物吗'), '三国');
   assert.equal(extractDynasty('他当过皇帝吗'), null);
+});
+
+test('跨朝代人物：按生卒年与朝代重叠判定', () => {
+  // 蒲松龄 1640 年生于明崇祯年间，四轮对话里被答成"不是明朝人物"，错在这里
+  assert.equal(v(byName('蒲松龄'), 'dynasty', '明'), 'yes');
+  assert.equal(v(byName('蒲松龄'), 'dynasty', '清'), 'yes');
+  assert.equal(v(byName('岳飞'), 'dynasty', '北宋'), 'yes');
+  assert.equal(v(byName('朱元璋'), 'dynasty', '元'), 'yes');
+  assert.equal(v(byName('鲁迅'), 'dynasty', '清'), 'yes');
+  // 曹操卒于 220 年，三国始于同年，仍不算三国
+  assert.equal(v(byName('曹操'), 'dynasty', '三国'), 'no');
+});
+
+test('数据一致性：朝代标注与生卒年覆盖的时期必须吻合', () => {
+  const bad: string[] = [];
+  for (const c of list) {
+    if (c.birth === null || c.death === null) continue;
+    const lived = periodsLived(c.birth, c.death);
+    const declared = new Set([c.dynasty, ...(c.dynastyAlt ?? [])]);
+    const missing = lived.filter((d) => !declared.has(d));
+    const extra = [...declared].filter((d) => !lived.includes(d));
+    if (missing.length || extra.length) {
+      bad.push(`${c.name} 缺[${missing.join(',')}] 多[${extra.join(',')}]`);
+    }
+  }
+  assert.deepEqual(bad, [], bad.join(' | '));
 });

@@ -24,6 +24,7 @@ const SPANS: Record<string, Span> = {
   五代: { start: 907, end: 960 },
   北宋: { start: 960, end: 1127 },
   南宋: { start: 1127, end: 1279 },
+  蒙古: { start: 1206, end: 1271 },
   元: { start: 1271, end: 1368 },
   明: { start: 1368, end: 1644 },
   清: { start: 1644, end: 1912 },
@@ -48,7 +49,7 @@ export function spanOf(input: string): Span | null {
   return null;
 }
 
-const MULTI = ['南北朝', '北宋', '南宋', '西汉', '东汉', '西晋', '东晋', '春秋', '战国', '三国', '五代'];
+const MULTI = ['南北朝', '北宋', '南宋', '西汉', '东汉', '西晋', '东晋', '春秋', '战国', '三国', '五代', '蒙古'];
 const SINGLE = ['唐', '宋', '元', '明', '清', '汉', '晋', '周', '秦', '隋'];
 
 /**
@@ -65,4 +66,18 @@ export function extractDynasty(question: string): string | null {
     if (new RegExp(`${name}(朝|代)`).test(q)) return name;
   }
   return null;
+}
+
+/**
+ * 生卒年覆盖过的所有时期。
+ * 这是"朝代归属"的唯一口径：只要与某个朝代的起止有重叠，就算经历过。
+ * 曹操因此不算三国（卒于 220，三国始于同年）；蒲松龄因此算明（1640 年生）。
+ */
+export function periodsLived(birth: number | null, death: number | null): string[] {
+  if (birth === null || death === null) return [];
+  const out: string[] = [];
+  for (const [name, span] of Object.entries(SPANS)) {
+    if (birth < span.end && death > span.start) out.push(name);
+  }
+  return out;
 }

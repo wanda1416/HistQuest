@@ -337,7 +337,7 @@ function revealView(s: State): string {
   const won = r.status === 'won';
 
   const facts = [
-    ['朝代', c.dynasty],
+    ['朝代', c.dynastyAlt?.length ? `${c.dynasty}（亦经历 ${c.dynastyAlt.join('、')}）` : c.dynasty],
     ['身份', c.roles.join('、') || '—'],
     ['生卒', `${fmtYear(c.birth)} — ${fmtYear(c.death)}`],
     ['籍贯', c.birthplace ?? '不详'],
