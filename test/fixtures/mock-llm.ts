@@ -84,6 +84,19 @@ function decide(messages: Array<{ role: string; content: string }>): { content: 
     // 用固定脚本模拟"模型作答"，便于断言引擎的覆盖逻辑
     if (question.includes('坏JSON')) return { content: '这个我不好说', delayMs: 0 };
     if (question.includes('超时')) return { content: '', delayMs: 12000 };
+    // "提到名字但不是猜测"：guessed 必须为 null
+    if (question.includes('同时代') || question.includes('康熙字典')) {
+      return {
+        content: JSON.stringify({
+          attr: 'other',
+          value: null,
+          verdict: 'yes',
+          text: '是的，确实是。',
+          guessed: null,
+        }),
+        delayMs: 0,
+      };
+    }
     if (question.includes('泄漏')) {
       return {
         content: JSON.stringify({ attr: 'other', value: null, verdict: 'yes', text: '是的，他就是李白。' }),
@@ -146,6 +159,22 @@ function decide(messages: Array<{ role: string; content: string }>): { content: 
     if (/(活过|岁)/.test(question)) {
       return {
         content: JSON.stringify({ attr: 'lifespan', value: 60, verdict: 'yes', text: '是，他活过了。' }),
+        delayMs: 0,
+      };
+    }
+    // 点名猜测：放在受控属性之后、兜底之前（真实模型也是先识别问题类型）
+    if (question.startsWith('他是') && /[吗吧]$/.test(question)) {
+      const named = question.slice(2, -1);
+      const libaiNames = ['李白', '李太白', '诗仙', '青莲居士'];
+      const isHit = libaiNames.some((n) => named.includes(n) || n.includes(named));
+      return {
+        content: JSON.stringify({
+          attr: 'other',
+          value: null,
+          verdict: isHit ? 'yes' : 'no',
+          text: isHit ? '没错，就是他。恭喜你猜中了！' : `不是${named}，TA另有其人。`,
+          guessed: named,
+        }),
         delayMs: 0,
       };
     }

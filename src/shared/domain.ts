@@ -91,6 +91,7 @@ export type Basis =
   | 'index.alive'
   | 'index.nationality'
   | 'index.event'
+  | 'index.name'
   | 'subjective'
   | 'knowledge'
   | 'evidence'
@@ -109,6 +110,8 @@ export interface AnswerRecord {
   ms: number;
   /** 问法不是有效的是/否问题：不扣次数、不换回合 */
   invalid?: 'format';
+  /** 玩家在提问中直接说出目标名号：猜中，本局获胜（不扣次数） */
+  hit?: boolean;
   /** 基础设施故障（超时/网络）：不算次数，可重试 */
   transient?: boolean;
 }

@@ -10,7 +10,7 @@ import type {
 } from '../shared/domain.ts';
 import type { CharacterIndex } from './index.ts';
 import { precheck, detectNonBinary } from './precheck.ts';
-import { judgeByIndex } from './judge.ts';
+import { judgeByIndex, guessMatches } from './judge.ts';
 import { clarify, phrase, PARSE_FAILED_TEXT } from './phraser.ts';
 import { extractDynasty } from './dynasty.ts';
 import { modelAnswer, toQuery } from './answerer.ts';
@@ -33,6 +33,8 @@ export interface AskParams {
 
 export interface AskOutcome {
   record: AnswerRecord;
+  /** 模型判定玩家点名猜中（已通过 guessMatches 复核）：服务端据此直接结算 */
+  won?: boolean;
 }
 
 const TRANSIENT_TEXT = '模型这次没能及时回应，这问不计次数，请再问一次。';
@@ -141,6 +143,7 @@ export async function runAsk(params: AskParams): Promise<AskOutcome> {
   let query: ParsedQuery | null = null;
   let hint: string | undefined;
   let text: string;
+  let won: boolean | undefined;
 
   try {
     const answer = await modelAnswer(
@@ -155,6 +158,18 @@ export async function runAsk(params: AskParams): Promise<AskOutcome> {
     query = toQuery(answer);
     verdict = answer.verdict;
     basis = 'knowledge';
+
+    // 点名猜测：模型判定 + 服务端复核，猜中直接结算，不扣次数。
+    // 复核必须有：模型可能把"提到名字"误报成猜中，直接结算就是错杀。
+    if (answer.guessed && verdict === 'yes' && guessMatches(params.target, answer.guessed)) {
+      won = true;
+      basis = 'index.name';
+      query = { attr: 'other', value: null };
+      // 恭喜文案不走 scrub：玩家自己说出了名字，重复它不泄密
+      text = answer.text || '没错，就是TA。恭喜你猜中了！';
+      if (!/恭喜|猜中/.test(text)) text = `没错，就是TA。恭喜你猜中了！`;
+      return { record: make({ verdict: 'yes', text, basis, query, hint, calls }), won };
+    }
 
     // 朝代由索引裁定：严格史学分期（曹操=东汉）不能被模型的民间印象覆盖。
     // 注意：必须用"问句里提到的朝代"去比对——模型返回的 dynasty.value 指的是

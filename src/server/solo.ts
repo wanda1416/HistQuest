@@ -117,6 +117,25 @@ export class SoloStore {
       this.answerCache.set(cacheKey, outcome.record);
     }
 
+    // 玩家在提问中点名猜中：直接结算，这一问不扣次数
+    if (outcome.won) {
+      session.history.push(outcome.record);
+      session.status = 'won';
+      session.updatedAt = Date.now();
+      this.persist();
+      log('solo.win', { id, via: 'ask' });
+      const view: AskRes = {
+        accepted: true,
+        seq: outcome.record.seq,
+        verdict: outcome.record.verdict,
+        text: outcome.record.text,
+        turnsLeft: session.turnsLeft,
+        status: session.status,
+      };
+      if (outcome.record.hint) view.hint = outcome.record.hint;
+      return view;
+    }
+
     return this.applyRecord(session, outcome.record);
   }
 

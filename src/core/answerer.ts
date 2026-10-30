@@ -15,6 +15,8 @@ export interface ModelAnswer {
   verdict: Verdict;
   /** 已过去名化；为空时调用方回退到模板 */
   text: string;
+  /** 模型判定玩家在点名猜测时，玩家点出的名号原文；否则为 null */
+  guessed: string | null;
   calls: number;
 }
 
@@ -55,6 +57,7 @@ function normalize(raw: unknown, c: Character): Omit<ModelAnswer, 'calls'> | nul
     value: obj.value ?? null,
     verdict: verdictRaw as Verdict,
     text: readable(safe) ? safe : '',
+    guessed: typeof obj.guessed === 'string' && obj.guessed.trim() ? obj.guessed.trim().slice(0, 30) : null,
   };
 }
 

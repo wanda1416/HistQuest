@@ -178,3 +178,29 @@ test('性别词中性化：关闭时保持原样', async () => {
   const { record } = await ask('代词：他当过官吗', { mode: 'guided', pronoun: 'normal' });
   assert.ok(record.text.includes('她'), record.text);
 });
+
+test('点名猜测：问"他是李白吗"直接判猜中并结算', async () => {
+  const { record, won } = await ask('他是李白吗');
+  assert.equal(won, true);
+  assert.equal(record.verdict, 'yes');
+  assert.ok(/恭喜|猜中/.test(record.text), record.text);
+  assert.equal(record.basis, 'index.name');
+});
+
+test('点名猜测：别名命中同样算猜中', async () => {
+  const { won } = await ask('他是诗仙吗');
+  assert.equal(won, true);
+});
+
+test('点名猜错：答否、扣次数、不结算', async () => {
+  const { record, won } = await ask('他是杜甫吗');
+  assert.equal(won, undefined);
+  assert.equal(record.verdict, 'no');
+});
+
+test('提到名字但不是猜测：不触发结算', async () => {
+  const { record, won } = await ask('他和李白是同时代的人吗');
+  assert.equal(won, undefined);
+  assert.equal(record.invalid, undefined);
+  assert.equal(record.verdict, 'yes');
+});

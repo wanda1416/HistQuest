@@ -77,3 +77,18 @@ test('真模型：普通提问不会被误判为作弊', { skip: !LIVE }, async 
     assert.equal(record.invalid, undefined, q);
   }
 });
+
+test('真模型：点名猜中触发结算，点名猜错只答否', { skip: !LIVE }, async () => {
+  const xuanye = list.find((c) => c.name === '玄烨')!;
+  const hit = await ask('他是康熙吗？', { target: xuanye, mode: 'guided', pronoun: 'neutral' });
+  assert.equal(hit.won, true);
+  assert.ok(/恭喜|猜中/.test(hit.record.text), hit.record.text);
+
+  const miss = await ask('他是李白吗？', { target: xuanye });
+  assert.equal(miss.won, undefined);
+  assert.equal(miss.record.verdict, 'no');
+
+  const mention = await ask('他编过康熙字典吗？', { target: xuanye });
+  assert.equal(mention.won, undefined);
+  assert.equal(mention.record.verdict, 'yes');
+});

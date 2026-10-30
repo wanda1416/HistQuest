@@ -110,3 +110,27 @@ test('出错时抛明确的业务错误', () => {
   const store = new SoloStore(index, { turns: 20, file: null });
   assert.throws(() => store.require('不存在的id'), /找不到这一局/);
 });
+
+test('提问中点名猜中：直接结算为 won，这一问不扣次数', async () => {
+  const store = new SoloStore(onlyLibai, { turns: 20, file: null });
+  const s = store.create({ difficulty: 1, dynasty: null });
+  const before = store.require(s.id).turnsLeft;
+  const r = await store.ask(s.id, '他是李白吗', cred);
+  assert.equal(r.status, 'won');
+  assert.equal(r.verdict, 'yes');
+  assert.ok(/恭喜|猜中/.test(r.text), r.text);
+  assert.equal(r.turnsLeft, before, '猜中的一问不扣次数');
+  const after = store.require(s.id);
+  assert.equal(after.status, 'won');
+  // 已结束的局不能再问
+  await assert.rejects(() => store.ask(s.id, '他是唐朝人吗', cred), /已结束/);
+});
+
+test('提问中点名猜错：答否并扣一次', async () => {
+  const store = new SoloStore(onlyLibai, { turns: 20, file: null });
+  const s = store.create({ difficulty: 1, dynasty: null });
+  const r = await store.ask(s.id, '他是杜甫吗', cred);
+  assert.equal(r.status, 'playing');
+  assert.equal(r.verdict, 'no');
+  assert.equal(r.turnsLeft, 19);
+});
