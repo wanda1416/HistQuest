@@ -129,8 +129,15 @@ export interface HistorySummary {
   turnsLeft: number;
   startedAt: number;
   endedAt: number | null;
-  /** 管理员视角下的对局归属；游客为 null */
+  /** 管理员视角下的对局归属；游客与"归属未记录"都为 null */
   userName?: string | null;
+  /**
+   * 归属来源，三种情况必须分开，否则会把登录玩家误标成游客：
+   * - user    有登录玩家（userName 可靠）
+   * - guest   明确未登录（本版本起写入）
+   * - unknown 迁移回填的老局，玩家是否登录已无从得知
+   */
+  owner: 'user' | 'guest' | 'unknown';
   /**
    * 目标人物：只有已结束的局才下发（复盘需要）。
    * 进行中的局一律为 null——与对局中接口一致，不给扒答案的口子。

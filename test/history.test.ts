@@ -67,6 +67,7 @@ const aiConfig = () => ({ baseURL: mock.url, apiKey: 'sk-history-abcdef', model:
 interface HistoryItem {
   id: string;
   result: string;
+  owner: string;
   turnsUsed: number;
   turnsTotal: number;
   userName?: string | null;
@@ -194,7 +195,33 @@ test('别人看不到我的局（403），管理员能看到全部用户', async
   const adminDetail = await call(`/api/admin/history/${aliceGameId}`, { headers: { 'X-HQ-Admin': '1' } });
   assert.equal(adminDetail.status, 200);
   assert.equal(adminDetail.body.userName, 'alice');
+  assert.equal(adminDetail.body.owner, 'user');
   assert.equal((adminDetail.body.turns as unknown[]).length, 3);
+
+  // 「游客」只标真正没登录的局，别把登录玩家算进去
+  const guestRow = items.find((g) => g.id === guestGameId)!;
+  assert.equal(guestRow.owner, 'guest');
+  assert.equal(guestRow.userName, null);
+});
+
+test('迁移回填的老局标「归属未记录」，不能被当成游客', async () => {
+  assert.ok(db);
+  // 造一条 v3 之前写入的账本行：只有历史，没有归属信息
+  db!
+    .prepare(
+      `INSERT INTO games (id, user_id, user_name, attribution, target_id, target_name, target_roles,
+         difficulty, polity, region, world_era, mode, pronoun, turns_total, turns_left, turns_used, asks,
+         status, started_at, ended_at, updated_at)
+       VALUES ('legacy-1', NULL, NULL, NULL, 'c-legacy', '某位古人', '[]', 2, '唐', NULL, NULL,
+         'strict', 'normal', 20, 5, 15, 15, 'revealed', ?, ?, ?)`,
+    )
+    .run(Date.now() - 86_400_000, Date.now() - 80_000_000, Date.now() - 80_000_000);
+
+  const all = await call('/api/admin/history?q=某位古人', { headers: { 'X-HQ-Admin': '1' } });
+  const row = (all.body.items as HistoryItem[]).find((g) => g.id === 'legacy-1');
+  assert.ok(row, '回填的老局应能在后台查到');
+  assert.equal(row!.owner, 'unknown');
+  assert.equal(row!.userName, null);
 });
 
 test('会话被清理后历史仍在（历史不寄生在 24h 会话上）', async () => {

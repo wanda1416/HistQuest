@@ -621,6 +621,19 @@ const RESULT_TEXT: Record<string, string> = {
   playing: '进行中',
 };
 
+/** 归属展示：登录玩家 / 明确游客 / 迁移回填查不到归属的三者不能混为一谈 */
+function ownerLabel(g: HistorySummary): string {
+  if (g.userName) return g.userName;
+  return g.owner === 'unknown' ? '归属未记录' : '游客';
+}
+
+function ownerCell(g: HistorySummary): string {
+  if (g.owner === 'unknown') {
+    return '<span class="a-muted" title="迁移回填的老局：当时还没有记录账号归属">归属未记录</span>';
+  }
+  return '<span class="a-muted">游客</span>';
+}
+
 function historyDetailPane(d: HistoryDetail): string {
   const turns = d.turns.length
     ? d.turns
@@ -649,7 +662,7 @@ function historyDetailPane(d: HistoryDetail): string {
     </div>
     <p class="a-muted">
       ${esc(new Date(d.startedAt).toLocaleString('zh-CN'))}
-      · 玩家 ${esc(d.userName ?? '游客')}
+      · 玩家 ${esc(ownerLabel(d))}
       · ${esc(RESULT_TEXT[d.result] ?? d.result)}
       · 用了 ${d.turnsUsed} / ${d.turnsTotal} 问
       · 难度 ${d.difficulty}
@@ -669,7 +682,7 @@ function historyView(s: AdminState): string {
     .map(
       (g) => `<tr>
         <td>${esc(new Date(g.startedAt).toLocaleString('zh-CN'))}</td>
-        <td>${g.userName ? esc(g.userName) : '<span class="a-muted">游客</span>'}</td>
+        <td>${g.userName ? esc(g.userName) : ownerCell(g)}</td>
         <td><span class="a-pill ${g.result === 'won' ? 'is-ok' : g.result === 'lost' ? 'is-bad' : ''}">${esc(RESULT_TEXT[g.result] ?? g.result)}</span></td>
         <td>${g.target ? esc(g.target.name) : '<span class="a-muted">—</span>'}</td>
         <td>${g.turnsUsed} / ${g.turnsTotal}</td>

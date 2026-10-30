@@ -110,6 +110,7 @@ CREATE TABLE IF NOT EXISTS games (
   target_id    TEXT NOT NULL,
   target_name  TEXT NOT NULL,
   target_roles TEXT NOT NULL DEFAULT '[]',
+  attribution  TEXT,                      -- user / guest / NULL=迁移回填未记录
   difficulty   INTEGER NOT NULL,
   polity       TEXT,
   region       TEXT,
@@ -145,3 +146,6 @@ CREATE TABLE IF NOT EXISTS game_turns (
   asked_at INTEGER NOT NULL,
   PRIMARY KEY (game_id, seq)
 );
+
+-- v7：归属来源（user / guest / NULL=迁移回填查不到），避免把登录玩家误标成游客
+-- 老库执行一次：ALTER TABLE games ADD COLUMN attribution TEXT;

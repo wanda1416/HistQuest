@@ -26,6 +26,7 @@ const summary: HistorySummary = {
   startedAt: Date.now() - 60_000,
   endedAt: Date.now(),
   userName: 'alice',
+  owner: 'user',
   target: { name: '李白', polity: '唐', roles: ['诗人'] },
 };
 
@@ -147,7 +148,7 @@ const adminBase: AdminState = {
   llm: null,
   pwBusy: false,
   llmBusy: false,
-  history: [{ ...summary, userName: null }],
+  history: [{ ...summary, userName: null, owner: 'guest' }],
   historyTotal: 1,
   historyDetail: null,
   historyFilters: { user: '', result: '', q: '' },
@@ -164,6 +165,15 @@ test('后台历史列表：游客局标「游客」，进行中的局不显示�
     history: [{ ...summary, status: 'playing', result: 'playing', target: null, userName: 'alice' }],
   });
   assert.doesNotMatch(playing, /李白/);
+});
+
+test('归属未记录的老局不标「游客」', () => {
+  const html = renderAdmin({
+    ...adminBase,
+    history: [{ ...summary, userName: null, owner: 'unknown' }],
+  });
+  assert.match(html, /归属未记录/);
+  assert.doesNotMatch(html, /游客/, '查不到归属的老局不能被打成游客');
 });
 
 test('后台历史详情：表格里给出每条提问与回答', () => {

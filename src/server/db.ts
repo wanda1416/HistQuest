@@ -9,7 +9,7 @@ import { DatabaseSync } from 'node:sqlite';
  * 代价是要求宿主 Node ≥ 23.4（22.x 需 --experimental-sqlite）。
  */
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export interface OpenOptions {
   file: string;
@@ -128,6 +128,17 @@ export function migrate(db: DatabaseSync): void {
   if (current < 3) {
     migrateV3(db);
   }
+
+  if (current < 4) {
+    // v4：把「游客」和「归属未记录」分开
+    //   attribution = 'user'  有登录玩家
+    //   attribution = 'guest' 明确知道是未登录玩家（本版本起写入）
+    //   attribution IS NULL   迁移回填的老局，玩家是否登录已无从得知
+    // 不能在迁移里用 user_id IS NULL 反推：回填那批恰恰全是 NULL，
+    // 直接推断会把登录用户的局误标成游客。
+    addColumn(db, 'games', 'attribution', 'TEXT');
+    db.exec(`INSERT INTO schema_migrations (version, applied_at) VALUES (4, ${Date.now()})`);
+  }
 }
 
 /**
@@ -177,6 +188,7 @@ function migrateV3(db: DatabaseSync): void {
       target_id   TEXT NOT NULL,
       target_name TEXT NOT NULL,
       target_roles TEXT NOT NULL DEFAULT '[]',
+      attribution TEXT,
       difficulty  INTEGER NOT NULL,
       polity      TEXT,
       region      TEXT,
