@@ -6,8 +6,13 @@ data/hq.db-wal
 data/hq.db-shm
 data/characters.json.migrated
 data/backups/
+.local/
 .tmp/
 .workbuddy/
 .env
 *.log
 .DS_Store
+
+# workers
+workers/.wrangler/
+workers/.dev.vars
