@@ -6,6 +6,7 @@ import { SoloStore, SoloError } from '../src/server/solo.ts';
 import { projectSession } from '../src/server/dto.ts';
 import { AiError, testConnection } from '../src/ai/client.ts';
 import { D1Database, D1SessionPersistence } from './d1.ts';
+import { D1HistoryStore } from './d1-history.ts';
 import { D1CharacterStore } from './d1-characters.ts';
 import { handleVault } from './vault.ts';
 import { handleAuth, currentUser, ensureAdmin, type AuthUser } from './auth.ts';
@@ -46,6 +47,8 @@ interface Runtime {
   index: CharacterIndex;
   store: D1CharacterStore;
   solo: SoloStore;
+  /** 对局账本（永久历史），与 SoloStore 的归档钩子共用同一实例 */
+  history: D1HistoryStore;
   env: Env;
   maxTurns: number;
   /** 后台可改的 LLM 覆盖配置（D1 app_settings.llm）；优先于 env */
@@ -87,9 +90,11 @@ function initRuntime(env: Env): Promise<Runtime> {
       const index = store.index;
       const persistence = new D1SessionPersistence(env.DB);
       const sessions = await persistence.load();
+      const history = new D1HistoryStore(env.DB);
       const solo = new SoloStore(index, {
         awaitPersist: true,
         persistence,
+        history,
         turns: Number(env.SOLO_TURNS) || MAX_TURNS_DEFAULT,
         preloaded: sessions,
         newId: () => crypto.randomUUID().replace(/-/g, ''),
@@ -101,7 +106,7 @@ function initRuntime(env: Env): Promise<Runtime> {
         await ensureAdmin(env.DB, env.ADMIN_USER, env.ADMIN_PASSWORD);
       }
 
-      return { index, store, solo, env, maxTurns, llmOverride: await readLlmOverride(env.DB) };
+      return { index, store, solo, history, env, maxTurns, llmOverride: await readLlmOverride(env.DB) };
     })().catch((err) => {
       runtime = null; // 失败后允许重试
       throw err;
@@ -209,6 +214,34 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
     });
   }
 
+  // ---------- 我的历史 ----------
+  if (path === '/history/mine' && req.method === 'GET') {
+    const user = rt.env.SESSION_SECRET
+      ? await currentUser(rt.env.DB, req, rt.env.SESSION_SECRET)
+      : null;
+    if (!user) return fail(401, 'LOGIN_REQUIRED', '登录后可查看自己的对局历史');
+    const result = await rt.history.list({
+      userId: user.id,
+      limit: Number(url.searchParams.get('limit')) || undefined,
+      offset: Number(url.searchParams.get('offset')) || undefined,
+    });
+    return json(200, result);
+  }
+
+  const myGame = path.match(/^\/history\/mine\/([A-Za-z0-9-]+)$/);
+  if (myGame && req.method === 'GET') {
+    const user = rt.env.SESSION_SECRET
+      ? await currentUser(rt.env.DB, req, rt.env.SESSION_SECRET)
+      : null;
+    if (!user) return fail(401, 'LOGIN_REQUIRED', '登录后可查看自己的对局历史');
+    const detail = await rt.history.get(myGame[1]!);
+    if (!detail) return fail(404, 'NOT_FOUND', '找不到这一局');
+    if (detail.userId !== user.id && user.role !== 'admin') {
+      return fail(403, 'FORBIDDEN', '这局不属于当前账号');
+    }
+    return json(200, detail);
+  }
+
   // ---------- 模型连通测试（BYOK 时代用；服务器持 key 时也保留） ----------
   if (path === '/ai/test' && req.method === 'POST') {
     const cred = readAiConfig(body) ?? serverCred;
@@ -229,7 +262,14 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
     const pronoun = body.pronoun === 'neutral' ? 'neutral' : 'normal';
     const turnsRaw = Number(body.turns);
     const turns = Number.isFinite(turnsRaw) && turnsRaw > 0 ? Math.round(turnsRaw) : undefined;
-    const session = await rt.solo.create({ difficulty, polity, region, worldEra, cnShare, mode, pronoun, turns });
+    const creator = rt.env.SESSION_SECRET
+      ? await currentUser(rt.env.DB, req, rt.env.SESSION_SECRET)
+      : null;
+    const session = await rt.solo.create({
+      difficulty, polity, region, worldEra, cnShare, mode, pronoun, turns,
+      userId: creator?.id ?? null,
+      userName: creator?.username ?? null,
+    });
     return json(201, projectSession(session));
   }
 
@@ -530,6 +570,36 @@ async function handleAdmin(req: Request, url: URL, rt: Runtime): Promise<Respons
     // 立即生效：刷新运行时持有的配置
     await refreshLlmOverride(rt);
     return json(200, { ok: true });
+  }
+
+  // ---------- 对局历史（管理员全局） ----------
+  if (path === '/history' && req.method === 'GET') {
+    const params = url.searchParams;
+    const userName = params.get('user')?.trim() || undefined;
+    const result = (params.get('result')?.trim() || undefined) as
+      | 'won'
+      | 'lost'
+      | 'abandoned'
+      | 'playing'
+      | undefined;
+    const q = params.get('q')?.trim() || undefined;
+    const guest = params.get('guest') === '1';
+    const list = await rt.history.list({
+      ...(guest ? { userId: 'guest' as const } : {}),
+      ...(userName ? { userName } : {}),
+      ...(result ? { result } : {}),
+      ...(q ? { q } : {}),
+      limit: Number(params.get('limit')) || undefined,
+      offset: Number(params.get('offset')) || undefined,
+    });
+    return json(200, list);
+  }
+
+  const adminGame = path.match(/^\/history\/([A-Za-z0-9-]+)$/);
+  if (adminGame && req.method === 'GET') {
+    const detail = await rt.history.get(adminGame[1]!);
+    if (!detail) return fail(404, 'NOT_FOUND', '找不到这一局');
+    return json(200, detail);
   }
 
   // ---------- 邀请码管理 ----------

@@ -7,6 +7,7 @@ import {
   SqliteSessionPersistence,
   type SessionPersistence,
 } from './sessions.ts';
+import type { GameRecorder, TargetSnapshot } from './history.ts';
 import type { AskRes, GuessRes, RevealRes } from '../shared/protocol.ts';
 import type { CharacterIndex } from '../core/index.ts';
 import { guessMatches } from '../core/judge.ts';
@@ -33,6 +34,8 @@ export interface SoloStoreOptions {
   db?: DatabaseSync;
   /** 直接注入持久层实现（Workers：D1 版）；优先于 db/file */
   persistence?: SessionPersistence;
+  /** 对局归档（永久账本）；不传则只保留 24h 会话，不留历史 */
+  history?: GameRecorder;
   /** 预加载的会话列表（Workers：D1 异步读出后注入，跳过同步 load） */
   preloaded?: SoloSession[];
   /** id 生成器（Workers 环境注入 crypto.randomUUID 版本） */
@@ -55,6 +58,10 @@ export interface CreateInput {
   pronoun?: PronounStyle;
   /** 本局提问轮次，10 到 opts.turns 之间；缺省用 opts.turns */
   turns?: number;
+  /** 归属玩家（用户系统）；游客为 null */
+  userId?: string | null;
+  /** 用户名快照（改名不断联） */
+  userName?: string | null;
   rng?: () => number;
 }
 
@@ -113,10 +120,12 @@ export class SoloStore {
       history: [],
       createdAt: now,
       updatedAt: now,
+      ...(input.userId ? { userId: input.userId, userName: input.userName ?? null } : {}),
     };
 
     this.sessions.set(session.id, session);
     await this.persist(session);
+    await this.recordStart(session);
     log('solo.create', {
       id: session.id,
       difficulty: input.difficulty,
@@ -174,6 +183,7 @@ export class SoloStore {
       session.status = 'won';
       session.updatedAt = Date.now();
       await this.persist(session);
+      await this.recordTurn(session, outcome.record);
       log('solo.win', { id, via: 'ask' });
       const view: AskRes = {
         accepted: true,
@@ -201,6 +211,7 @@ export class SoloStore {
       session.status = 'won';
       session.updatedAt = Date.now();
       await this.persist(session);
+      await this.recordSync(session);
       log('solo.win', { id });
       return { correct: true, status: session.status, turnsLeft: session.turnsLeft };
     }
@@ -209,6 +220,7 @@ export class SoloStore {
     if (session.turnsLeft === 0) session.status = 'revealed';
     session.updatedAt = Date.now();
     await this.persist(session);
+    await this.recordSync(session);
     return {
       correct: false,
       status: session.status,
@@ -226,6 +238,7 @@ export class SoloStore {
       session.status = 'revealed';
       session.updatedAt = Date.now();
       await this.persist(session);
+      await this.recordSync(session);
     }
 
     const turnsUsed = session.history.filter((r) => !r.transient && !r.invalid).length;
@@ -247,6 +260,7 @@ export class SoloStore {
     }
 
     await this.persist(session);
+    await this.recordTurn(session, record);
 
     const view: AskRes = {
       accepted: !record.invalid && !record.transient,
@@ -270,6 +284,44 @@ export class SoloStore {
       if (list.length) log('solo.load', { count: this.sessions.size });
     } catch {
       log('solo.load.failed', {});
+    }
+  }
+
+  /* ---------------- 对局归档 ---------------- */
+
+  private targetSnapshot(session: SoloSession): TargetSnapshot {
+    const c = this.index.get(session.targetId);
+    return { name: c?.name ?? session.targetId, roles: c?.roles ?? [] };
+  }
+
+  private recordStart(session: SoloSession): void | Promise<void> {
+    return this.record((rec) => rec.start(session, this.targetSnapshot(session)));
+  }
+
+  private recordTurn(session: SoloSession, record: AnswerRecord): void | Promise<void> {
+    return this.record((rec) => rec.turn(session, this.targetSnapshot(session), record));
+  }
+
+  private recordSync(session: SoloSession): void | Promise<void> {
+    return this.record((rec) => rec.sync(session, this.targetSnapshot(session)));
+  }
+
+  /** 归档写失败不该拖垮对局：只记日志，玩家照常继续 */
+  private record(write: (rec: GameRecorder) => void | Promise<void>): void | Promise<void> {
+    const rec = this.opts.history;
+    if (!rec) return;
+    try {
+      const out = write(rec);
+      if (out && typeof (out as Promise<void>).then === 'function') {
+        const p = (out as Promise<void>).catch((err: unknown) => {
+          // eslint-disable-next-line no-console
+          console.error('solo.history.failed', { message: (err as Error)?.message ?? 'async' });
+        });
+        if (this.opts.awaitPersist) return p;
+      }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('solo.history.sync-failed', { message: (err as Error).message });
     }
   }
 

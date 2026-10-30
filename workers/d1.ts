@@ -47,8 +47,9 @@ export class D1SessionPersistence implements SessionPersistence {
       .prepare(
         `INSERT INTO sessions (
            id, target_id, difficulty, polity, region, world_era, cn_share,
-           turns_left, total_turns, mode, pronoun, status, history, created_at, updated_at
-         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+           turns_left, total_turns, mode, pronoun, status, history, created_at, updated_at,
+           user_id, user_name
+         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
          ON CONFLICT(id) DO UPDATE SET
            turns_left = excluded.turns_left,
            mode = excluded.mode,
@@ -72,6 +73,8 @@ export class D1SessionPersistence implements SessionPersistence {
         JSON.stringify(session.history),
         session.createdAt,
         session.updatedAt,
+        session.userId ?? null,
+        session.userName ?? null,
       )
       .run();
   }
@@ -97,6 +100,8 @@ interface SessionRow {
   history: string;
   created_at: number;
   updated_at: number;
+  user_id?: string | null;
+  user_name?: string | null;
 }
 
 function rowToSession(r: SessionRow): SoloSession {
@@ -121,6 +126,7 @@ function rowToSession(r: SessionRow): SoloSession {
     history,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
+    ...(r.user_id ? { userId: r.user_id, userName: r.user_name ?? null } : {}),
   };
 }
 

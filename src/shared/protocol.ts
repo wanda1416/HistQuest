@@ -90,6 +90,65 @@ export interface RevealRes {
   history: RecordView[];
 }
 
+/* ---------------- 对局历史 ---------------- */
+
+/**
+ * 对局结局：
+ * - playing  进行中
+ * - won      猜中（抢答或提问中点名）
+ * - lost     次数用尽
+ * - abandoned 主动放弃（还有剩余次数就揭晓了）
+ */
+export type GameResult = 'won' | 'lost' | 'abandoned' | 'playing';
+
+/** 历史里的一条问答：与对局中的 RecordView 同形，另带失败标记 */
+export interface HistoryTurn {
+  seq: number;
+  question: string;
+  verdict: Verdict;
+  text: string;
+  hint?: string;
+  /** 问法不是有效的是/否问题（不扣次数） */
+  invalid?: 'format';
+  /** 基础设施故障（超时/网络），不算次数 */
+  failed?: boolean;
+}
+
+export interface HistorySummary {
+  id: string;
+  status: SessionStatus;
+  result: GameResult;
+  difficulty: number;
+  mode: AnswerMode;
+  /** 开局时的筛选条件 */
+  polity: string | null;
+  region: Region | null;
+  worldEra: string | null;
+  turnsTotal: number;
+  turnsUsed: number;
+  turnsLeft: number;
+  startedAt: number;
+  endedAt: number | null;
+  /** 管理员视角下的对局归属；游客为 null */
+  userName?: string | null;
+  /**
+   * 目标人物：只有已结束的局才下发（复盘需要）。
+   * 进行中的局一律为 null——与对局中接口一致，不给扒答案的口子。
+   */
+  target: { name: string; polity: string; roles: string[] } | null;
+}
+
+export interface HistoryDetail extends HistorySummary {
+  /** 归属用户 id（游客为 null）；用于校验"这局是不是我的" */
+  userId?: string | null;
+  turns: HistoryTurn[];
+}
+
+export interface HistoryListRes {
+  total: number;
+  items: HistorySummary[];
+}
+
 /** 对局中下发的记录：刻意不含 basis / calls / query */
 export interface RecordView {
   seq: number;

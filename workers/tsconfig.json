@@ -9,12 +9,14 @@
     "./bundle.ts",
     "./d1.ts",
     "./vault.ts",
+    "./d1-history.ts",
     "./seed.ts",
     "../src/shared/**/*.ts",
     "../src/core/**/*.ts",
     "../src/ai/**/*.ts",
     "../src/server/solo.ts",
     "../src/server/sessions.ts",
-    "../src/server/dto.ts"
+    "../src/server/dto.ts",
+    "../src/server/history.ts"
   ]
 }

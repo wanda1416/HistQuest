@@ -95,3 +95,53 @@ CREATE TABLE IF NOT EXISTS app_settings (
   v          TEXT NOT NULL,
   updated_at INTEGER NOT NULL
 );
+
+-- v5：对局历史归属（游客为 NULL；user_name 为注册时的用户名快照）
+ALTER TABLE sessions ADD COLUMN user_id TEXT;
+ALTER TABLE sessions ADD COLUMN user_name TEXT;
+CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id, updated_at);
+
+-- v6：对局账本（永久历史）——与 src/server/db.ts 迁移 v3 完全同构
+-- sessions 仍是 24h 工作状态；games / game_turns 只追加，不随会话过期消失
+CREATE TABLE IF NOT EXISTS games (
+  id           TEXT PRIMARY KEY,
+  user_id      TEXT,
+  user_name    TEXT,
+  target_id    TEXT NOT NULL,
+  target_name  TEXT NOT NULL,
+  target_roles TEXT NOT NULL DEFAULT '[]',
+  difficulty   INTEGER NOT NULL,
+  polity       TEXT,
+  region       TEXT,
+  world_era    TEXT,
+  mode         TEXT NOT NULL,
+  pronoun      TEXT NOT NULL,
+  turns_total  INTEGER NOT NULL,
+  turns_left   INTEGER NOT NULL,
+  turns_used   INTEGER NOT NULL DEFAULT 0,
+  asks         INTEGER NOT NULL DEFAULT 0,
+  status       TEXT NOT NULL,
+  started_at   INTEGER NOT NULL,
+  ended_at     INTEGER,
+  updated_at   INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_games_user    ON games(user_id, started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_games_started ON games(started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_games_target  ON games(target_id);
+
+CREATE TABLE IF NOT EXISTS game_turns (
+  game_id  TEXT NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+  seq      INTEGER NOT NULL,
+  question TEXT NOT NULL,
+  verdict  TEXT NOT NULL,
+  text     TEXT NOT NULL,
+  hint     TEXT,
+  invalid  TEXT,
+  failed   INTEGER NOT NULL DEFAULT 0,
+  hit      INTEGER NOT NULL DEFAULT 0,
+  basis    TEXT,
+  calls    INTEGER NOT NULL DEFAULT 0,
+  ms       INTEGER NOT NULL DEFAULT 0,
+  asked_at INTEGER NOT NULL,
+  PRIMARY KEY (game_id, seq)
+);

@@ -204,6 +204,10 @@ export interface SoloSession {
   history: AnswerRecord[];
   createdAt: number;
   updatedAt: number;
+  /** 归属玩家（Workers 用户系统）；游客为 null */
+  userId?: string | null;
+  /** 用户名快照（改名不断联） */
+  userName?: string | null;
 }
 
 /** AI 凭据：MVP 只实现 byok；platform 为 Steam 平台代调预留 */
