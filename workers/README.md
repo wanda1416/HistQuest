@@ -14,18 +14,24 @@ npx wrangler login
 
 # 3. 建 D1
 cd workers
-npx wrangler d1 create hq         # 记下 database_id 填入 wrangler.toml
+npx wrangler d1 create hq         # 记下 database_id，填进 wrangler.toml
 npx wrangler d1 execute hq --remote --file=schema.sql
 
-# 4. 配密钥与域名
-npx wrangler secret put AI_API_KEY        # DeepSeek 等平台的 key
-#    编辑 wrangler.toml：AI_BASE_URL / AI_MODEL / routes（你的域名）
-#    AI_BASE_URL = "https://api.deepseek.com/v1"
-#    AI_MODEL    = "deepseek-chat"
+# 4. 生成本地部署配置（wrangler.toml 不入库）
+cp wrangler.example.toml wrangler.toml
+#    编辑 wrangler.toml：name / database_id / routes / AI_BASE_URL / AI_MODEL / ADMIN_USER
 
-# 5. 发布
+# 5. 注入密钥（不会写进任何文件）
+npx wrangler secret put AI_API_KEY
+npx wrangler secret put ADMIN_TOKEN
+npx wrangler secret put SESSION_SECRET
+
+# 6. 发布
 npx wrangler deploy
 ```
+
+`wrangler.toml` 含账号资源 ID、域名与实际使用的模型服务，已被 `.gitignore` 忽略；
+仓库里只保留占位模板 `wrangler.example.toml`。
 
 首次请求会自动把 184 位人物种子导入 D1（`d1.seeded` 日志）。
 
@@ -55,5 +61,6 @@ npx wrangler deploy   # 首个请求会重新播种
 ## 密钥边界
 
 - `AI_API_KEY` 只存 wrangler secret，只在 Worker→LLM 一段使用
+- `ADMIN_TOKEN` / `SESSION_SECRET` 同样走 secret，不写入配置文件
 - 不出现在日志、响应、前端（与验收 9 一致）
 - 管理后台（admin）未迁移到 Workers；人物编辑继续用本地 Node 模式

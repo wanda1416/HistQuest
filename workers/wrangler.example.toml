@@ -1,0 +1,42 @@
+# 部署配置模板。
+#
+#   cp wrangler.example.toml wrangler.toml
+#
+# wrangler.toml 含账号资源 ID、域名与实际使用的模型服务，已被 .gitignore 忽略，
+# 不要提交到仓库。本文件只保留占位符。
+#
+# 密钥一律用 `wrangler secret put` 注入，绝不写进任何文件。
+
+name = "your-worker-name"
+main = "bundle.ts"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+# 自定义域名（可选）。workers.dev 在国内访问不稳定时建议绑定。
+# routes = [
+#   { pattern = "your-domain.example", custom_domain = true },
+# ]
+
+# 静态资源：npm run build 后 dist/ 由 assets 托管
+[assets]
+directory = "../dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "hq"
+# 从 `npx wrangler d1 create hq` 的输出里抄过来
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+
+[vars]
+# 非密钥配置
+ADMIN_USER = "your-admin-name"
+AI_BASE_URL = "https://your-llm-endpoint/v1"
+AI_MODEL = "your-model"
+# SOLO_TURNS = "50"
+
+# 以下密钥不要写进本文件：
+#   npx wrangler secret put AI_API_KEY
+#   npx wrangler secret put ADMIN_TOKEN
+#   npx wrangler secret put SESSION_SECRET

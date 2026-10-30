@@ -96,7 +96,7 @@ Steam 上的两种模型供给方式，必须在架构里**现在就留好口子
 │  Workers（单 Worker，Hono 路由，绑定自定义域名）        │
 │  ├─ 静态资源：dist/（assets binding，无 Server 化）    │
 │  ├─ /api/*：core 判定引擎原样复用（纯函数，零 Node 依赖）│
-│  ├─ LLM 调用：Worker fetch 直连 DeepSeek 等（服务端 Key │
+│  ├─ LLM 调用：Worker fetch 直连所选模型服务（服务端 Key │
 │  │  存 wrangler secret，永不进入响应/日志/前端）        │
 │  ├─ 会话状态：Durable Object（每局一个 DO 实例）        │
 │  │  —— 取代 Node 内存 Map + fs 快照，免费额度足够       │
@@ -117,7 +117,7 @@ Steam 上的两种模型供给方式，必须在架构里**现在就留好口子
 | admin 人物库（fs 读写） | KV（characters.json 整体读写，变更频率低） |
 | express.static 服务 dist | Workers assets binding |
 
-**成本**：免费档 10 万请求/天 + DO 13 万 GB-s/天，个人与朋友规模（日均 < 1 万问）远碰不到上限；LLM token 费用走部署者自己的 DeepSeek 账户（deepseek-chat 约每问 0.001 元量级）。
+**成本**：免费档 10 万请求/天 + DO 13 万 GB-s/天，个人与朋友规模（日均 < 1 万问）远碰不到上限；LLM token 费用由部署者自己的模型账户承担，按所选模型的定价计。
 
 ---
 
