@@ -4,11 +4,39 @@
  */
 
 export const DYNASTIES = [
-  '商', '西周', '春秋', '战国', '秦', '西汉', '东汉', '三国', '西晋', '东晋',
-  '南北朝', '隋', '唐', '五代', '北宋', '南宋', '蒙古', '元', '明', '清', '近代',
+  '史前', '商', '西周', '春秋', '战国', '秦', '西汉', '东汉', '三国', '西晋', '东晋',
+  '南北朝', '隋', '唐', '五代', '北宋', '南宋', '辽', '金', '西夏', '大理',
+  '蒙古', '元', '明', '清', '近代',
 ] as const;
 
 export type Dynasty = (typeof DYNASTIES)[number];
+
+/**
+ * 时期组：大厅筛选用（9 组比 26 个朝代好选），索引裁定仍按具体朝代。
+ * 注意「宋辽金夏」是并存政权组：组内朝代互不归并（辽代条目问「它是宋朝的吗」
+ * 必须答否），与「汉=西汉+东汉」这类合并组方向相反——见 core/index.ts 的
+ * DYNASTY_GROUPS（合并）/ 本表（仅分组展示）。
+ */
+export const PERIOD_GROUPS = [
+  { key: 'prehistory', label: '史前传说', dynasties: ['史前'] },
+  { key: 'xianqin', label: '先秦', dynasties: ['商', '西周', '春秋', '战国'] },
+  { key: 'qinhan', label: '秦汉', dynasties: ['秦', '西汉', '东汉'] },
+  { key: 'weijin', label: '魏晋南北朝', dynasties: ['三国', '西晋', '东晋', '南北朝'] },
+  { key: 'suitang', label: '隋唐五代', dynasties: ['隋', '唐', '五代'] },
+  {
+    key: 'songliao',
+    label: '宋辽金夏',
+    dynasties: ['北宋', '南宋', '辽', '金', '西夏', '大理'],
+  },
+  { key: 'yuan', label: '元', dynasties: ['蒙古', '元'] },
+  { key: 'mingqing', label: '明清', dynasties: ['明', '清'] },
+  { key: 'modern', label: '近现代', dynasties: ['近代'] },
+] as const;
+
+/** 中国条目所属时期组；世界条目走 worldEra，不在此体系 */
+export function periodOf(polity: string): string | null {
+  return PERIOD_GROUPS.find((g) => (g.dynasties as readonly string[]).includes(polity))?.key ?? null;
+}
 
 /** 文明圈：决定抽样权重与筛选，不参与问答判定 */
 export const REGIONS = [

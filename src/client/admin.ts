@@ -650,6 +650,37 @@ root.addEventListener('keydown', (event) => {
   }
 });
 
+/**
+ * ← / → 方向键翻页（当前视图的列表）。
+ * 绑在 document 上：焦点在页面任意位置（含 body）都响应；
+ * 焦点在输入框/下拉/textarea 里时不抢按键。
+ */
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+  if (event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) return;
+  const target = event.target as HTMLElement | null;
+  const tag = target?.tagName;
+  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || target?.isContentEditable) return;
+  if (!state.ready) return;
+
+  // 只在对局历史视图用 history 分页，其余（数据管理/健康）用 list 分页
+  const prefix: 'list' | 'history' = state.view === 'history' ? 'history' : 'list';
+  const page = prefix === 'history' ? state.historyPage : state.listPage;
+  const size = prefix === 'history' ? state.historyPageSize : state.listPageSize;
+  const total = prefix === 'history' ? state.historyTotal : state.total;
+  const pages = Math.max(1, Math.ceil(total / size));
+  const next = event.key === 'ArrowRight' ? page + 1 : page - 1;
+  if (next < 1 || next > pages) return;
+  event.preventDefault();
+  if (prefix === 'history') {
+    setState({ historyPage: next });
+    void loadHistory();
+  } else {
+    setState({ listPage: next });
+    void loadList();
+  }
+});
+
 root.addEventListener('submit', (event) => {
   event.preventDefault();
   const form = event.target as HTMLFormElement;

@@ -260,6 +260,7 @@ function listView(s: AdminState): string {
     .join('');
 
   return `
+  ${pagination(s, 'list', s.total, s.listPage, s.listPageSize, true)}
   ${filtersView(s)}
   <p class="a-muted">共 ${s.total} 条${s.list.length !== s.total ? `，当前显示 ${s.list.length} 条` : ''}</p>
   <table class="a-table">
@@ -273,9 +274,9 @@ function listView(s: AdminState): string {
 }
 
 /**
- * 通用分页控件：页码行 + 每页条数选择 + 快速跳页输入框。
- * prefix 区分两个列表（list / history），对应 admin.ts 里的
- * `${prefix}-page` / `${prefix}-pagesize` 动作。
+ * 通用分页控件。compact=true 时输出顶部粘性精简条（只有 ←/→ 和每页条数），
+ * 完整版（页码行 + 跳页）放表格底部。prefix 区分两个列表（list / history），
+ * 对应 admin.ts 里的 `${prefix}-page` / `${prefix}-pagesize` 动作。
  */
 function pagination(
   s: AdminState,
@@ -283,6 +284,7 @@ function pagination(
   total: number,
   page: number,
   pageSize: number,
+  compact = false,
 ): string {
   const pages = Math.max(1, Math.ceil(total / pageSize));
   const cur = Math.min(Math.max(1, page), pages);
@@ -298,6 +300,18 @@ function pagination(
   const pageBtn = (p: number, label = String(p)): string =>
     `<button class="a-btn a-btn-sm ${p === cur ? 'is-active' : ''}"
       data-action="${prefix}-page" data-page="${p}">${esc(label)}</button>`;
+
+  if (compact) {
+    return `
+  <div class="a-pagination is-compact">
+    <span class="a-muted">${prefix === 'list' ? '谜底库' : '对局历史'} · 第 ${cur} / ${pages} 页 · 共 ${total} 条 <small class="pg-kbd-hint">（←/→ 翻页）</small></span>
+    <div class="pg-right">
+      ${cur > 1 ? pageBtn(cur - 1, '←') : '<button class="a-btn a-btn-sm" disabled>←</button>'}
+      ${cur < pages ? pageBtn(cur + 1, '→') : '<button class="a-btn a-btn-sm" disabled>→</button>'}
+      <select data-action="${prefix}-pagesize" aria-label="每页条数">${sizes}</select>
+    </div>
+  </div>`;
+  }
 
   const nums: number[] = [];
   for (let p = 1; p <= pages; p++) {
@@ -863,6 +877,7 @@ function historyView(s: AdminState): string {
 
   return `
   <section class="a-panel">
+    ${pagination(s, 'history', s.historyTotal, s.historyPage, s.historyPageSize, true)}
     <h2 class="a-h2">对局历史（全部玩家 · ${s.historyTotal} 局）</h2>
     <div class="a-filters">
       <input type="search" data-field="history-user" value="${esc(s.historyFilters.user)}" placeholder="按用户名筛选" />
