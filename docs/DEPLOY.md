@@ -183,11 +183,16 @@ node scripts/verify-ui.ts
 
 ## 4. 语音识别（ASR，可选）
 
-服务端配了 ASR 模型后，单人局与对战局的提问框会出现 🎤「按住说话」按钮；
+服务端配了 ASR 后，单人局与对战局的提问框会出现 🎤「按住说话」按钮；
 识别出的文字填进输入框，由玩家确认后提交（语音只是输入法，不直接进 ask）。
 
-走 **OpenAI 兼容 `/v1/audio/transcriptions`**（Whisper 系事实标准），
-下列服务商任选其一，模型名填进配置即可：
+**推荐：零配置的 Workers AI（已上线）**。`wrangler.toml` 里的 `[ai]` 绑定接通
+Cloudflare 账号自带的免费 Whisper（`@cf/openai/whisper`）——每天 10k Neurons
+免费额度 ≈ 4.6 小时音频（一句提问 2 秒，约每天 8000 次），零密钥、大陆可达、
+实测延迟 <1s。有这个绑定语音就可用，无需任何外部服务。
+
+外部服务商（备用，Workers AI 失败时自动回落）。走 OpenAI 兼容
+`/v1/audio/transcriptions`（Whisper 系事实标准），任选其一：
 
 | 服务商 | 模型名示例 | 大陆可达 | 说明 |
 |---|---|---|---|

@@ -63,13 +63,27 @@ async function makeUser(id: string, role: 'user' | 'admin' = 'user') {
     .run();
 }
 
-function makeEnv(patch: Record<string, string | undefined> = {}) {
+/** mock 的 Workers AI 绑定：始终返回固定文字（不触发即不调用） */
+function makeAiBinding(calls: { n: number } = { n: 0 }) {
+  return {
+    calls,
+    run: async (model: string, input: { audio: ArrayBuffer }) => {
+      if (model !== '@cf/openai/whisper') throw new Error('unexpected model');
+      if (input.audio.byteLength === 0) throw new Error('empty audio');
+      calls.n += 1;
+      return { text: ' Workers AI 识别结果 ' };
+    },
+  };
+}
+
+function makeEnv(patch: Record<string, string | undefined> = {}, ai?: ReturnType<typeof makeAiBinding>) {
   return {
     DB: d1,
     AI_BASE_URL: patch.AI_BASE_URL,
     AI_API_KEY: patch.AI_API_KEY ?? 'sk-asr-test',
     AI_MODEL: patch.AI_MODEL ?? 'mock-chat',
     AI_ASR_MODEL: patch.AI_ASR_MODEL,
+    ...(ai ? { AI: ai } : {}),
   };
 }
 
@@ -113,6 +127,40 @@ test('asr：正常识别 → 透传模型名、返回去空格文字、扣 1 配
   assert.equal(typeof body.ms, 'number');
   const row = await d1.prepare('SELECT asks_today FROM users WHERE id = ?').bind('u2').first<{ asks_today: number }>();
   assert.equal(row!.asks_today, 1, '一次识别扣一次配额');
+});
+
+test('asr：Workers AI 绑定优先于外部端点（免费档，零密钥）', async () => {
+  await makeUser('u5');
+  const calls = { n: 0 };
+  // 外部上游不该被调用：故意给一个会 500 的地址，若走到了就会 502
+  const upstream = await startMockAsr({ status: 500 });
+  const res = await handleTranscribe(
+    makeRequest({ baseURL: upstream }, audioFile),
+    makeEnv({ AI_BASE_URL: upstream, AI_ASR_MODEL: 'm' }, makeAiBinding(calls)),
+    { id: 'u5', username: 'f', role: 'user', allowServerKey: true } as never,
+  );
+  assert.equal(res.status, 200);
+  const body = await json(res);
+  assert.equal(body.text, 'Workers AI 识别结果', '走 Workers AI 且文字去空格');
+  assert.equal(calls.n, 1, 'AI.run 被调用一次');
+});
+
+test('asr：Workers AI 失败 → 回落外部端点', async () => {
+  await makeUser('u6');
+  const upstream = await startMockAsr();
+  const brokenAi = {
+    run: async () => {
+      throw new Error('neurons exhausted');
+    },
+  };
+  const res = await handleTranscribe(
+    makeRequest({ baseURL: upstream }, audioFile),
+    makeEnv({ AI_BASE_URL: upstream, AI_ASR_MODEL: 'm' }, brokenAi as never),
+    { id: 'u6', username: 'g', role: 'user', allowServerKey: true } as never,
+  );
+  assert.equal(res.status, 200);
+  const body = await json(res);
+  assert.equal(body.text, '他是唐朝人吗', '回落到外部端点拿到识别文字');
 });
 
 test('asr：管理员不限配额', async () => {

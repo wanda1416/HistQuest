@@ -29,6 +29,14 @@ export interface TranscribeEnv {
    */
   AI_ASR_BASE_URL?: string;
   AI_ASR_API_KEY?: string;
+  /**
+   * Cloudflare Workers AI 绑定（推荐首选）：账号自带每天 10k Neurons 免费额度
+   * （whisper ≈0.023 Neurons/分钟音频 → 每天约 4.6 小时，朋友规模用不完），
+   * 零密钥、大陆可达（Cloudflare 边缘）。配了就优先用它，外部 ASR 降为备用。
+   */
+  AI?: {
+    run(model: string, input: unknown): Promise<unknown>;
+  };
 }
 
 const MAX_AUDIO_BYTES = 10 * 1024 * 1024;
@@ -96,8 +104,9 @@ export async function handleTranscribe(
   const baseURL = override?.asrBaseURL ?? env.AI_ASR_BASE_URL ?? override?.baseURL ?? env.AI_BASE_URL;
   const apiKey = override?.asrApiKey ?? env.AI_ASR_API_KEY ?? override?.apiKey ?? env.AI_API_KEY;
   const asrModel = override?.asrModel ?? env.AI_ASR_MODEL;
-  if (!baseURL || !apiKey || !asrModel) {
-    return fail(503, 'ASR_NOT_CONFIGURED', '语音识别未配置（缺 AI_ASR_MODEL）');
+  // Workers AI 绑定在就能用（免费档），外部三元组只是备用——都不满足才 503
+  if (!env.AI && !(baseURL && apiKey && asrModel)) {
+    return fail(503, 'ASR_NOT_CONFIGURED', '语音识别未配置（缺 AI 绑定或 AI_ASR_MODEL）');
   }
 
   const ct = req.headers.get('content-type') ?? '';
@@ -132,13 +141,34 @@ export async function handleTranscribe(
     if (!quota.ok) return fail(429, 'QUOTA_EXCEEDED', quota.message ?? '今日额度已用完');
   }
 
+  /* ---------- 识别：首选 Workers AI（免费），失败回落外部 OpenAI 兼容端点 ---------- */
+
+  if (env.AI) {
+    try {
+      const result = (await env.AI.run('@cf/openai/whisper', {
+        audio: await audio.arrayBuffer(),
+      })) as { text?: string };
+      const text = String(result?.text ?? '').trim();
+      if (text) return json(200, { text, ms: Date.now() - started });
+      // 空结果（真没说话）也直接返回：whisper 对静音/噪声会回空串
+      return json(200, { text: '', ms: Date.now() - started });
+    } catch (err) {
+      // Workers AI 失败（额度耗尽/模型异常）不中断：落回外部端点
+      console.error('asr.workers-ai.failed', { message: (err as Error)?.message });
+    }
+  }
+
+  // 外部端点需要完整三元组
+  if (!baseURL || !apiKey || !asrModel) {
+    return fail(503, 'ASR_NOT_CONFIGURED', '语音识别不可用（Workers AI 未绑定，外部 ASR 未配置）');
+  }
+
   // 透传给上游 OpenAI 兼容端点
   const upstream = new FormData();
   upstream.append('file', audio, audio.name || 'speech.webm');
   upstream.append('model', asrModel);
   // 中文游戏：显式提示语提高人名/朝代命中（whisper 系支持 prompt 偏置）
   upstream.append('prompt', '历史人物问答：「是」「否」「唐朝」「宋朝」「诗人」「皇帝」等词。');
-  // 不传 response_format：默认 json {text}
 
   let res: Response;
   try {

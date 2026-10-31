@@ -37,6 +37,8 @@ interface Env {
   /** ASR 专用端点/密钥（可选；不配则复用 LLM 的） */
   AI_ASR_BASE_URL?: string;
   AI_ASR_API_KEY?: string;
+  /** Cloudflare Workers AI（语音识别首选：账号免费额度，零密钥） */
+  AI: { run(model: string, input: unknown): Promise<unknown> };
   SOLO_TURNS?: string;
   ADMIN_TOKEN?: string;
   /** 会话签名密钥（secret）；未配置时用户系统禁用 */
@@ -207,7 +209,9 @@ function errorResponse(err: unknown): Response {
 
 async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response> {
   const path = url.pathname.replace(/^\/api/, '');
-  const body = req.method === 'POST' ? await readBody(req) : {};
+  // transcribe 的 body 是 multipart，预读 json() 会把它消费掉——路由内部自己读
+  const isMultipart = (req.headers.get('content-type') ?? '').includes('multipart/form-data');
+  const body = req.method === 'POST' && !isMultipart ? await readBody(req) : {};
   const serverCred = serverCredential(rt.env, rt.llmOverride);
 
   // ---------- meta ----------
@@ -229,7 +233,7 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
         label: REGION_LABELS[v],
         count: counts.get(v) ?? 0,
       })),
-      asrReady: Boolean(rt.llmOverride?.asrModel ?? rt.env.AI_ASR_MODEL),
+      asrReady: Boolean(rt.env.AI || (rt.llmOverride?.asrModel ?? rt.env.AI_ASR_MODEL)),
     };
     return json(200, {
       ...meta,
