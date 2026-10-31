@@ -448,13 +448,16 @@ function turnView(r: RecordView, canSave: boolean): string {
     </div>`;
 }
 
-function examples(category: TargetCategory): string {
+function examples(category: TargetCategory | 'mixed'): string {
+  // mixed 用三类通用的中性问题：示例本身不能暗示类别
   const samples =
     category === 'event'
       ? ['它发生在唐朝吗？', '它和战争有关吗？', '它发生在公元前吗？', '主角是皇帝吗？', '它改变了历史走向吗？']
       : category === 'item'
         ? ['它是青铜器吗？', '它是唐朝的东西吗？', '它出土于河南吗？', '它现在藏在博物馆吗？', '它有一千年以上历史吗？']
-        : ['他是唐朝人吗？', '他当过皇帝吗？', '他是诗人吗？', '他名字是两个字吗？', '他活在公元后吗？'];
+        : category === 'character'
+          ? ['他是唐朝人吗？', '他当过皇帝吗？', '他是诗人吗？', '他名字是两个字吗？', '他活在公元后吗？']
+          : ['它与唐朝有关吗？', '它在公元 1500 年之前吗？', '它是真实存在过的吗？', '它和战争有关吗？', '它的名字是三个字吗？'];
   return `<div class="examples"><p class="examples-title">试试这样问</p><div class="chips chips-wrap">
     ${samples.map((q) => `<button class="chip-select chip-sm" data-action="fill-example" data-value="${esc(q)}">${esc(q)}</button>`).join('')}
   </div></div>`;
@@ -488,7 +491,8 @@ function gameView(s: State): string {
           <div class="target-seal">？</div>
           <div>
             <p class="target-label">目标${
-              { character: '人物', event: '事件', item: '物品' }[session.category ?? 'character']
+              // mixed 不揭示类别：「目标事件」等于告诉玩家这次抽到了事件
+              session.category === 'mixed' ? '' : ({ character: '人物', event: '事件', item: '物品' }[session.category] ?? '')
             }</p>
             <p class="target-hint">开局已锁定</p>
           </div>
@@ -502,11 +506,13 @@ function gameView(s: State): string {
 
         <div class="rail-actions">
           <button class="btn btn-primary" data-action="open-guess" ${s.pending ? 'disabled' : ''}>${
-            session.category === 'event'
-              ? '我猜是哪件事…'
-              : session.category === 'item'
-                ? '我猜是哪件…'
-                : '我猜是…'
+            session.category === 'mixed'
+              ? '我猜…'
+              : session.category === 'event'
+                ? '我猜是哪件事…'
+                : session.category === 'item'
+                  ? '我猜是哪件…'
+                  : '我猜是…'
           }</button>
           <button class="btn btn-ghost" data-action="reveal" ${s.pending ? 'disabled' : ''}>放弃并揭晓</button>
         </div>
@@ -578,17 +584,24 @@ function diffLabel(s: State): string {
 
 function guessDialog(s: State): string {
   const cat = s.session?.category ?? 'character';
-  const ariaLabel = cat === 'event' ? '猜事件' : cat === 'item' ? '猜物品' : '猜人物';
+  // mixed 中性：弹窗不能暗示类别
+  const ariaLabel = cat === 'mixed' ? '抢答' : cat === 'event' ? '猜事件' : cat === 'item' ? '猜物品' : '猜人物';
   const title = cat === 'character' ? '你猜是谁？' : '你猜是什么？';
+  const placeholder =
+    cat === 'mixed'
+      ? '输入名称'
+      : cat === 'event'
+        ? '输入事件名称'
+        : cat === 'item'
+          ? '输入物品名称'
+          : '输入人物姓名';
   return `
   <div class="dialog-mask" data-mask="1">
     <div class="dialog" role="dialog" aria-modal="true" aria-label="${ariaLabel}">
       <p class="eyebrow">抢答</p>
       <h3 class="dialog-title">${title}</h3>
       <p class="dialog-hint">猜错会消耗一次提问机会。别称也算对。</p>
-      <input class="input" name="guess" data-role="guess-input" placeholder="${
-        cat === 'event' ? '输入事件名称' : cat === 'item' ? '输入物品名称' : '输入人物姓名'
-      }" autocomplete="off" />
+      <input class="input" name="guess" data-role="guess-input" placeholder="${placeholder}" autocomplete="off" />
       ${s.guessError ? `<p class="testline fail">${esc(s.guessError)}</p>` : ''}
       <div class="dialog-actions">
         <button class="btn btn-text" data-action="close-guess">取消</button>

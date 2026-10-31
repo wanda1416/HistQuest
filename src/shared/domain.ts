@@ -214,8 +214,8 @@ export interface SoloSession {
   id: string;
   /** 服务端唯一持有，任何下行 DTO 都不得包含 */
   targetId: string;
-  /** 谜底类别；缺省人物（老会话） */
-  category?: TargetCategory;
+  /** 玩家所选类别（mixed 保持 mixed）；真实类别只在服务端判定与历史账本里 */
+  category?: TargetCategory | 'mixed';
   difficulty: number;
   /** 玩家筛选的政权（中国朝代），null = 不限 */
   polity: string | null;

@@ -109,7 +109,8 @@ export class SoloStore {
     const session: SoloSession = {
       id: this.opts.newId ? this.opts.newId() : defaultNewId(),
       targetId: target.id,
-      category: target.category ?? 'character',
+      // 存玩家所选（mixed 保持 mixed）：真实类别下发给客户端就等于泄题
+      category: input.category ?? 'character',
       difficulty: input.difficulty,
       polity: input.polity ?? null,
       region: input.region ?? null,
@@ -293,7 +294,12 @@ export class SoloStore {
 
   private targetSnapshot(session: SoloSession): TargetSnapshot {
     const c = this.index.get(session.targetId);
-    return { name: c?.name ?? session.targetId, roles: c?.roles ?? [] };
+    return {
+      name: c?.name ?? session.targetId,
+      roles: c?.roles ?? [],
+      // 账本记真实类别（与玩家所选 mixed 无关）：后台统计按实际类别走
+      category: c?.category ?? 'character',
+    };
   }
 
   private recordStart(session: SoloSession): void | Promise<void> {

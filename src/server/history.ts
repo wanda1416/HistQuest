@@ -1,4 +1,4 @@
-import type { AnswerMode, AnswerRecord, Region, SessionStatus, SoloSession } from '../shared/domain.ts';
+import type { AnswerMode, AnswerRecord, Region, SessionStatus, SoloSession, TargetCategory } from '../shared/domain.ts';
 import type {
   GameResult,
   HistoryDetail,
@@ -45,6 +45,8 @@ export interface HistoryQuery {
 export interface TargetSnapshot {
   name: string;
   roles: string[];
+  /** 真实类别（混合局与玩家所选可能不同） */
+  category: TargetCategory;
 }
 
 export interface HistoryStore {
@@ -192,7 +194,7 @@ export function gameParams(session: SoloSession, target: TargetSnapshot): unknow
     JSON.stringify(target.roles),
     // 归属来源：开局时就知道玩家有没有登录，落库时一次定死
     session.userId ? 'user' : 'guest',
-    session.category ?? 'character',
+    target.category,
     session.difficulty,
     session.polity,
     session.region,

@@ -178,8 +178,8 @@ export interface RecordView {
 
 export interface SessionView {
   gameId: string;
-  /** 谜底类别 */
-  category: TargetCategory;
+  /** 玩家所选类别（mixed 时不揭示真实类别） */
+  category: TargetCategory | 'mixed';
   status: SessionStatus;
   turnsLeft: number;
   difficulty: number;
