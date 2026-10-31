@@ -46,7 +46,8 @@ const DYNASTY_SET = new Set<string>(DYNASTIES);
 const REGION_SET = new Set<string>(REGIONS);
 const ERA_SET = new Set<string>(WORLD_ERAS);
 const GENDERS = new Set(['male', 'female']);
-const ID_RE = /^[a-z][a-z0-9_]{1,31}$/;
+// 连字符允许：事件/物品种子的 id 形如 ev-cn-001（类别-区域-编号）
+const ID_RE = /^[a-z][a-z0-9_-]{1,31}$/;
 const NAME_MIN = 2;
 const NAME_MAX = 8;
 
@@ -127,6 +128,9 @@ export interface ValidateOptions {
 
 export function validateCharacter(c: Character, opts: ValidateOptions): Issue[] {
   const issues: Issue[] = [];
+  // 类别语义：人物专用规则（性别/皇帝/卒年）只对 character 生效
+  const category = c.category ?? 'character';
+  const isCharacter = category === 'character';
   const err = (field: string, code: string, message: string): void => {
     issues.push({ level: 'error', field, code, message });
   };
@@ -136,7 +140,7 @@ export function validateCharacter(c: Character, opts: ValidateOptions): Issue[] 
 
   /* ---------------- 标识 ---------------- */
   if (!c.id) err('id', 'id_empty', 'id 不能为空');
-  else if (!ID_RE.test(c.id)) err('id', 'id_format', 'id 需为 2–32 位小写字母、数字或下划线，并以字母开头');
+  else if (!ID_RE.test(c.id)) err('id', 'id_format', 'id 需为 2–32 位小写字母、数字、下划线或连字符，并以字母开头');
   const idOwner = opts.others.find((o) => o.id === c.id);
   if (idOwner) err('id', 'id_duplicate', `id「${c.id}」已被「${idOwner.name}」占用`);
 
@@ -217,11 +221,11 @@ export function validateCharacter(c: Character, opts: ValidateOptions): Issue[] 
     }
   }
 
-  /* ---------------- 性别 / 君主 ---------------- */
-  if (!GENDERS.has(c.gender)) err('gender', 'gender_invalid', '性别只能是 male（男）或 female（女）');
+  /* ---------------- 性别 / 君主（人物专用；事件/物品的占位值不校验） ---------------- */
+  if (isCharacter && !GENDERS.has(c.gender)) err('gender', 'gender_invalid', '性别只能是 male（男）或 female（女）');
 
   // 身份与「是否君主」的一致性只对中国区提示：世界区有国王、法老、苏丹等不同称谓
-  if (c.region === 'cn') {
+  if (isCharacter && c.region === 'cn') {
     const roleEmperor = c.roles.includes('皇帝');
     if (c.emperor !== roleEmperor) {
       warn(
@@ -232,23 +236,33 @@ export function validateCharacter(c: Character, opts: ValidateOptions): Issue[] 
     }
   }
 
-  /* ---------------- 生卒 ---------------- */
-  if (c.birth !== null && !Number.isInteger(c.birth)) err('birth', 'birth_invalid', '生年必须是整数（公元前用负数），或留空');
+  /* ---------------- 时地（语义随类别：生卒/发生时间/制造年代） ---------------- */
+  if (c.birth !== null && !Number.isInteger(c.birth)) {
+    err('birth', 'birth_invalid', isCharacter ? '生年必须是整数（公元前用负数），或留空' : '年份必须是整数（公元前用负数）');
+  }
   if (c.death !== null && !Number.isInteger(c.death)) err('death', 'death_invalid', '卒年必须是整数（公元前用负数），或留空');
-  if (c.birth !== null && c.death !== null && c.birth >= c.death) {
+  if (isCharacter && c.birth !== null && c.death !== null && c.birth >= c.death) {
     err('death', 'death_before_birth', `卒年（${c.death}）必须晚于生年（${c.birth}）`);
   }
-  if (c.birth === null) warn('birth', 'birth_missing', '生年未填：生卒资料卡会缺一项，模型只能凭自身知识判断');
-  if (c.death === null) warn('death', 'death_missing', '卒年未填：生卒资料卡会缺一项，模型只能凭自身知识判断');
+  if (isCharacter) {
+    if (c.birth === null) warn('birth', 'birth_missing', '生年未填：生卒资料卡会缺一项，模型只能凭自身知识判断');
+    if (c.death === null) warn('death', 'death_missing', '卒年未填：生卒资料卡会缺一项，模型只能凭自身知识判断');
+  } else if (category === 'event' && c.birth === null) {
+    // 事件的年份是核心可判定维度（「发生在 X 朝之前吗」走确定性裁定）
+    err('birth', 'birth_required_event', '事件必须填写发生年份：年份是事件最重要的可判定维度');
+  }
 
-  /* ---------------- 籍贯 ---------------- */
-  if (!c.birthplace) warn('birthplace', 'birthplace_missing', '籍贯未填：资料卡缺此项，模型只能凭自身知识判断');
+  /* ---------------- 时地地点（籍贯 / 发生地 / 出土地） ---------------- */
+  if (!c.birthplace) {
+    const word = isCharacter ? '籍贯' : category === 'item' && c.birthplace !== '传世' ? '出土地' : '地点';
+    warn('birthplace', 'birthplace_missing', `${word}未填：资料卡缺此项，模型只能凭自身知识判断`);
+  }
   if (c.region === 'cn' && c.birthplace && !c.birthProvince) {
-    warn('birthProvince', 'province_missing', '有籍贯但缺省份，筛选项和省级问法都会受影响');
+    warn('birthProvince', 'province_missing', '有地点但缺省份，筛选项和省级问法都会受影响');
   }
 
   /* ---------------- 身份 / 标签 / 事迹 ---------------- */
-  if (!c.roles.length) err('roles', 'roles_empty', '身份不能为空：资料卡会缺少最重要的识别锚点');
+  if (!c.roles.length) err('roles', 'roles_empty', (isCharacter ? '身份' : '类型') + '不能为空：资料卡会缺少最重要的识别锚点');
   for (const role of c.roles) {
     if (charLen(role) < 2) warn('roles', 'role_too_short', `身份「${role}」只有 1 个字，容易与其他身份词混淆`);
   }
@@ -258,7 +272,7 @@ export function validateCharacter(c: Character, opts: ValidateOptions): Issue[] 
     if (/\s/.test(tag)) warn('tags', 'tag_space', `标签「${tag}」含空白字符`);
   }
 
-  if (!c.notable) err('notable', 'notable_empty', '代表事迹不能为空：它是资料卡与揭晓卡的主要内容');
+  if (!c.notable) err('notable', 'notable_empty', (isCharacter ? '代表事迹' : category === 'event' ? '经过与结果' : '简介') + '不能为空：它是资料卡与揭晓卡的主要内容');
 
   /* ---------------- 抽样与元数据 ---------------- */
   if (![1, 2, 3].includes(c.difficulty)) err('difficulty', 'difficulty_invalid', '难度只能是 1、2 或 3');
@@ -316,17 +330,28 @@ export function serializeCharacters(list: Character[]): string {
   return `[\n${rows.join(',\n')}\n]\n`;
 }
 
-/** 从现有数据聚合下拉选项：身份词与省份不设硬编码表，跟着数据长 */
+/** 从现有数据聚合下拉选项：身份/类型词与省份不设硬编码表，跟着数据长 */
 export function collectVocab(list: Character[]): {
   roles: string[];
   provinces: string[];
   polities: string[];
+  /** 各类别的类型词（人物=身份；事件=战役/条约…；物品=青铜器/书画…） */
+  types: Record<'character' | 'event' | 'item', string[]>;
 } {
   const roles = new Set<string>();
   const provinces = new Set<string>();
   const polities = new Set<string>();
+  const types: Record<'character' | 'event' | 'item', Set<string>> = {
+    character: new Set(),
+    event: new Set(),
+    item: new Set(),
+  };
   for (const c of list) {
-    for (const role of c.roles) roles.add(role);
+    const cat = c.category ?? 'character';
+    for (const role of c.roles) {
+      roles.add(role);
+      types[cat].add(role);
+    }
     if (c.birthProvince) provinces.add(c.birthProvince);
     // 中国朝代由 DYNASTIES 提供，这里只收集世界政权建议值
     if (c.region !== 'cn' && c.polity) polities.add(c.polity);
@@ -336,6 +361,11 @@ export function collectVocab(list: Character[]): {
     roles: [...roles].sort(byLocale),
     provinces: [...provinces].sort(byLocale),
     polities: [...polities].sort(byLocale),
+    types: {
+      character: [...types.character].sort(byLocale),
+      event: [...types.event].sort(byLocale),
+      item: [...types.item].sort(byLocale),
+    },
   };
 }
 

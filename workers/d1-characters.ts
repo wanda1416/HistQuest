@@ -195,7 +195,7 @@ export class D1CharacterStore {
     return serializeCharacters(this.all);
   }
 
-  vocab(): { roles: string[]; provinces: string[]; polities: string[] } {
+  vocab(): ReturnType<typeof collectVocab> {
     return collectVocab(this.all);
   }
 

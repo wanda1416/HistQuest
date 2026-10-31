@@ -31,7 +31,7 @@ export interface CharacterStoreLike {
   setRetired(id: string, retired: boolean): SaveResult;
   health(): HealthReport;
   exportText(): string;
-  vocab(): { roles: string[]; provinces: string[]; polities: string[] };
+  vocab(): ReturnType<typeof collectVocab>;
 }
 
 interface CharacterRow {
@@ -262,7 +262,7 @@ export class SqliteCharacterStore implements CharacterStoreLike {
     return serializeCharacters(this.all);
   }
 
-  vocab(): { roles: string[]; provinces: string[]; polities: string[] } {
+  vocab(): ReturnType<typeof collectVocab> {
     return collectVocab(this.all);
   }
 

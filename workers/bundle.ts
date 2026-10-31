@@ -407,6 +407,7 @@ async function handleAdmin(req: Request, url: URL, rt: Runtime): Promise<Respons
       dynasties: [...DYNASTIES],
       difficulties: DIFFICULTIES,
       roles: vocab.roles,
+      types: vocab.types,
       provinces: vocab.provinces,
       polities: vocab.polities,
       regions: REGIONS.map((value) => ({ value, label: REGION_LABELS[value] })),
@@ -429,6 +430,8 @@ async function handleAdmin(req: Request, url: URL, rt: Runtime): Promise<Respons
     if (polity) items = items.filter((c) => c.polity === polity || (c.polityAlt ?? []).includes(polity));
     if (region) items = items.filter((c) => c.region === region);
     if ([1, 2, 3].includes(difficulty)) items = items.filter((c) => c.difficulty === difficulty);
+    const category = (url.searchParams.get('category') ?? '').trim();
+    if (category) items = items.filter((c) => (c.category ?? 'character') === category);
     if (retired === '1') items = items.filter((c) => c.retired);
     if (retired === '0') items = items.filter((c) => !c.retired);
     items.sort((a, b) => a.name.localeCompare(b.name, 'zh'));

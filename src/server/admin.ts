@@ -111,6 +111,7 @@ export function createAdminRoutes(deps: AdminDeps): express.Router {
       dynasties: [...DYNASTIES],
       difficulties: DIFFICULTIES,
       roles: vocab.roles,
+      types: vocab.types,
       provinces: vocab.provinces,
       polities: vocab.polities,
       regions: REGIONS.map((value) => ({ value, label: REGION_LABELS[value] })),
@@ -136,6 +137,8 @@ export function createAdminRoutes(deps: AdminDeps): express.Router {
     if (polity) items = items.filter((c) => c.polity === polity || (c.polityAlt ?? []).includes(polity));
     if (region) items = items.filter((c) => c.region === (region as Region));
     if ([1, 2, 3].includes(difficulty)) items = items.filter((c) => c.difficulty === difficulty);
+    const category = String(req.query.category ?? '').trim();
+    if (category) items = items.filter((c) => (c.category ?? 'character') === category);
     if (retired === '1') items = items.filter((c) => c.retired);
     if (retired === '0') items = items.filter((c) => !c.retired);
 

@@ -14,7 +14,7 @@ let state: AdminState = {
   meta: null,
   list: [],
   total: 0,
-  filters: { q: '', polity: '', region: '', difficulty: '', retired: '' },
+  filters: { q: '', category: '', polity: '', region: '', difficulty: '', retired: '' },
   view: 'list',
   draft: null,
   originalId: null,
@@ -114,6 +114,7 @@ async function openHistoryGame(id: string): Promise<void> {
 async function loadList(): Promise<void> {
   const qs = new URLSearchParams();
   if (state.filters.q) qs.set('q', state.filters.q);
+  if (state.filters.category) qs.set('category', state.filters.category);
   if (state.filters.polity) qs.set('polity', state.filters.polity);
   if (state.filters.region) qs.set('region', state.filters.region);
   if (state.filters.difficulty) qs.set('difficulty', state.filters.difficulty);
@@ -141,6 +142,9 @@ function syncDraftField(field: string, el: HTMLInputElement | HTMLSelectElement 
   if (!d) return;
 
   switch (field) {
+    case 'category':
+      // 类别只在新建时通过 create 按钮决定，编辑中不改写 draft
+      break;
     case 'id':
       d.id = el.value.trim();
       break;
@@ -238,6 +242,11 @@ function handleField(el: HTMLElement): void {
     void loadHistory();
     return;
   }
+  if (field === 'filter-category') {
+    state.filters.category = (el as HTMLSelectElement).value;
+    void loadList();
+    return;
+  }
   if (field === 'filter-polity') {
     state.filters.polity = (el as HTMLSelectElement).value;
     void loadList();
@@ -264,7 +273,7 @@ function handleField(el: HTMLElement): void {
 
 /* ---------------- 动作 ---------------- */
 
-function newDraft(): void {
+function newDraft(category: 'character' | 'event' | 'item' = 'character'): void {
   setState({
     view: 'edit',
     originalId: null,
@@ -272,10 +281,12 @@ function newDraft(): void {
     notice: null,
     draft: {
       id: `h${Math.random().toString(16).slice(2, 8)}`,
+      // 类别只在新建时选：编辑中锁定（改类别等于换实体语义）
+      ...(category !== 'character' ? { category } : {}),
       name: '',
       aliases: [],
       region: 'cn',
-      polity: '唐',
+      polity: category === 'character' ? '唐' : category === 'event' ? '唐' : '商',
       gender: 'male',
       birth: null,
       death: null,
@@ -471,7 +482,7 @@ root.addEventListener('click', async (event) => {
       void loadList();
       break;
     case 'create':
-      newDraft();
+      newDraft((el.dataset.category as 'character' | 'event' | 'item') ?? 'character');
       break;
     case 'export':
       void exportJson();

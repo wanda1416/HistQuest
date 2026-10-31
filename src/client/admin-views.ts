@@ -1,7 +1,7 @@
 import type { Character, Verdict } from '../shared/domain.ts';
 import { DYNASTIES, WORLD_ERAS } from '../shared/domain.ts';
 import type { HistoryDetail, HistorySummary } from '../shared/protocol.ts';
-import { CharacterIndex } from '../core/index.ts';
+import { CharacterIndex, dynastyScope } from '../core/index.ts';
 import { judgeByIndex } from '../core/judge.ts';
 import { charLen, type Issue } from '../core/schema.ts';
 
@@ -11,6 +11,8 @@ export interface AdminMeta {
   dynasties: string[];
   difficulties: Array<{ level: number; label: string }>;
   roles: string[];
+  /** 各类别的类型词（人物=身份；事件=战役…；物品=青铜器…） */
+  types?: { character: string[]; event: string[]; item: string[] };
   provinces: string[];
   polities: string[];
   regions: Array<{ value: string; label: string }>;
@@ -49,7 +51,7 @@ export interface AdminState {
   meta: AdminMeta | null;
   list: Character[];
   total: number;
-  filters: { q: string; polity: string; region: string; difficulty: string; retired: string };
+  filters: { q: string; category: string; polity: string; region: string; difficulty: string; retired: string };
   view: 'list' | 'edit' | 'health' | 'users' | 'invites' | 'settings' | 'history';
   draft: Character | null;
   /** 正在编辑的原始 id；新建时为 null */
@@ -114,8 +116,10 @@ function headerFor(s: AdminState): { title: string; sub: string } {
       return { title: '管理后台', sub: '账号与站方模型' };
     case 'health':
       return { title: '管理后台', sub: '数据健康' };
-    case 'edit':
-      return { title: '管理后台', sub: s.originalId ? `编辑：${s.draft?.name ?? ''}` : '新建人物' };
+    case 'edit': {
+      const label = { character: '人物', event: '事件', item: '物品' }[s.draft?.category ?? 'character'];
+      return { title: '管理后台', sub: s.originalId ? `编辑：${s.draft?.name ?? ''}` : `新增${label}` };
+    }
     default:
       return { title: '管理后台', sub: stats };
   }
@@ -189,16 +193,27 @@ function filtersView(s: AdminState): string {
   ]
     .map(([v, label]) => `<option value="${v}" ${s.filters.retired === v ? 'selected' : ''}>${label}</option>`)
     .join('');
+  const categoryOptions = [
+    ['', '全部类别'],
+    ['character', '人物'],
+    ['event', '事件'],
+    ['item', '物品'],
+  ]
+    .map(([v, label]) => `<option value="${v}" ${s.filters.category === v ? 'selected' : ''}>${label}</option>`)
+    .join('');
 
   return `
   <div class="a-filters">
     <input type="search" data-field="q" value="${esc(s.filters.q)}" placeholder="搜姓名 / 别名 / id" />
+    <select data-field="filter-category">${categoryOptions}</select>
     <select data-field="filter-polity">${polityOptions}</select>
     <select data-field="filter-region">${regionOptions}</select>
     <select data-field="filter-difficulty">${diffOptions}</select>
     <select data-field="filter-retired">${retireOptions}</select>
     <button class="a-btn" data-action="reload">刷新</button>
-    <button class="a-btn is-primary" data-action="create">新增人物</button>
+    <button class="a-btn is-primary" data-action="create" data-category="character">新增人物</button>
+    <button class="a-btn is-primary" data-action="create" data-category="event">新增事件</button>
+    <button class="a-btn is-primary" data-action="create" data-category="item">新增物品</button>
     <button class="a-btn" data-action="export">导出 JSON</button>
   </div>`;
 }
@@ -271,16 +286,21 @@ function textInput(s: AdminState, name: string, value: string, extra = ''): stri
 
 function roleChips(s: AdminState): string {
   const selected = s.draft!.roles;
-  const chips = s.meta!.roles
+  // 建议词按类别分桶：人物=身份（诗人/皇帝…），事件=战役/条约…，物品=青铜器/书画…
+  const cat = s.draft!.category ?? 'character';
+  const suggest = s.meta?.types?.[cat as 'character' | 'event' | 'item'] ?? s.meta!.roles;
+  const chips = suggest
     .map(
       (r) => `<button type="button" class="a-chip ${selected.includes(r) ? 'is-on' : ''}"
         data-action="toggle-role" data-value="${esc(r)}">${esc(r)}</button>`,
     )
     .join('');
+  const placeholder = cat === 'character' ? '新增身份词' : '新增类型词';
+  const listAttr = cat === 'character' ? '' : ' list="type-list"';
   return `
   <div class="a-chips">
     ${chips}
-    <input class="a-input" id="f-role-custom" data-field="role-custom" placeholder="新增身份词" style="width:120px" />
+    <input class="a-input" id="f-role-custom" data-field="role-custom" placeholder="${placeholder}"${listAttr} style="width:120px" />
     <button type="button" class="a-btn" data-action="add-role">添加</button>
   </div>
   ${fieldIssues(s, 'roles')}`;
@@ -300,14 +320,18 @@ function checks(c: Character): Array<{ q: string; verdict: Verdict; expect: 'yes
   const yes = (query: { attr: string; value: unknown }, q: string): void => {
     out.push({ q, verdict: judgeByIndex(c, query as never).verdict, expect: 'yes' });
   };
+  // 问句按类别：人物「他是 X 朝人吗」；事件「它发生在 X 吗」；物品「它是 X 代的吗」
+  const cat = c.category ?? 'character';
+  const q = (dynasty: string): string =>
+    cat === 'event' ? `它发生在「${dynasty}」（${dynastyScope(dynasty)?.join('、') ?? dynasty}）吗` : cat === 'item' ? `它是「${dynasty}」代的吗` : `他是「${dynasty}」人吗`;
 
   if (c.region === 'cn' && c.polity) {
-    yes({ attr: 'dynasty', value: c.polity }, `他是「${c.polity}」人吗`);
-    for (const alt of c.polityAlt ?? []) yes({ attr: 'dynasty', value: alt }, `他是「${alt}」时期的人吗`);
+    yes({ attr: 'dynasty', value: c.polity }, q(c.polity));
+    for (const alt of c.polityAlt ?? []) yes({ attr: 'dynasty', value: alt }, q(alt));
 
     if (c.polity === '东汉') {
       out.push({
-        q: '他是三国人物吗（严格分期应为否）',
+        q: cat === 'character' ? '他是三国人物吗（严格分期应为否）' : '严格分期不属于三国（应答否）',
         verdict: judgeByIndex(c, { attr: 'dynasty', value: '三国' }).verdict,
         expect: 'no',
       });
@@ -355,6 +379,20 @@ function editView(s: AdminState): string {
   const meta = s.meta;
   if (!meta) return '<p class="a-muted">先在顶栏填入 ADMIN_TOKEN 再试。</p>';
 
+  // 类别：编辑中锁定（新建由「新增」按钮带入选定类别）
+  const cat = c.category ?? 'character';
+  const isCharacter = cat === 'character';
+  const CAT_LABEL: Record<string, string> = { character: '人物', event: '事件', item: '物品' };
+  const nameWord = isCharacter ? '姓名' : '名称';
+  const birthWord = isCharacter ? '生年' : cat === 'event' ? '发生年份' : '制造年代（约）';
+  const placeWord = isCharacter ? '籍贯（古地名 + 今地名）' : cat === 'event' ? '发生地点（含今属地名）' : '出土地（传世品填「传世」）';
+  const notableWord = isCharacter ? '代表事迹' : cat === 'event' ? '经过与结果' : '简介';
+  const rolesWord = isCharacter ? '身份' : '类型';
+  // 类型 datalist：从同类别条目收集（自由输入，不设白名单）
+  const typeOptions = (meta.types?.[cat] ?? [])
+    .map((t) => `<option value="${esc(t)}"></option>`)
+    .join('');
+
   const polityValues = c.region === 'cn' ? [...DYNASTIES] : meta.polities;
   const polityOptions = polityValues
     .map((d) => `<option value="${esc(d)}" ${c.polity === d ? 'selected' : ''}>${esc(d)}</option>`)
@@ -384,8 +422,8 @@ function editView(s: AdminState): string {
   <section class="a-edit">
     <form class="a-form" onsubmit="return false">
       <div class="a-form-head">
-        <h2>${isNew ? '新增人物' : esc(c.name || c.id)}</h2>
-        <span class="a-muted">${isNew ? '创建后 id 不可修改' : '在库' + (c.retired ? ' · 已下线' : '')}</span>
+        <h2>${isNew ? `新增${CAT_LABEL[cat]}` : esc(c.name || c.id)}</h2>
+        <span class="a-muted">${isNew ? `类别：${CAT_LABEL[cat]}（创建后不可改） · id 不可修改` : '在库' + (c.retired ? ' · 已下线' : '')}</span>
       </div>
       ${rootIssues}
 
@@ -399,7 +437,7 @@ function editView(s: AdminState): string {
             textInput(s, 'id', c.id, isNew ? '' : 'disabled'),
             isNew ? '保存后不可修改：进行中的对局靠它找回目标人物' : '已锁定',
           )}
-          ${field(s, 'name', '姓名', textInput(s, 'name', c.name), '2–5 字，全库唯一')}
+          ${field(s, 'name', nameWord, textInput(s, 'name', c.name), isCharacter ? '2–5 字，全库唯一' : '2–10 字，全库唯一')}
         </div>
         ${field(
           s,
@@ -428,7 +466,13 @@ function editView(s: AdminState): string {
                 : `<input class="a-input" id="f-polity" data-field="polity" list="polity-list" value="${esc(c.polity)}" />
                    <datalist id="polity-list">${polityList}</datalist>`
             }
-            <p class="a-hint">${c.region === 'cn' ? '索引会强制用这里裁定「他是 X 朝人吗」' : '世界政权的判定交给模型，这里只做资料卡'}</p>
+            <p class="a-hint">${
+              c.region === 'cn'
+                ? `索引会强制用这里裁定「${
+                    cat === 'event' ? '它发生在 X 吗' : cat === 'item' ? '它是 X 代的吗' : '他是 X 人吗'
+                  }」`
+                : '世界政权的判定交给模型，这里只做资料卡'
+            }</p>
             ${fieldIssues(s, 'polity')}
           </div>
           ${
@@ -449,21 +493,25 @@ function editView(s: AdminState): string {
                  </div>`
           }
           <div class="a-field">
-            <label class="a-label" for="f-country">今属国家/地区</label>
-            <input class="a-input" id="f-country" data-field="country" value="${esc(c.country ?? '')}" />
+            <label class="a-label" for="f-country">${isCharacter ? '今属国家/地区' : cat === 'item' ? '现藏机构 / 所在国' : '（事件不使用）'}</label>
+            <input class="a-input" id="f-country" data-field="country" value="${esc(c.country ?? '')}" ${cat === 'event' ? 'disabled' : ''} />
             ${fieldIssues(s, 'country')}
           </div>
-          <div class="a-field">
-            <label class="a-label" for="f-gender">性别</label>
-            <select class="a-select" id="f-gender" data-field="gender">
-              <option value="male" ${c.gender === 'male' ? 'selected' : ''}>男</option>
-              <option value="female" ${c.gender === 'female' ? 'selected' : ''}>女</option>
-            </select>
-            ${fieldIssues(s, 'gender')}
-          </div>
+          ${
+            isCharacter
+              ? `<div class="a-field">
+                   <label class="a-label" for="f-gender">性别</label>
+                   <select class="a-select" id="f-gender" data-field="gender">
+                     <option value="male" ${c.gender === 'male' ? 'selected' : ''}>男</option>
+                     <option value="female" ${c.gender === 'female' ? 'selected' : ''}>女</option>
+                   </select>
+                   ${fieldIssues(s, 'gender')}
+                 </div>`
+              : ''
+          }
         </div>
         ${
-          c.region === 'cn'
+          isCharacter && c.region === 'cn'
             ? `<div class="a-field">
                  <span class="a-label">还经历过哪些朝代（多选）</span>
                  ${altChips(s)}
@@ -471,23 +519,27 @@ function editView(s: AdminState): string {
                </div>`
             : ''
         }
-        <div class="a-field">
-          <label class="a-check">
-            <input type="checkbox" id="f-emperor" data-field="emperor" ${c.emperor ? 'checked' : ''} />
-            当过皇帝（须与身份里的「皇帝」一致）
-          </label>
-          ${fieldIssues(s, 'emperor')}
-        </div>
+        ${
+          isCharacter
+            ? `<div class="a-field">
+                 <label class="a-check">
+                   <input type="checkbox" id="f-emperor" data-field="emperor" ${c.emperor ? 'checked' : ''} />
+                   当过皇帝（须与身份里的「皇帝」一致）
+                 </label>
+                 ${fieldIssues(s, 'emperor')}
+               </div>`
+            : ''
+        }
       </div>
 
       <div class="a-section">
-        <h3>生平</h3>
+        <h3>${isCharacter ? '生平' : '时地'}</h3>
         <div class="a-grid2">
-          ${field(s, 'birth', '生年（公元前用负数）', `<input class="a-input" id="f-birth" data-field="birth" type="number" step="1" value="${c.birth ?? ''}" />`)}
-          ${field(s, 'death', '卒年（公元前用负数）', `<input class="a-input" id="f-death" data-field="death" type="number" step="1" value="${c.death ?? ''}" />`)}
+          ${field(s, 'birth', `${birthWord}（公元前用负数）`, `<input class="a-input" id="f-birth" data-field="birth" type="number" step="1" value="${c.birth ?? ''}" />`, isCharacter ? '' : cat === 'event' ? '必填：年份是事件最重要的可判定维度' : '存疑就取通行说法的整数')}
+          ${isCharacter ? field(s, 'death', '卒年（公元前用负数）', `<input class="a-input" id="f-death" data-field="death" type="number" step="1" value="${c.death ?? ''}" />`) : ''}
         </div>
         <div class="a-grid2">
-          ${field(s, 'birthplace', '籍贯（古地名 + 今地名）', textInput(s, 'birthplace', c.birthplace ?? ''), '如：沛国谯（今安徽亳州）')}
+          ${field(s, 'birthplace', placeWord, textInput(s, 'birthplace', c.birthplace ?? ''), isCharacter ? '如：沛国谯（今安徽亳州）' : cat === 'item' ? '如：河南安阳（殷墟出土）；传世品填「传世」' : '如：赤壁（今湖北赤壁市西北）')}
           ${field(
             s,
             'birthProvince',
@@ -501,15 +553,22 @@ function editView(s: AdminState): string {
       <div class="a-section">
         <h3>内容</h3>
         <div class="a-field">
-          <span class="a-label">身份（可多选）</span>
+          <span class="a-label">${rolesWord}（可多选）</span>
           ${roleChips(s)}
+          ${
+            !isCharacter
+              ? `<datalist id="type-list">${typeOptions}</datalist>
+                 <p class="a-hint">建议从上方建议词中选同类条目用过的类型，保持题库一致；也可直接输入新类型</p>`
+              : ''
+          }
         </div>
         ${field(s, 'tags', '关键词（逗号分隔）', textInput(s, 'tags', c.tags.join('、')), '会作为资料卡关键词与事迹匹配依据')}
         ${field(
           s,
           'notable',
-          '代表事迹',
+          notableWord,
           `<textarea class="a-textarea" id="f-notable" data-field="notable">${esc(c.notable)}</textarea>`,
+          isCharacter ? '一句话讲清这个人是谁、做过什么' : '一句话 factual 描述，不含主观评价（伟大/著名会被 AI 拒答）',
         )}
         <div class="a-grid2">
           <div class="a-field">
