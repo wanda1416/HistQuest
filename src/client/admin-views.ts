@@ -70,6 +70,11 @@ export interface AdminState {
   historyTotal: number;
   historyDetail: HistoryDetail | null;
   historyFilters: { user: string; result: string; q: string };
+  /* 分页：两个列表各自独立（默认 100 条/页） */
+  listPage: number;
+  listPageSize: number;
+  historyPage: number;
+  historyPageSize: number;
 }
 
 export interface AdminUserRow {

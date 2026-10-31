@@ -102,6 +102,10 @@ function adminStateWithUsers(): AdminState {
     historyTotal: 0,
     historyDetail: null,
     historyFilters: { user: '', result: '', q: '' },
+  listPage: 1,
+  listPageSize: 100,
+  historyPage: 1,
+  historyPageSize: 100,
   };
 }
 

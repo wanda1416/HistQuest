@@ -6,7 +6,7 @@ import { DYNASTIES, REGIONS, REGION_LABELS, type Region } from '../shared/domain
 import type { Character } from '../shared/domain.ts';
 import type { GameResult } from '../shared/protocol.ts';
 import type { Issue } from '../core/schema.ts';
-import type { CharacterStoreLike } from './characters-sqlite.ts';
+import type { TargetStoreLike } from './targets-sqlite.ts';
 import type { AuthUser } from './auth.ts';
 import {
   changePassword,
@@ -44,7 +44,7 @@ export interface AdminAccess {
 }
 
 export interface AdminDeps {
-  store: CharacterStoreLike;
+  store: TargetStoreLike;
   solo: SoloStore;
   token: string;
   /** 账号与历史都依赖 SQLite；JSON 存储模式下为 null */
@@ -122,7 +122,7 @@ export function createAdminRoutes(deps: AdminDeps): express.Router {
     });
   });
 
-  router.get('/characters', (req: Request, res: Response) => {
+  router.get('/targets', (req: Request, res: Response) => {
     const q = String(req.query.q ?? '').trim().toLowerCase();
     const polity = String(req.query.polity ?? '').trim();
     const region = String(req.query.region ?? '').trim();
@@ -144,16 +144,24 @@ export function createAdminRoutes(deps: AdminDeps): express.Router {
     if (retired === '0') items = items.filter((c) => !c.retired);
 
     items.sort((a, b) => a.name.localeCompare(b.name, 'zh'));
-    res.json({ total: items.length, items });
+
+    // 分页：默认全量（老调用方兼容）；显式传 limit 才切页。total 永远是过滤后的总数。
+    const total = items.length;
+    const limit = Number(req.query.limit);
+    const offset = Number(req.query.offset) || 0;
+    if (Number.isFinite(limit) && limit > 0) {
+      items = items.slice(offset, offset + Math.min(limit, 5000));
+    }
+    res.json({ total, items });
   });
 
-  router.get('/characters/:id', (req: Request, res: Response) => {
+  router.get('/targets/:id', (req: Request, res: Response) => {
     const character = deps.store.find(String(req.params.id));
     if (!character) return fail(res, 404, 'NOT_FOUND', '找不到这个人物');
     res.json({ character });
   });
 
-  router.post('/characters', (req: Request, res: Response) => {
+  router.post('/targets', (req: Request, res: Response) => {
     let result;
     try {
       result = deps.store.create(req.body as Character);
@@ -167,7 +175,7 @@ export function createAdminRoutes(deps: AdminDeps): express.Router {
     res.status(201).json({ character: result.character, issues: result.issues });
   });
 
-  router.put('/characters/:id', (req: Request, res: Response) => {
+  router.put('/targets/:id', (req: Request, res: Response) => {
     const id = String(req.params.id);
     let result;
     try {
@@ -182,7 +190,7 @@ export function createAdminRoutes(deps: AdminDeps): express.Router {
     res.json({ character: result.character, issues: result.issues });
   });
 
-  router.post('/characters/:id/retire', (req: Request, res: Response) => {
+  router.post('/targets/:id/retire', (req: Request, res: Response) => {
     const id = String(req.params.id);
     const retired = Boolean((req.body as { retired?: unknown })?.retired);
     let result;

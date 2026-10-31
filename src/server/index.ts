@@ -6,9 +6,9 @@ import express from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import { config, serverModelReady } from '../config.ts';
 import type { CharacterIndex } from '../core/index.ts';
-import { CharacterStore, readCharacters } from './characters.ts';
-import type { CharacterStoreLike } from './characters-sqlite.ts';
-import { SqliteCharacterStore, importCharacters } from './characters-sqlite.ts';
+import { TargetStore, readTargets } from './targets.ts';
+import type { TargetStoreLike } from './targets-sqlite.ts';
+import { SqliteTargetStore, importTargets } from './targets-sqlite.ts';
 import { createAdminRoutes } from './admin.ts';
 import { createAuthRoutes, ensureAdmin, ensureSessionSecret, readUser, takeQuota } from './auth.ts';
 import { integrityCheck, openDatabase, tableCount } from './db.ts';
@@ -67,7 +67,7 @@ export interface AppOptions {
 export interface CreatedApp {
   app: express.Express;
   index: CharacterIndex;
-  store: CharacterStoreLike;
+  store: TargetStoreLike;
   solo: SoloStore;
   db: DatabaseSync | null;
   /** 启动期异步任务（预置管理员）：监听前 await 一次即可 */
@@ -85,7 +85,7 @@ export function createApp(options: AppOptions = {}): CreatedApp {
     options.dbFile ?? (sessionsFile === null ? ':memory:' : config.paths.db);
 
   let db: DatabaseSync | null = null;
-  let store: CharacterStoreLike;
+  let store: TargetStoreLike;
 
   if (mode === 'sqlite') {
     db = openDatabase({ file: dbFile });
@@ -94,9 +94,9 @@ export function createApp(options: AppOptions = {}): CreatedApp {
     if (!check.ok) log('db.integrity.failed', { detail: check.detail });
 
     // 首次启动：从 JSON 自动迁移，原文件保留作为种子与回滚点
-    if (tableCount(db, 'characters') === 0 && fs.existsSync(charactersFile)) {
-      const legacy = readCharacters(charactersFile);
-      const imported = importCharacters(db, legacy);
+    if (tableCount(db, 'targets') === 0 && fs.existsSync(charactersFile)) {
+      const legacy = readTargets(charactersFile);
+      const imported = importTargets(db, legacy);
       try {
         fs.copyFileSync(charactersFile, `${charactersFile}.migrated`);
       } catch {
@@ -115,21 +115,21 @@ export function createApp(options: AppOptions = {}): CreatedApp {
     for (const seed of seedCategories) {
       if (!fs.existsSync(seed.file)) continue;
       const hasCategory = db
-        .prepare("SELECT COUNT(*) AS n FROM characters WHERE category = ?")
+        .prepare("SELECT COUNT(*) AS n FROM targets WHERE category = ?")
         .get(seed.category) as { n?: number } | undefined;
       if ((hasCategory?.n ?? 0) > 0) continue;
       try {
-        const list = readCharacters(seed.file).map((c) => ({ ...c, category: seed.category }));
-        const imported = importCharacters(db, list);
+        const list = readTargets(seed.file).map((c) => ({ ...c, category: seed.category }));
+        const imported = importTargets(db, list);
         log('db.seeded.category', { category: seed.category, imported, source: seed.file });
       } catch (err) {
         log('db.seed.category.failed', { category: seed.category, message: (err as Error).message });
       }
     }
 
-    store = new SqliteCharacterStore({ db, backupDir, backupKeep: config.admin.backupKeep });
+    store = new SqliteTargetStore({ db, backupDir, backupKeep: config.admin.backupKeep });
   } else {
-    store = new CharacterStore({
+    store = new TargetStore({
       file: charactersFile,
       backupDir,
       backupKeep: config.admin.backupKeep,

@@ -5,7 +5,7 @@ import { CharacterIndex } from '../core/index.ts';
 import {
   collectVocab,
   normalizeCharacter,
-  serializeCharacters,
+  serializeTargets,
   validateCharacter,
   validateLibrary,
   type Issue,
@@ -19,7 +19,7 @@ import {
  * 2. 索引重建后由调用方替换进 SoloStore，否则编辑要重启才生效。
  */
 
-export interface CharacterStoreOptions {
+export interface TargetStoreOptions {
   file: string;
   backupDir: string;
   backupKeep?: number;
@@ -52,18 +52,18 @@ export interface HealthReport {
 
 const BACKUP_RE = /^characters-\d{8}-\d{6}-\d{3}(-\d+)?\.json$/;
 
-export class CharacterStore {
+export class TargetStore {
   private all: Character[];
   private idx: CharacterIndex;
   private readonly file: string;
   private readonly backupDir: string;
   private readonly backupKeep: number;
 
-  constructor(opts: CharacterStoreOptions) {
+  constructor(opts: TargetStoreOptions) {
     this.file = opts.file;
     this.backupDir = opts.backupDir;
     this.backupKeep = Math.max(1, opts.backupKeep ?? 20);
-    this.all = readCharacters(this.file);
+    this.all = readTargets(this.file);
     this.idx = new CharacterIndex(this.all);
   }
 
@@ -198,7 +198,7 @@ export class CharacterStore {
 
   /** 导出用：当前内存中的规范快照 */
   exportText(): string {
-    return serializeCharacters(this.all);
+    return serializeTargets(this.all);
   }
 
   vocab(): ReturnType<typeof collectVocab> {
@@ -226,7 +226,7 @@ export class CharacterStore {
 
   private persist(next: Character[]): void {
     this.backup();
-    writeAtomically(this.file, serializeCharacters(next));
+    writeAtomically(this.file, serializeTargets(next));
     this.all = next;
     this.idx = new CharacterIndex(next);
   }
@@ -282,7 +282,7 @@ function clone(c: Character): Character {
   };
 }
 
-function readCharacters(file: string): Character[] {
+function readTargets(file: string): Character[] {
   const raw = fs.readFileSync(file, 'utf8');
   const parsed = JSON.parse(raw) as unknown;
   if (!Array.isArray(parsed)) throw new Error('人物库必须是 JSON 数组');
@@ -296,4 +296,4 @@ function writeAtomically(file: string, text: string): void {
   fs.renameSync(tmp, file);
 }
 
-export { writeAtomically, readCharacters };
+export { writeAtomically, readTargets };

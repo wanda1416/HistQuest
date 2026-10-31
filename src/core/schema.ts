@@ -318,7 +318,7 @@ export function validateLibrary(list: Character[]): Issue[] {
 }
 
 /** 一人一行的紧凑 JSON，与 data/characters.json 的现有格式一致 */
-export function serializeCharacters(list: Character[]): string {
+export function serializeTargets(list: Character[]): string {
   const rows = list.map((c) => {
     const ordered: Record<string, unknown> = {};
     for (const key of CHARACTER_KEY_ORDER) {

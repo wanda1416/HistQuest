@@ -94,7 +94,7 @@ test('meta 返回朝代/身份词表与统计', async () => {
 
 test('非法人物被拒绝，且文件不被改写', async () => {
   const before = fs.readFileSync(charactersFile, 'utf8');
-  const { status, body } = await api('/api/admin/characters', {
+  const { status, body } = await api('/api/admin/targets', {
     method: 'POST',
     body: JSON.stringify({
       id: 'bad_person',
@@ -115,7 +115,7 @@ test('非法人物被拒绝，且文件不被改写', async () => {
 });
 
 test('写操作必须使用 application/json', async () => {
-  const res = await fetch(`${base}/api/admin/characters`, {
+  const res = await fetch(`${base}/api/admin/targets`, {
     method: 'POST',
     headers: { 'X-HQ-Admin': '1' },
     body: '{}',
@@ -142,18 +142,18 @@ test('新增 → 查询 → 修改 → 导出 → 下线', async () => {
     difficulty: 2,
   };
 
-  const created = await api('/api/admin/characters', {
+  const created = await api('/api/admin/targets', {
     method: 'POST',
     body: JSON.stringify(person),
   });
   assert.equal(created.status, 201, JSON.stringify(created.body));
   assert.equal(created.body.character.name, '测试君');
 
-  const fetched = await api('/api/admin/characters/test_person');
+  const fetched = await api('/api/admin/targets/test_person');
   assert.equal(fetched.status, 200);
   assert.equal(fetched.body.character.polity, '唐');
 
-  const updated = await api('/api/admin/characters/test_person', {
+  const updated = await api('/api/admin/targets/test_person', {
     method: 'PUT',
     body: JSON.stringify({ ...person, notable: '改过的测试事迹' }),
   });
@@ -166,7 +166,7 @@ test('新增 → 查询 → 修改 → 导出 → 下线', async () => {
   assert.ok(text.includes('改过的测试事迹'));
   assert.ok(text.endsWith(']\n'));
 
-  const retired = await api('/api/admin/characters/test_person/retire', {
+  const retired = await api('/api/admin/targets/test_person/retire', {
     method: 'POST',
     body: JSON.stringify({ retired: true }),
   });

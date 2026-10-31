@@ -4,14 +4,14 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import type { Character } from '../src/shared/domain.ts';
-import { CharacterStore } from '../src/server/characters.ts';
+import { TargetStore } from '../src/server/targets.ts';
 
 function setup(backupKeep = 20) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hq-store-'));
   const file = path.join(dir, 'characters.json');
   fs.copyFileSync(new URL('../data/characters.json', import.meta.url), file);
   const backupDir = path.join(dir, 'backups');
-  const store = new CharacterStore({ file, backupDir, backupKeep });
+  const store = new TargetStore({ file, backupDir, backupKeep });
   const cleanup = (): void => fs.rmSync(dir, { recursive: true, force: true });
   return { file, backupDir, store, cleanup };
 }

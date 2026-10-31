@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import type { Character } from '../src/shared/domain.ts';
 import {
   normalizeCharacter,
-  serializeCharacters,
+  serializeTargets,
   validateCharacter,
   validateLibrary,
 } from '../src/core/schema.ts';
@@ -112,7 +112,7 @@ test('全库唯一性检查', () => {
 });
 
 test('序列化：一人一行，且能原样解析回来', () => {
-  const text = serializeCharacters(list);
+  const text = serializeTargets(list);
   const lines = text.trim().split('\n');
   assert.equal(lines.length, list.length + 2, '应为 [ + 每人一行 + ]');
   assert.ok(text.endsWith(']\n'), '文件应以换行结尾');
@@ -120,9 +120,9 @@ test('序列化：一人一行，且能原样解析回来', () => {
 });
 
 test('改一个字段只会产生一行差异', () => {
-  const before = serializeCharacters(list).split('\n');
+  const before = serializeTargets(list).split('\n');
   const next = list.map((c) => (c.name === '李白' ? { ...c, notable: '改过的代表事迹' } : c));
-  const after = serializeCharacters(next).split('\n');
+  const after = serializeTargets(next).split('\n');
 
   let changed = 0;
   for (let i = 0; i < before.length; i++) {

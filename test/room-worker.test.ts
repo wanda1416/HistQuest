@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { openDatabase } from '../src/server/db.ts';
 import { createD1 } from './fixtures/d1-sqlite.ts';
 import { startMockLlm, type MockLlm } from './fixtures/mock-llm.ts';
-import { seedCharactersIntoD1 } from '../workers/d1.ts';
+import { seedTargetsIntoD1 } from '../workers/d1.ts';
 import type { Character } from '../src/shared/domain.ts';
 
 /**
@@ -107,7 +107,7 @@ const json = async (res: Response) => (await res.json()) as Record<string, never
 
 before(async () => {
   // 一次性的老库：characters 表由 openDatabase 建好，这里灌一个人物
-  await seedCharactersIntoD1(d1 as never, CHARACTERS);
+  await seedTargetsIntoD1(d1 as never, CHARACTERS);
 });
 
 after(async () => {

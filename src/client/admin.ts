@@ -31,6 +31,11 @@ let state: AdminState = {
   historyTotal: 0,
   historyDetail: null,
   historyFilters: { user: '', result: '', q: '' },
+  /* 分页：两个列表各自独立（默认 100 条/页） */
+  listPage: 1,
+  listPageSize: 100,
+  historyPage: 1,
+  historyPageSize: 100,
 };
 
 function render(): void {
@@ -100,6 +105,8 @@ async function loadHistory(): Promise<void> {
   if (state.historyFilters.user) qs.set('user', state.historyFilters.user);
   if (state.historyFilters.result) qs.set('result', state.historyFilters.result);
   if (state.historyFilters.q) qs.set('q', state.historyFilters.q);
+  qs.set('limit', String(state.historyPageSize));
+  qs.set('offset', String((state.historyPage - 1) * state.historyPageSize));
   const res = await request<{ total: number; items: HistorySummary[] }>(
     `/api/admin/history?${qs.toString()}`,
   );
@@ -119,9 +126,11 @@ async function loadList(): Promise<void> {
   if (state.filters.region) qs.set('region', state.filters.region);
   if (state.filters.difficulty) qs.set('difficulty', state.filters.difficulty);
   if (state.filters.retired) qs.set('retired', state.filters.retired);
+  qs.set('limit', String(state.listPageSize));
+  qs.set('offset', String((state.listPage - 1) * state.listPageSize));
 
   const data = await request<{ total: number; items: Character[] }>(
-    `/api/admin/characters?${qs.toString()}`,
+    `/api/admin/targets?${qs.toString()}`,
   );
   setState({ list: data.items, total: data.total });
 }
@@ -231,39 +240,49 @@ function handleField(el: HTMLElement): void {
   }
   if (field === 'history-user') {
     state.historyFilters.user = (el as HTMLInputElement).value.trim();
+    state.historyPage = 1;
+    void loadHistory();
     return;
   }
   if (field === 'history-q') {
     state.historyFilters.q = (el as HTMLInputElement).value.trim();
+    state.historyPage = 1;
+    void loadHistory();
     return;
   }
   if (field === 'history-result') {
     state.historyFilters.result = (el as HTMLSelectElement).value;
+    state.historyPage = 1;
     void loadHistory();
     return;
   }
   if (field === 'filter-category') {
     state.filters.category = (el as HTMLSelectElement).value;
+    state.listPage = 1;
     void loadList();
     return;
   }
   if (field === 'filter-polity') {
     state.filters.polity = (el as HTMLSelectElement).value;
+    state.listPage = 1;
     void loadList();
     return;
   }
   if (field === 'filter-region') {
     state.filters.region = (el as HTMLSelectElement).value;
+    state.listPage = 1;
     void loadList();
     return;
   }
   if (field === 'filter-difficulty') {
     state.filters.difficulty = (el as HTMLSelectElement).value;
+    state.listPage = 1;
     void loadList();
     return;
   }
   if (field === 'filter-retired') {
     state.filters.retired = (el as HTMLSelectElement).value;
+    state.listPage = 1;
     void loadList();
     return;
   }
@@ -304,7 +323,7 @@ function newDraft(category: 'character' | 'event' | 'item' = 'character'): void 
 async function openCharacter(id: string): Promise<void> {
   try {
     const data = await request<{ character: Character }>(
-      `/api/admin/characters/${encodeURIComponent(id)}`,
+      `/api/admin/targets/${encodeURIComponent(id)}`,
     );
     setState({ view: 'edit', draft: data.character, originalId: id, issues: [], notice: null });
   } catch (err) {
@@ -319,8 +338,8 @@ async function saveDraft(): Promise<void> {
 
   try {
     const path = isNew
-      ? '/api/admin/characters'
-      : `/api/admin/characters/${encodeURIComponent(state.originalId!)}`;
+      ? '/api/admin/targets'
+      : `/api/admin/targets/${encodeURIComponent(state.originalId!)}`;
     const data = await request<{ character: Character; issues: Issue[] }>(path, {
       method: isNew ? 'POST' : 'PUT',
       body: JSON.stringify(state.draft),
@@ -349,7 +368,7 @@ async function toggleRetire(next: boolean): Promise<void> {
   if (!state.originalId) return;
   try {
     const data = await request<{ character: Character }>(
-      `/api/admin/characters/${encodeURIComponent(state.originalId)}/retire`,
+      `/api/admin/targets/${encodeURIComponent(state.originalId)}/retire`,
       { method: 'POST', body: JSON.stringify({ retired: next }) },
     );
     setState({
@@ -419,6 +438,39 @@ root.addEventListener('click', async (event) => {
     case 'reload-history':
       await loadHistory();
       break;
+    /* ---------- 分页 ---------- */
+    case 'list-page': {
+      const page = Number(el.dataset.page);
+      if (Number.isFinite(page) && page >= 1) {
+        setState({ listPage: page });
+        await loadList();
+      }
+      break;
+    }
+    case 'list-pagesize': {
+      const size = Number((el as HTMLSelectElement).value);
+      if (Number.isFinite(size) && size > 0) {
+        setState({ listPageSize: size, listPage: 1 });
+        await loadList();
+      }
+      break;
+    }
+    case 'history-page': {
+      const page = Number(el.dataset.page);
+      if (Number.isFinite(page) && page >= 1) {
+        setState({ historyPage: page });
+        await loadHistory();
+      }
+      break;
+    }
+    case 'history-pagesize': {
+      const size = Number((el as HTMLSelectElement).value);
+      if (Number.isFinite(size) && size > 0) {
+        setState({ historyPageSize: size, historyPage: 1 });
+        await loadHistory();
+      }
+      break;
+    }
     case 'open-history':
       if (el.dataset.id) {
         try {
@@ -662,7 +714,7 @@ async function boot(reinitialized = false): Promise<void> {
 
   try {
     const meta = await request<AdminMeta>('/api/admin/meta');
-    const list = await request<{ total: number; items: Character[] }>('/api/admin/characters');
+    const list = await request<{ total: number; items: Character[] }>('/api/admin/targets');
     setState({
       ready: true,
       error: null,

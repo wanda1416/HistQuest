@@ -1,7 +1,7 @@
 -- D1 schema：与 src/server/db.ts 的迁移 v2 保持同构。
 -- 部署：wrangler d1 execute hq --remote --file=workers/schema.sql
 
-CREATE TABLE IF NOT EXISTS characters (
+CREATE TABLE IF NOT EXISTS targets (
   id             TEXT PRIMARY KEY,
   name           TEXT NOT NULL,
   region         TEXT NOT NULL,
@@ -19,21 +19,22 @@ CREATE TABLE IF NOT EXISTS characters (
   emperor        INTEGER NOT NULL DEFAULT 0,
   notable        TEXT NOT NULL DEFAULT '',
   difficulty     INTEGER NOT NULL,
+  category       TEXT NOT NULL DEFAULT 'character',
   external_id    TEXT,
   retired        INTEGER NOT NULL DEFAULT 0,
   updated_at     INTEGER NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS character_aliases (
-  character_id TEXT NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+CREATE TABLE IF NOT EXISTS target_aliases (
+  target_id TEXT NOT NULL REFERENCES targets(id) ON DELETE CASCADE,
   alias        TEXT NOT NULL,
-  PRIMARY KEY (character_id, alias)
+  PRIMARY KEY (target_id, alias)
 );
 
-CREATE INDEX IF NOT EXISTS idx_pick_region ON characters(retired, region, difficulty);
-CREATE INDEX IF NOT EXISTS idx_pick_polity ON characters(retired, polity, difficulty);
-CREATE INDEX IF NOT EXISTS idx_pick_era    ON characters(retired, world_era, difficulty);
-CREATE INDEX IF NOT EXISTS idx_alias       ON character_aliases(alias);
+CREATE INDEX IF NOT EXISTS idx_pick_region ON targets(retired, region, difficulty);
+CREATE INDEX IF NOT EXISTS idx_pick_polity ON targets(retired, polity, difficulty);
+CREATE INDEX IF NOT EXISTS idx_pick_era    ON targets(retired, world_era, difficulty);
+CREATE INDEX IF NOT EXISTS idx_alias       ON target_aliases(alias);
 
 CREATE TABLE IF NOT EXISTS sessions (
   id          TEXT PRIMARY KEY,
@@ -184,6 +185,9 @@ CREATE INDEX IF NOT EXISTS idx_rooms_open ON rooms(status, created_at DESC);
 
 -- v9：谜底类别（character / event / item）——见 src/shared/domain.ts 的类别说明
 -- 人物专用列（gender/emperor…）对事件/物品填占位值，语义由 category 决定
-ALTER TABLE characters ADD COLUMN category TEXT NOT NULL DEFAULT 'character';
+ALTER TABLE targets ADD COLUMN category TEXT NOT NULL DEFAULT 'character';
 ALTER TABLE sessions ADD COLUMN category TEXT NOT NULL DEFAULT 'character';
 ALTER TABLE games ADD COLUMN category TEXT NOT NULL DEFAULT 'character';
+-- v9（本地 v6）：谜底类别列（category），新库建表时已含
+-- v10（本地 v7）：表改名 characters → targets，新库建表时已用新名。
+--   老库升级：按顺序执行 migrations/v9-category.sql、v10-rename-targets.sql

@@ -9,7 +9,7 @@ import { DatabaseSync } from 'node:sqlite';
  * 代价是要求宿主 Node ≥ 23.4（22.x 需 --experimental-sqlite）。
  */
 
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 export interface OpenOptions {
   file: string;
@@ -50,7 +50,7 @@ export function migrate(db: DatabaseSync): void {
 
   if (current < 1) {
     db.exec(`
-      CREATE TABLE IF NOT EXISTS characters (
+      CREATE TABLE IF NOT EXISTS targets (
         id             TEXT PRIMARY KEY,
         name           TEXT NOT NULL,
         region         TEXT NOT NULL,
@@ -68,21 +68,22 @@ export function migrate(db: DatabaseSync): void {
         emperor        INTEGER NOT NULL DEFAULT 0,
         notable        TEXT NOT NULL DEFAULT '',
         difficulty     INTEGER NOT NULL,
+        category       TEXT NOT NULL DEFAULT 'character',
         external_id    TEXT,
         retired        INTEGER NOT NULL DEFAULT 0,
         updated_at     INTEGER NOT NULL
       );
 
-      CREATE TABLE IF NOT EXISTS character_aliases (
-        character_id TEXT NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+      CREATE TABLE IF NOT EXISTS target_aliases (
+        target_id TEXT NOT NULL REFERENCES targets(id) ON DELETE CASCADE,
         alias        TEXT NOT NULL,
-        PRIMARY KEY (character_id, alias)
+        PRIMARY KEY (target_id, alias)
       );
 
-      CREATE INDEX IF NOT EXISTS idx_pick_region ON characters(retired, region, difficulty);
-      CREATE INDEX IF NOT EXISTS idx_pick_polity ON characters(retired, polity, difficulty);
-      CREATE INDEX IF NOT EXISTS idx_pick_era    ON characters(retired, world_era, difficulty);
-      CREATE INDEX IF NOT EXISTS idx_alias       ON character_aliases(alias);
+      CREATE INDEX IF NOT EXISTS idx_pick_region ON targets(retired, region, difficulty);
+      CREATE INDEX IF NOT EXISTS idx_pick_polity ON targets(retired, polity, difficulty);
+      CREATE INDEX IF NOT EXISTS idx_pick_era    ON targets(retired, world_era, difficulty);
+      CREATE INDEX IF NOT EXISTS idx_alias       ON target_aliases(alias);
 
       CREATE TABLE IF NOT EXISTS sessions (
         id          TEXT PRIMARY KEY,
@@ -181,14 +182,38 @@ export function migrate(db: DatabaseSync): void {
 
   if (current < 6) {
     // v6：谜底类别（character / event / item）。
-    // 三类共用一张 characters 表；人物专用列（gender/emperor…）对事件/物品
+    // 三类共用一张 targets 表；人物专用列（gender/emperor…）对事件/物品
     // 填占位值，语义由 category 决定——见 shared/domain.ts 的字段注释。
     // 老数据全部视为人物（默认值），零回填。
-    addColumn(db, 'characters', 'category', "TEXT NOT NULL DEFAULT 'character'");
+    addColumnAny(db, ['targets', 'characters'], 'category', "TEXT NOT NULL DEFAULT 'character'");
     addColumn(db, 'sessions', 'category', "TEXT NOT NULL DEFAULT 'character'");
     addColumn(db, 'games', 'category', "TEXT NOT NULL DEFAULT 'character'");
     db.exec(`INSERT INTO schema_migrations (version, applied_at) VALUES (6, ${Date.now()})`);
   }
+
+  if (current < 7) {
+    // v7：谜底库表改名 characters → targets。谜底现有 人物/事件/物品 三类，
+    // "characters" 这个名字装不下语义。RENAME 自动带走索引，数据保留；
+    // 别名列 character_id 同步改名 target_id。
+    // 与 Workers 侧 migrations/v10-rename-targets.sql 同构。
+    // 兼容两种现状：老库有 characters（RENAME），新库直接建的 targets（跳过）。
+    const hasOld = tableExists(db, 'characters');
+    if (hasOld) {
+      db.exec(`
+        ALTER TABLE characters RENAME TO targets;
+        ALTER TABLE character_aliases RENAME TO target_aliases;
+        ALTER TABLE target_aliases RENAME COLUMN character_id TO target_id;
+      `);
+    }
+    db.exec(`INSERT INTO schema_migrations (version, applied_at) VALUES (7, ${Date.now()})`);
+  }
+}
+
+function tableExists(db: DatabaseSync, name: string): boolean {
+  const row = db.prepare('SELECT 1 AS x FROM sqlite_master WHERE type = ? AND name = ?').get('table', name) as
+    | { x?: number }
+    | undefined;
+  return Boolean(row?.x);
 }
 
 /**
@@ -293,6 +318,17 @@ function addColumn(db: DatabaseSync, table: string, column: string, type: string
   db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
 }
 
+/** addColumn 的表名宽容版：v6 加 category 列时老库表叫 characters、新库叫 targets，不存在的跳过 */
+function addColumnAny(db: DatabaseSync, tables: string[], column: string, type: string): void {
+  for (const table of tables) {
+    const cols = db.prepare(`PRAGMA table_info(${table})`).all() as unknown as Array<{ name: string }>;
+    if (cols.length === 0) continue;
+    if (cols.some((c) => c.name === column)) return;
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+    return;
+  }
+}
+
 /**
  * 把升级前还在有效期内的会话搬进账本，避免"刚打完的局在历史里查不到"。
  * 只搬 games 表还没有的局；turns 从会话的 history JSON 逐条展开。
@@ -338,7 +374,7 @@ function backfillGamesFromSessions(db: DatabaseSync): void {
        game_id, seq, question, verdict, text, hint, invalid, failed, hit, basis, calls, ms, asked_at
      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
   );
-  const findName = db.prepare('SELECT name, roles FROM characters WHERE id = ?');
+  const findName = db.prepare('SELECT name, roles FROM targets WHERE id = ?');
 
   for (const row of rows) {
     let turns: Array<Record<string, unknown>> = [];
@@ -425,7 +461,7 @@ export function integrityCheck(db: DatabaseSync): { ok: boolean; detail: string 
   return { ok: detail === 'ok', detail };
 }
 
-export function tableCount(db: DatabaseSync, table: 'characters' | 'sessions'): number {
+export function tableCount(db: DatabaseSync, table: 'targets' | 'sessions'): number {
   const row = db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get() as { n: number } | undefined;
   return row?.n ?? 0;
 }

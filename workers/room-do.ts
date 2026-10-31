@@ -20,7 +20,7 @@ import { runAsk } from '../src/core/engine.ts';
 import { guessMatches } from '../src/core/judge.ts';
 import { AiError } from '../src/ai/client.ts';
 import type { D1Database } from './d1.ts';
-import { loadCharactersFromD1 } from './d1.ts';
+import { loadTargetsFromD1 } from './d1.ts';
 
 /**
  * 对战房间的 Durable Object。
@@ -475,7 +475,7 @@ export class RoomDo {
 
   private async ensureIndex(): Promise<CharacterIndex> {
     if (this.index) return this.index;
-    const list = await loadCharactersFromD1(this.env.DB);
+    const list = await loadTargetsFromD1(this.env.DB);
     this.index = new CharacterIndex(list);
     return this.index;
   }

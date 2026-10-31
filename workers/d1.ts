@@ -195,28 +195,28 @@ function rowToCharacter(r: CharacterRow, aliases: string[]): Character {
 }
 
 /** 从 D1 读出全部人物（含软删除），构造 CharacterIndex 用的列表 */
-export async function loadCharactersFromD1(db: D1Database): Promise<Character[]> {
-  const rows = await db.prepare('SELECT * FROM characters').bind().all<CharacterRow>();
+export async function loadTargetsFromD1(db: D1Database): Promise<Character[]> {
+  const rows = await db.prepare('SELECT * FROM targets').bind().all<CharacterRow>();
   if (rows.results.length === 0) return [];
   const aliasRows = await db
-    .prepare('SELECT character_id, alias FROM character_aliases')
+    .prepare('SELECT target_id, alias FROM target_aliases')
     .bind()
-    .all<{ character_id: string; alias: string }>();
+    .all<{ target_id: string; alias: string }>();
   const aliasMap = new Map<string, string[]>();
   for (const a of aliasRows.results) {
-    const list = aliasMap.get(a.character_id) ?? [];
+    const list = aliasMap.get(a.target_id) ?? [];
     list.push(a.alias);
-    aliasMap.set(a.character_id, list);
+    aliasMap.set(a.target_id, list);
   }
   return rows.results.map((r) => rowToCharacter(r, aliasMap.get(r.id) ?? []));
 }
 
 /** 首次部署：把打包进来的人物 JSON 种子导入 D1 */
-export async function seedCharactersIntoD1(
+export async function seedTargetsIntoD1(
   db: D1Database,
   list: Character[],
 ): Promise<number> {
-  const count = await db.prepare('SELECT COUNT(*) AS n FROM characters').bind().first<{ n: number }>();
+  const count = await db.prepare('SELECT COUNT(*) AS n FROM targets').bind().first<{ n: number }>();
   if ((count?.n ?? 0) > 0) return 0;
 
   const stmts: D1Bound[] = [];
@@ -225,7 +225,7 @@ export async function seedCharactersIntoD1(
     stmts.push(
       db
         .prepare(
-          `INSERT INTO characters (
+          `INSERT INTO targets (
              id, name, region, polity, polity_alt, world_era, gender, birth, death,
              birthplace, country, birth_province, roles, tags, emperor, notable,
              difficulty, retired, updated_at
@@ -256,7 +256,7 @@ export async function seedCharactersIntoD1(
     for (const a of c.aliases) {
       stmts.push(
         db
-          .prepare('INSERT OR IGNORE INTO character_aliases (character_id, alias) VALUES (?, ?)')
+          .prepare('INSERT OR IGNORE INTO target_aliases (target_id, alias) VALUES (?, ?)')
           .bind(c.id, a),
       );
     }

@@ -3,23 +3,23 @@ import { CharacterIndex } from '../src/core/index.ts';
 import {
   collectVocab,
   normalizeCharacter,
-  serializeCharacters,
+  serializeTargets,
   validateCharacter,
   validateLibrary,
   type Issue,
 } from '../src/core/schema.ts';
 import type { D1Database } from './d1.ts';
-import { loadCharactersFromD1 } from './d1.ts';
+import { loadTargetsFromD1 } from './d1.ts';
 import type { HealthItem, HealthReport, SaveResult } from '../src/core/store-types.ts';
 
 /**
  * 人物库的 D1 实现（Workers）。
- * 与 SqliteCharacterStore 同一套方法/同一策略：内存全量列表，
+ * 与 SqliteTargetStore 同一套方法/同一策略：内存全量列表，
  * 写入时同步 D1 并整体重建索引——184 人量级下这比增量维护更简单可靠。
  * 区别：无备份文件（D1 自带时间旅行恢复），写操作为异步。
  */
 
-interface D1CharacterStoreOptions {
+interface D1TargetStoreOptions {
   db: D1Database;
 }
 
@@ -57,22 +57,22 @@ function toParams(c: Character, now: number): Array<string | number | null> {
 
 const clone = (c: Character): Character => JSON.parse(JSON.stringify(c));
 
-export class D1CharacterStore {
+export class D1TargetStore {
   private readonly db: D1Database;
   private all: Character[] = [];
   private idx!: CharacterIndex;
 
-  constructor(opts: D1CharacterStoreOptions) {
+  constructor(opts: D1TargetStoreOptions) {
     this.db = opts.db;
   }
 
   /** 异步初始化（Worker 启动路径调用） */
   async init(seed: Character[]): Promise<void> {
-    this.all = await loadCharactersFromD1(this.db);
+    this.all = await loadTargetsFromD1(this.db);
     if (this.all.length === 0 && seed.length > 0) {
-      const { seedCharactersIntoD1 } = await import('./d1.ts');
-      await seedCharactersIntoD1(this.db, seed);
-      this.all = await loadCharactersFromD1(this.db);
+      const { seedTargetsIntoD1 } = await import('./d1.ts');
+      await seedTargetsIntoD1(this.db, seed);
+      this.all = await loadTargetsFromD1(this.db);
     }
     this.idx = new CharacterIndex(this.all);
   }
@@ -139,7 +139,7 @@ export class D1CharacterStore {
       };
     }
     await this.db
-      .prepare('UPDATE characters SET retired = ?, updated_at = ? WHERE id = ?')
+      .prepare('UPDATE targets SET retired = ?, updated_at = ? WHERE id = ?')
       .bind(retired ? 1 : 0, Date.now(), id)
       .run();
     await this.reload();
@@ -198,7 +198,7 @@ export class D1CharacterStore {
   }
 
   exportText(): string {
-    return serializeCharacters(this.all);
+    return serializeTargets(this.all);
   }
 
   vocab(): ReturnType<typeof collectVocab> {
@@ -226,17 +226,17 @@ export class D1CharacterStore {
 
     await this.db
       .prepare(
-        `INSERT INTO characters (${cols}) VALUES (${placeholders})
+        `INSERT INTO targets (${cols}) VALUES (${placeholders})
          ON CONFLICT(id) DO UPDATE SET ${
            UPSERT_COLUMNS.filter((c) => c !== 'id').map((c) => `${c} = excluded.${c}`).join(', ')
          }`,
       )
       .bind(...params)
       .run();
-    await this.db.prepare('DELETE FROM character_aliases WHERE character_id = ?').bind(character.id).run();
+    await this.db.prepare('DELETE FROM target_aliases WHERE character_id = ?').bind(character.id).run();
     const aliasStmts = character.aliases.map((a) =>
       this.db
-        .prepare('INSERT OR IGNORE INTO character_aliases (character_id, alias) VALUES (?, ?)')
+        .prepare('INSERT OR IGNORE INTO target_aliases (character_id, alias) VALUES (?, ?)')
         .bind(character.id, a),
     );
     if (aliasStmts.length > 0) await this.db.batch(aliasStmts);
@@ -246,7 +246,7 @@ export class D1CharacterStore {
   }
 
   private async reload(): Promise<void> {
-    this.all = await loadCharactersFromD1(this.db);
+    this.all = await loadTargetsFromD1(this.db);
     this.idx = new CharacterIndex(this.all);
   }
 }

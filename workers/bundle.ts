@@ -7,7 +7,7 @@ import { projectSession } from '../src/server/dto.ts';
 import { AiError, testConnection } from '../src/ai/client.ts';
 import { D1SessionPersistence, type D1Database } from './d1.ts';
 import { D1HistoryStore } from './d1-history.ts';
-import { D1CharacterStore } from './d1-characters.ts';
+import { D1TargetStore } from './d1-targets.ts';
 import { handleVault } from './vault.ts';
 import { handleAuth, currentUser, ensureAdmin, type AuthUser } from './auth.ts';
 import { takeUserQuota } from './quota.ts';
@@ -63,7 +63,7 @@ const MAX_TURNS_DEFAULT = 50;
 
 interface Runtime {
   index: CharacterIndex;
-  store: D1CharacterStore;
+  store: D1TargetStore;
   solo: SoloStore;
   /** 对局账本（永久历史），与 SoloStore 的归档钩子共用同一实例 */
   history: D1HistoryStore;
@@ -100,7 +100,7 @@ let runtime: Promise<Runtime> | null = null;
 function initRuntime(env: Env): Promise<Runtime> {
   if (!runtime) {
     runtime = (async () => {
-      const store = new D1CharacterStore({ db: env.DB });
+      const store = new D1TargetStore({ db: env.DB });
       {
         const seed = await import('./seed.ts');
         await store.init(seed.SEED_CHARACTERS);
@@ -438,7 +438,7 @@ async function handleAdmin(req: Request, url: URL, rt: Runtime): Promise<Respons
     });
   }
 
-  if (path === '/characters' && req.method === 'GET') {
+  if (path === '/targets' && req.method === 'GET') {
     const params = url.searchParams;
     const q = (params.get('q') ?? '').trim().toLowerCase();
     const polity = (params.get('polity') ?? '').trim();
@@ -456,10 +456,17 @@ async function handleAdmin(req: Request, url: URL, rt: Runtime): Promise<Respons
     if (retired === '1') items = items.filter((c) => c.retired);
     if (retired === '0') items = items.filter((c) => !c.retired);
     items.sort((a, b) => a.name.localeCompare(b.name, 'zh'));
-    return json(200, { total: items.length, items });
+    // 分页：默认全量（老调用方兼容）；显式传 limit 才切页。total 永远是过滤后的总数。
+    const total = items.length;
+    const limit = Number(url.searchParams.get('limit'));
+    const offset = Number(url.searchParams.get('offset')) || 0;
+    if (Number.isFinite(limit) && limit > 0) {
+      items = items.slice(offset, offset + Math.min(limit, 5000));
+    }
+    return json(200, { total, items });
   }
 
-  const byId = path.match(/^\/characters\/([A-Za-z0-9_-]+)$/);
+  const byId = path.match(/^\/targets\/([A-Za-z0-9_-]+)$/);
   if (byId) {
     const id = byId[1]!;
     if (req.method === 'GET') {
@@ -475,14 +482,14 @@ async function handleAdmin(req: Request, url: URL, rt: Runtime): Promise<Respons
     }
   }
 
-  if (path === '/characters' && req.method === 'POST') {
+  if (path === '/targets' && req.method === 'POST') {
     const result = await rt.store.create(body);
     if (!result.ok) return json(400, { error: 'VALIDATION_FAILED', message: '校验未通过，未写入', issues: result.issues });
     rt.solo.reloadIndex(result.index ?? rt.store.index);
     return json(201, { character: result.character, issues: result.issues });
   }
 
-  const retire = path.match(/^\/characters\/([A-Za-z0-9_-]+)\/retire$/);
+  const retire = path.match(/^\/targets\/([A-Za-z0-9_-]+)\/retire$/);
   if (retire && req.method === 'POST') {
     const result = await rt.store.setRetired(retire[1]!, Boolean(body.retired));
     if (!result.ok) return json(400, { error: 'VALIDATION_FAILED', message: '操作失败', issues: result.issues });

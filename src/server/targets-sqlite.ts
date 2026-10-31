@@ -4,22 +4,22 @@ import { CharacterIndex } from '../core/index.ts';
 import {
   collectVocab,
   normalizeCharacter,
-  serializeCharacters,
+  serializeTargets,
   validateCharacter,
   validateLibrary,
   type Issue,
 } from '../core/schema.ts';
-import type { HealthItem, HealthReport, SaveResult } from './characters.ts';
+import type { HealthItem, HealthReport, SaveResult } from './targets.ts';
 import { vacuumInto, pruneBackups } from './db.ts';
 
 /**
  * 人物库的 SQLite 实现。
  *
- * 与 JSON 版（characters.ts）保持同一套公开方法，createApp 按配置二选一。
+ * 与 JSON 版（targets.ts）保持同一套公开方法，createApp 按配置二选一。
  * 内存里仍保留全量列表：184 人量级下，每次写入后重建索引比增量维护更简单可靠。
  */
 
-export interface CharacterStoreLike {
+export interface TargetStoreLike {
   readonly index: CharacterIndex;
   readonly total: number;
   readonly activeCount: number;
@@ -83,8 +83,8 @@ const UPSERT_COLUMNS = [
   'updated_at',
 ] as const;
 
-/** 直接往空库写入（迁移用：此时还不能构造 CharacterStore，因为索引不允许空库） */
-export function importCharacters(db: DatabaseSync, list: Character[]): number {
+/** 直接往空库写入（迁移用：此时还不能构造 TargetStore，因为索引不允许空库） */
+export function importTargets(db: DatabaseSync, list: Character[]): number {
   db.exec('BEGIN IMMEDIATE');
   try {
     for (const c of list) insertRow(db, c);
@@ -99,11 +99,11 @@ export function importCharacters(db: DatabaseSync, list: Character[]): number {
 function insertRow(db: DatabaseSync, c: Character): void {
   const cols = UPSERT_COLUMNS.join(', ');
   const placeholders = UPSERT_COLUMNS.map(() => '?').join(', ');
-  db.prepare(`INSERT INTO characters (${cols}) VALUES (${placeholders})`).run(
+  db.prepare(`INSERT INTO targets (${cols}) VALUES (${placeholders})`).run(
     ...toParams(c, Date.now()),
   );
   const stmt = db.prepare(
-    'INSERT OR IGNORE INTO character_aliases (character_id, alias) VALUES (?, ?)',
+    'INSERT OR IGNORE INTO target_aliases (target_id, alias) VALUES (?, ?)',
   );
   for (const alias of c.aliases) stmt.run(c.id, alias);
 }
@@ -114,7 +114,7 @@ export interface SqliteStoreOptions {
   backupKeep?: number;
 }
 
-export class SqliteCharacterStore implements CharacterStoreLike {
+export class SqliteTargetStore implements TargetStoreLike {
   private readonly db: DatabaseSync;
   private readonly backupDir: string;
   private readonly backupKeep: number;
@@ -191,7 +191,7 @@ export class SqliteCharacterStore implements CharacterStoreLike {
     }
     this.backup();
     this.db
-      .prepare('UPDATE characters SET retired = ?, updated_at = ? WHERE id = ?')
+      .prepare('UPDATE targets SET retired = ?, updated_at = ? WHERE id = ?')
       .run(retired ? 1 : 0, Date.now(), id);
     this.reload();
 
@@ -212,13 +212,13 @@ export class SqliteCharacterStore implements CharacterStoreLike {
 
     const cnRows = this.db
       .prepare(
-        `SELECT polity AS key, difficulty AS d, COUNT(*) AS n FROM characters
+        `SELECT polity AS key, difficulty AS d, COUNT(*) AS n FROM targets
          WHERE region = 'cn' AND retired = 0 GROUP BY polity, difficulty`,
       )
       .all() as unknown as Array<{ key: string; d: number; n: number }>;
     const regionRows = this.db
       .prepare(
-        `SELECT region AS key, difficulty AS d, COUNT(*) AS n FROM characters
+        `SELECT region AS key, difficulty AS d, COUNT(*) AS n FROM targets
          WHERE retired = 0 GROUP BY region, difficulty`,
       )
       .all() as unknown as Array<{ key: string; d: number; n: number }>;
@@ -267,7 +267,7 @@ export class SqliteCharacterStore implements CharacterStoreLike {
   }
 
   exportText(): string {
-    return serializeCharacters(this.all);
+    return serializeTargets(this.all);
   }
 
   vocab(): ReturnType<typeof collectVocab> {
@@ -339,14 +339,14 @@ export class SqliteCharacterStore implements CharacterStoreLike {
       .map((col) => `${col} = ?`)
       .join(', ');
     this.db
-      .prepare(`UPDATE characters SET ${assignments} WHERE id = ?`)
+      .prepare(`UPDATE targets SET ${assignments} WHERE id = ?`)
       .run(...toParams(c, Date.now()).slice(1), c.id);
-    this.db.prepare('DELETE FROM character_aliases WHERE character_id = ?').run(c.id);
+    this.db.prepare('DELETE FROM target_aliases WHERE target_id = ?').run(c.id);
     this.replaceAliases(c);
   }
 
   private replaceAliases(c: Character): void {
-    const stmt = this.db.prepare('INSERT OR IGNORE INTO character_aliases (character_id, alias) VALUES (?, ?)');
+    const stmt = this.db.prepare('INSERT OR IGNORE INTO target_aliases (target_id, alias) VALUES (?, ?)');
     for (const alias of c.aliases) stmt.run(c.id, alias);
   }
 
@@ -399,16 +399,16 @@ function toParams(c: Character, now: number): Array<string | number | null> {
 }
 
 function readAll(db: DatabaseSync): Character[] {
-  const rows = db.prepare('SELECT * FROM characters ORDER BY id').all() as unknown as CharacterRow[];
+  const rows = db.prepare('SELECT * FROM targets ORDER BY id').all() as unknown as CharacterRow[];
   const aliasRows = db
-    .prepare('SELECT character_id, alias FROM character_aliases ORDER BY character_id, alias')
-    .all() as unknown as Array<{ character_id: string; alias: string }>;
+    .prepare('SELECT target_id, alias FROM target_aliases ORDER BY target_id, alias')
+    .all() as unknown as Array<{ target_id: string; alias: string }>;
 
   const aliasMap = new Map<string, string[]>();
   for (const row of aliasRows) {
-    const list = aliasMap.get(row.character_id) ?? [];
+    const list = aliasMap.get(row.target_id) ?? [];
     list.push(row.alias);
-    aliasMap.set(row.character_id, list);
+    aliasMap.set(row.target_id, list);
   }
 
   return rows.map((r) => rowToCharacter(r, aliasMap.get(r.id) ?? []));
