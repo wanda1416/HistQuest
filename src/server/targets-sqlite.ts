@@ -2,6 +2,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { DYNASTIES, REGIONS, WORLD_ERAS, type Character, type TargetCategory } from '../shared/domain.ts';
 import { CharacterIndex } from '../core/index.ts';
 import {
+  buildHealthMatrices,
   collectVocab,
   normalizeCharacter,
   serializeTargets,
@@ -202,55 +203,17 @@ export class SqliteTargetStore implements TargetStoreLike {
 
     const active = this.idx.list;
 
-    const cnRows = this.db
-      .prepare(
-        `SELECT polity AS key, difficulty AS d, COUNT(*) AS n FROM targets
-         WHERE region = 'cn' AND retired = 0 GROUP BY polity, difficulty`,
-      )
-      .all() as unknown as Array<{ key: string; d: number; n: number }>;
-    const regionRows = this.db
-      .prepare(
-        `SELECT region AS key, difficulty AS d, COUNT(*) AS n FROM targets
-         WHERE retired = 0 GROUP BY region, difficulty`,
-      )
-      .all() as unknown as Array<{ key: string; d: number; n: number }>;
-    const worldEraRows = this.db
-      .prepare(
-        `SELECT polity AS key, difficulty AS d, COUNT(*) AS n FROM targets
-         WHERE retired = 0 AND region != 'cn' GROUP BY polity, difficulty`,
-      )
-      .all() as unknown as Array<{ key: string; d: number; n: number }>;
-
-    const matrix = DYNASTIES.map((polity) => {
-      const levels: Record<string, number> = { '1': 0, '2': 0, '3': 0 };
-      let total = 0;
-      for (const row of cnRows.filter((r) => r.key === polity)) {
-        levels[String(row.d)] = row.n;
-        total += row.n;
-      }
-      return { polity, levels, total };
-    });
-
-    const regionMatrix = REGIONS.map((region) => {
-      const levels: Record<string, number> = { '1': 0, '2': 0, '3': 0 };
-      let total = 0;
-      for (const row of regionRows.filter((r) => r.key === region)) {
-        levels[String(row.d)] = row.n;
-        total += row.n;
-      }
-      return { region, levels, total };
-    });
-
-    const worldEraMatrix = WORLD_ERAS.map((era) => {
-      const levels: Record<string, number> = { '1': 0, '2': 0, '3': 0 };
-      let total = 0;
-      for (const row of worldEraRows.filter((r) => r.key === era)) {
-        levels[String(row.d)] = row.n;
-        total += row.n;
-      }
-      return { era, levels, total };
-    });
-
+    const matricesFor = (cat: TargetCategory | 'all') =>
+      buildHealthMatrices(cat === 'all' ? active : active.filter((x) => (x.category ?? 'character') === cat));
+    const combined = matricesFor('all');
+    const matrix = combined.matrix;
+    const regionMatrix = combined.regionMatrix;
+    const worldEraMatrix = combined.worldEraMatrix;
+    const byCategory = {
+      character: { total: this.all.filter((x) => (x.category ?? 'character') === 'character').length, active: active.filter((x) => (x.category ?? 'character') === 'character').length, ...matricesFor('character') },
+      event: { total: this.all.filter((x) => (x.category ?? 'character') === 'event').length, active: active.filter((x) => (x.category ?? 'character') === 'event').length, ...matricesFor('event') },
+      item: { total: this.all.filter((x) => (x.category ?? 'character') === 'item').length, active: active.filter((x) => (x.category ?? 'character') === 'item').length, ...matricesFor('item') },
+    };
     const emptyDynasties = matrix.filter((m) => m.total === 0).map((m) => m.polity);
     const emptyCombos: HealthReport['emptyCombos'] = [];
     for (const m of matrix) {

@@ -153,6 +153,7 @@ const adminBase: AdminState = {
   historyTotal: 1,
   historyDetail: null,
   historyFilters: { user: '', result: '', q: '' },
+  healthSub: 'overview',
   listPage: 1,
   listPageSize: 100,
   historyPage: 1,

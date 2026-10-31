@@ -31,6 +31,7 @@ let state: AdminState = {
   historyTotal: 0,
   historyDetail: null,
   historyFilters: { user: '', result: '', q: '' },
+  healthSub: 'overview',
   /* 分页：两个列表各自独立（默认 100 条/页） */
   listPage: 1,
   listPageSize: 100,
@@ -537,6 +538,10 @@ root.addEventListener('click', async (event) => {
       setState({ view: 'invites', notice: { kind: 'ok', text: `已生成：${res.codes.join('、')}` } });
       break;
     }
+    case 'health-sub':
+      setState({ healthSub: el.dataset.value as 'overview' | 'character' | 'event' | 'item' });
+      render();
+      break;
     case 'go-health':
       syncHash('health');
       void loadHealth();

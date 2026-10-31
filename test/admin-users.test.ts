@@ -102,6 +102,7 @@ function adminStateWithUsers(): AdminState {
     historyTotal: 0,
     historyDetail: null,
     historyFilters: { user: '', result: '', q: '' },
+  healthSub: 'overview',
   listPage: 1,
   listPageSize: 100,
   historyPage: 1,

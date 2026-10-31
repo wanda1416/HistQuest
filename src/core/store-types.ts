@@ -29,6 +29,17 @@ export interface HealthReport {
   matrix: Array<{ polity: string; levels: Record<string, number>; total: number }>;
   regionMatrix: Array<{ region: string; levels: Record<string, number>; total: number }>;
   worldEraMatrix?: Array<{ era: string; levels: Record<string, number>; total: number }>;
+  /** 按类别拆分的分布（人物/事件/物品各自的总数与矩阵），供健康页二级 tab */
+  byCategory?: Record<
+    'character' | 'event' | 'item',
+    {
+      total: number;
+      active: number;
+      matrix: Array<{ polity: string; levels: Record<string, number>; total: number }>;
+      regionMatrix: Array<{ region: string; levels: Record<string, number>; total: number }>;
+      worldEraMatrix?: Array<{ era: string; levels: Record<string, number>; total: number }>;
+    }
+  >;
   emptyDynasties: string[];
   emptyCombos: Array<{ polity: string; difficulty: number }>;
 }

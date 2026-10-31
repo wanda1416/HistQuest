@@ -40,6 +40,17 @@ export interface HealthReport {
   regionMatrix: Array<{ region: string; levels: Record<string, number>; total: number }>;
   /** 世界时期 × 难度（region 非 cn 的条目，按 worldEra 归组） */
   worldEraMatrix: Array<{ era: string; levels: Record<string, number>; total: number }>;
+  /** 按类别拆分的分布（人物/事件/物品），健康页二级 tab 数据源 */
+  byCategory?: Record<
+    'character' | 'event' | 'item',
+    {
+      total: number;
+      active: number;
+      matrix: Array<{ polity: string; levels: Record<string, number>; total: number }>;
+      regionMatrix: Array<{ region: string; levels: Record<string, number>; total: number }>;
+      worldEraMatrix?: Array<{ era: string; levels: Record<string, number>; total: number }>;
+    }
+  >;
   emptyDynasties: string[];
   emptyCombos: Array<{ polity: string; difficulty: number }>;
 }
@@ -76,6 +87,7 @@ export interface AdminState {
   historyTotal: number;
   historyDetail: HistoryDetail | null;
   historyFilters: { user: string; result: string; q: string };
+  healthSub: 'overview' | 'character' | 'event' | 'item';
   /* 分页：两个列表各自独立（默认 100 条/页） */
   listPage: number;
   listPageSize: number;
@@ -730,6 +742,8 @@ function editView(s: AdminState): string {
 
 /* ---------------- 健康 ---------------- */
 
+const CAT_SUB_LABEL: Record<string, string> = { overview: '总览', character: '人物', event: '事件', item: '物品' };
+
 function healthView(s: AdminState): string {
   const h = s.health;
   if (!h) return '<p class="a-muted">正在加载…</p>';
@@ -784,48 +798,119 @@ function healthView(s: AdminState): string {
     )
     .join('');
 
+  // 二级 tab：总览 / 人物 / 事件 / 物品——避免四类混排一屏
+  const subTabs = (['overview', 'character', 'event', 'item'] as const)
+    .map((key) => {
+      const labels = { overview: '总览', character: '人物', event: '事件', item: '物品' };
+      return `<button class="a-chip ${s.healthSub === key ? 'is-on' : ''}"
+        data-action="health-sub" data-value="${key}">${labels[key]}</button>`;
+    })
+    .join('');
+  const sub = s.healthSub;
+  const cat = sub === 'overview' ? undefined : h.byCategory?.[sub];
+  const matrixTable = (rows: Array<{ polity: string; levels: Record<string, number>; total: number }>): string => `
+    <table class="a-matrix">
+      <thead>${header}</thead>
+      <tbody>${rows
+        .map((m) => {
+          const cell = (level: number): string =>
+            `<td class="${m.levels[String(level)] === 0 ? 'is-zero' : ''}">${m.levels[String(level)]}</td>`;
+          return `<tr>
+        <td>${esc(m.polity)}${m.total === 0 ? ' <span class="a-pill is-bad">无条目</span>' : ''}</td>
+        ${cell(1)}${cell(2)}${cell(3)}
+        <td>${m.total}</td>
+      </tr>`;
+        })
+        .join('')}</tbody>
+    </table>`;
+
   return `
+  <div class="a-chips" style="margin-bottom:14px">${subTabs}</div>
+
   <div class="a-stats">
-    <div class="a-stat"><b>${h.total}</b><span>人物总数</span></div>
+    <div class="a-stat"><b>${h.total}</b><span>条目总数</span></div>
     <div class="a-stat"><b>${h.active}</b><span>在库（可被抽中）</span></div>
     <div class="a-stat"><b>${h.retired}</b><span>已下线</span></div>
     <div class="a-stat ${h.errors ? 'is-bad' : ''}"><b>${h.errors} / ${h.warnings}</b><span>错误 / 提醒</span></div>
   </div>
 
   ${
-    h.emptyDynasties.length
-      ? `<div class="a-notice is-err">这些朝代没有任何人物，玩家选中后会抽到别的朝代：${esc(h.emptyDynasties.join('、'))}</div>`
+    sub === 'overview' && h.emptyDynasties.length
+      ? `<div class="a-notice is-err">这些朝代没有任何条目，玩家选中后会抽到别的朝代：${esc(h.emptyDynasties.join('、'))}</div>`
       : ''
   }
 
-  <div class="a-card" style="margin-bottom:16px">
-    <h3>朝代 × 难度分布（红色为 0，该组合会退化为跨难度抽样）</h3>
-    <table class="a-matrix">
-      <thead>${header}</thead>
-      <tbody>${rows}</tbody>
-    </table>
-  </div>
+  ${
+    sub === 'overview'
+      ? `<div class="a-card" style="margin-bottom:16px">
+           <h3>全部条目 · 朝代 × 难度分布（红色为 0，该组合会退化为跨难度抽样）</h3>
+           ${matrixTable(h.matrix)}
+         </div>
+         <div class="a-card">
+           <h3>文明圈 × 难度分布（混合模式按中国占比加权）</h3>
+           <table class="a-matrix">
+             <thead><tr><th>文明圈</th><th>入门</th><th>进阶</th><th>考据</th><th>合计</th></tr></thead>
+             <tbody>${regionRows}</tbody>
+           </table>
+         </div>
+         <div class="a-card">
+           <h3>世界时期 × 难度分布（单选「世界」开局时按时期筛选）</h3>
+           <table class="a-matrix">
+             <thead>${eraHeader}</thead>
+             <tbody>${eraRows}</tbody>
+           </table>
+         </div>
+         <div class="a-card">
+           <h3>校验结果（${h.errors} 个错误、${h.warnings} 个提醒）</h3>
+           <ul class="a-issue-list">${items || '<li class="a-muted">没有发现问题</li>'}</ul>
+         </div>`
+      : cat
+        ? `<div class="a-card" style="margin-bottom:16px">
+             <h3>${CAT_SUB_LABEL[sub]} · 朝代 × 难度分布（共 ${cat.total} 条，在库 ${cat.active}）</h3>
+             ${matrixTable(cat.matrix)}
+           </div>
+           <div class="a-card">
+             <h3>文明圈 × 难度分布</h3>
+             <table class="a-matrix">
+               <thead><tr><th>文明圈</th><th>入门</th><th>进阶</th><th>考据</th><th>合计</th></tr></thead>
+               <tbody>${cat.regionMatrix
+                 .map((m: { region: string; levels: Record<string, number>; total: number }) => {
+                   const lbl = s.meta?.regions.find((r) => r.value === m.region)?.label ?? m.region;
+                   const cell = (level: number): string =>
+                     `<td class="${m.levels[String(level)] === 0 ? 'is-zero' : ''}">${m.levels[String(level)]}</td>`;
+                   return `<tr><td>${esc(lbl)}</td>${cell(1)}${cell(2)}${cell(3)}<td>${m.total}</td></tr>`;
+                 })
+                 .join('')}</tbody>
+             </table>
+           </div>
+           ${
+             cat.worldEraMatrix?.length
+               ? `<div class="a-card">
+                    <h3>世界时期 × 难度分布</h3>
+                    <table class="a-matrix">
+                      <thead>${eraHeader}</thead>
+                      <tbody>${cat.worldEraMatrix
+                        .map((m) => {
+                          const cell = (level: number): string =>
+                            `<td class="${m.levels[String(level)] === 0 ? 'is-zero' : ''}">${m.levels[String(level)]}</td>`;
+                          return `<tr><td>${esc(m.era)}</td>${cell(1)}${cell(2)}${cell(3)}<td>${m.total}</td></tr>`;
+                        })
+                        .join('')}</tbody>
+                    </table>
+                  </div>`
+               : ''
+           }`
+        : `<div class="a-card"><p class="a-muted">该类别暂无条目。</p></div>`
+  }
 
-  <div class="a-card" style="margin-bottom:16px">
-    <h3>文明圈 × 难度分布（混合模式按中国占比加权）</h3>
-    <table class="a-matrix">
-      <thead><tr><th>文明圈</th><th>入门</th><th>进阶</th><th>考据</th><th>合计</th></tr></thead>
-      <tbody>${regionRows}</tbody>
-    </table>
-  </div>
-
-  <div class="a-card" style="margin-bottom:16px">
-    <h3>世界时期 × 难度分布（单选「世界」开局时按时期筛选）</h3>
-    <table class="a-matrix">
-      <thead>${eraHeader}</thead>
-      <tbody>${eraRows}</tbody>
-    </table>
-  </div>
-
-  <div class="a-card">
-    <h3>校验结果（${h.errors} 个错误、${h.warnings} 个提醒）</h3>
-    <ul class="a-issue-list">${items || '<li class="a-muted">没有发现问题</li>'}</ul>
-  </div>`;
+  ${
+    sub === 'overview'
+      ? `<div class="a-card" style="margin-top:16px">
+           <h3>校验结果（${h.errors} 个错误、${h.warnings} 个提醒）</h3>
+           <ul class="a-issue-list">${items || '<li class="a-muted">没有发现问题</li>'}</ul>
+         </div>`
+      : ''
+  }`;
 }
 
 /* ---------------- 对局历史（管理员视角） ---------------- */

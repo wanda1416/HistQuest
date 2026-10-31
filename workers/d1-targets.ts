@@ -1,6 +1,7 @@
 import { DYNASTIES, REGIONS, WORLD_ERAS, type Character, type TargetCategory } from '../src/shared/domain.ts';
 import { CharacterIndex } from '../src/core/index.ts';
 import {
+  buildHealthMatrices,
   collectVocab,
   normalizeCharacter,
   serializeTargets,
@@ -154,36 +155,19 @@ export class D1TargetStore {
         items.push({ ...issue, id: c.id, name: c.name });
       }
     }
-    // 矩阵直接从内存算（D1 版不需要 SQL 聚合，184 人遍历足够快）
     const active = this.idx.list;
-    const matrix = DYNASTIES.map((polity) => {
-      const levels: Record<string, number> = { '1': 0, '2': 0, '3': 0 };
-      let total = 0;
-      for (const c of active.filter((x) => x.region === 'cn' && x.polity === polity)) {
-        levels[String(c.difficulty)] += 1;
-        total += 1;
-      }
-      return { polity, levels, total };
-    });
-    const regionMatrix = REGIONS.map((region) => {
-      const levels: Record<string, number> = { '1': 0, '2': 0, '3': 0 };
-      let total = 0;
-      for (const c of active.filter((x) => x.region === region)) {
-        levels[String(c.difficulty)] += 1;
-        total += 1;
-      }
-      return { region, levels, total };
-    });
-    const worldEraMatrix = WORLD_ERAS.map((era) => {
-      const levels: Record<string, number> = { '1': 0, '2': 0, '3': 0 };
-      let total = 0;
-      for (const c of active) {
-        if (c.region === 'cn' || c.polity !== era) continue;
-        levels[String(c.difficulty)] += 1;
-        total += 1;
-      }
-      return { era, levels, total };
-    });
+    const matricesFor = (cat: TargetCategory | 'all') =>
+      buildHealthMatrices(cat === 'all' ? active : active.filter((x) => (x.category ?? 'character') === cat));
+    const combined = matricesFor('all');
+    const matrix = combined.matrix;
+    const regionMatrix = combined.regionMatrix;
+    const worldEraMatrix = combined.worldEraMatrix;
+    const byCategory = {
+      character: { total: this.all.filter((x) => (x.category ?? 'character') === 'character').length, active: active.filter((x) => (x.category ?? 'character') === 'character').length, ...matricesFor('character') },
+      event: { total: this.all.filter((x) => (x.category ?? 'character') === 'event').length, active: active.filter((x) => (x.category ?? 'character') === 'event').length, ...matricesFor('event') },
+      item: { total: this.all.filter((x) => (x.category ?? 'character') === 'item').length, active: active.filter((x) => (x.category ?? 'character') === 'item').length, ...matricesFor('item') },
+    };
+
 
     const emptyDynasties = matrix.filter((m) => m.total === 0).map((m) => m.polity);
     const emptyCombos: HealthReport['emptyCombos'] = [];
@@ -195,6 +179,7 @@ export class D1TargetStore {
     }
     return {
       total: this.all.length,
+      byCategory,
       active: active.length,
       retired: this.all.length - active.length,
       errors: items.filter((i) => i.level === 'error').length,

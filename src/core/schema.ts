@@ -418,3 +418,40 @@ export function targetEraFacts(c: Character): {
   for (const k of Object.keys(facts)) if (facts[k] === undefined) delete facts[k];
   return { era, regime, facts };
 }
+
+/** 健康报告的分布矩阵：按可选类别过滤（'all'=全部），Node/D1 两端共用 */
+export function buildHealthMatrices(list: Character[]): {
+  matrix: Array<{ polity: string; levels: Record<string, number>; total: number }>;
+  regionMatrix: Array<{ region: string; levels: Record<string, number>; total: number }>;
+  worldEraMatrix: Array<{ era: string; levels: Record<string, number>; total: number }>;
+} {
+  const active = list.filter((c) => !c.retired);
+  const matrix = DYNASTIES.map((polity) => {
+    const levels: Record<string, number> = { '1': 0, '2': 0, '3': 0 };
+    let total = 0;
+    for (const c of active.filter((x) => x.region === 'cn' && x.polity === polity)) {
+      levels[String(c.difficulty)] += 1;
+      total += 1;
+    }
+    return { polity, levels, total };
+  });
+  const regionMatrix = REGIONS.map((region) => {
+    const levels: Record<string, number> = { '1': 0, '2': 0, '3': 0 };
+    let total = 0;
+    for (const c of active.filter((x) => x.region === region)) {
+      levels[String(c.difficulty)] += 1;
+      total += 1;
+    }
+    return { region, levels, total };
+  });
+  const worldEraMatrix = WORLD_ERAS.map((era) => {
+    const levels: Record<string, number> = { '1': 0, '2': 0, '3': 0 };
+    let total = 0;
+    for (const c of active.filter((x) => x.region !== 'cn' && x.worldEra === era)) {
+      levels[String(c.difficulty)] += 1;
+      total += 1;
+    }
+    return { era, levels, total };
+  });
+  return { matrix, regionMatrix, worldEraMatrix };
+}
