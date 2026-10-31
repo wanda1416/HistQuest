@@ -27,6 +27,7 @@
     "../src/server/routes.ts",
     "../src/server/index.ts",
     "../src/server/settings.ts",
+    "./seed.ts",
     "../src/server/util.ts"
   ]
 }

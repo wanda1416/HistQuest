@@ -119,13 +119,14 @@ export class CharacterIndex {
       if (pool.length === 0) pool = this.list;
     }
 
-    // 1) 政权筛选：中国朝代先按分组（宋=北京+南宋）匹配
+    // 1) 政权筛选：中国朝代先按分组（宋=北京+南宋）匹配。
+    //    只按主 polity 抽样——polityAlt（经历过的时期）是判定口径
+    //    （耶律阿保机活过唐，问「他是唐朝人吗」答是），若进抽样池，
+    //    玩家筛「唐」会抽到辽太祖，反而困惑。
     if (opts.polity) {
       const scope = dynastyScope(opts.polity);
       pool = scope
-        ? pool.filter(
-            (c) => scope.includes(c.polity) || (c.polityAlt ?? []).some((p) => scope.includes(p)),
-          )
+        ? pool.filter((c) => scope.includes(c.polity))
         : pool.filter((c) => c.polity === opts.polity);
     }
 

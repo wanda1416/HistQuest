@@ -263,14 +263,8 @@ function handleField(el: HTMLElement): void {
     void loadList();
     return;
   }
-  if (field === 'filter-polity') {
-    state.filters.polity = (el as HTMLSelectElement).value;
-    state.listPage = 1;
-    void loadList();
-    return;
-  }
   if (field === 'filter-region') {
-    // 联动清空：换范围后，朝代（中国）/时期（世界）可能不再适用
+    // 联动清空：换范围后，时期选项列表会整体更换
     state.filters.region = (el as HTMLSelectElement).value;
     state.filters.polity = '';
     state.filters.worldEra = '';
@@ -278,8 +272,16 @@ function handleField(el: HTMLElement): void {
     void loadList();
     return;
   }
-  if (field === 'filter-era') {
-    state.filters.worldEra = (el as HTMLSelectElement).value;
+  if (field === 'filter-period') {
+    // 时期下拉统一入口：中国范围写 polity（唐/北宋…），世界范围写 worldEra
+    const value = (el as HTMLSelectElement).value;
+    if (state.filters.region === 'cn') {
+      state.filters.polity = value;
+      state.filters.worldEra = '';
+    } else {
+      state.filters.worldEra = value;
+      state.filters.polity = '';
+    }
     state.listPage = 1;
     void loadList();
     return;

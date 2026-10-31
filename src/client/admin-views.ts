@@ -215,20 +215,18 @@ function filtersView(s: AdminState): string {
 
   /**
    * 递进筛选（与玩家端开局页同一套口径）：
-   *   类别 → 范围（全部 / 中国 / 某文明圈）→ 时期（仅中国：朝代；仅世界：worldEra）
-   * 规则：
-   * - 选了文明圈（非 cn）→ 朝代下拉隐藏（朝代是中国专属概念），且选中的朝代自动清空
-   * - 选了"中国" → 显示朝代下拉 + 中国的 worldEra 不存在，无时期下拉
-   * - 全部范围 → 朝代与世界时期都隐藏（同时筛两者会互斥）
-   * 联动清空在 admin.ts 的 handleField 里做（filter-region 分支）。
+   *   类别 → 范围（全部 / 中国 / 某文明圈）→ 时期
+   * 数据层面「朝代」与「时期」是同一个东西（谜底所属时间段/政权），
+   * 所以只有一个**时期**下拉，固定展示：选项随范围变化，值按范围写入 polity 或 worldEra——
+   * - 中国 → 列 19 个朝代，选中写 polity
+   * - 某文明圈 → 只列该圈实际拥有的 worldEra（meta.worldErasByRegion），选中写 worldEra
+   * - 全部范围 → 时期含义模糊（朝代与世界时期混在一起），下拉禁用并提示先选范围
+   * 换范围时旧值自动清空（admin.ts 的 filter-region 分支）。
    */
   const region = s.filters.region;
-  const showPolity = region === 'cn';
-  const showEra = region !== '' && region !== 'cn';
+  const periodDisabled = region === '';
+  const periodValue = region === 'cn' ? s.filters.polity : s.filters.worldEra;
 
-  const polityOptions = ['', ...meta.dynasties]
-    .map((d) => `<option value="${esc(d)}" ${s.filters.polity === d ? 'selected' : ''}>${esc(d || '全部朝代')}</option>`)
-    .join('');
   const regionOptions = ['', ...meta.regions.map((r) => r.value)]
     .map((value) => {
       const label = value ? (meta.regions.find((r) => r.value === value)?.label ?? value) : '全部文明圈';
@@ -236,10 +234,17 @@ function filtersView(s: AdminState): string {
     })
     .join('');
 
-  // 世界时期：只列当前选中文明圈实际拥有的（meta.worldErasByRegion 数据驱动）
-  const eras = (region && meta.worldErasByRegion?.[region]) ?? [];
-  const eraOptions = ['', ...eras]
-    .map((e) => `<option value="${esc(e)}" ${s.filters.worldEra === e ? 'selected' : ''}>${esc(e || '全部时期')}</option>`)
+  // 时期选项：中国 → 朝代枚举；文明圈 → 该圈实际拥有的 worldEra；全部 → 空（禁用）
+  let periodList: string[];
+  if (region === 'cn') {
+    periodList = [...meta.dynasties];
+  } else if (region) {
+    periodList = meta.worldErasByRegion?.[region] ?? [];
+  } else {
+    periodList = [];
+  }
+  const periodOptions = ['', ...periodList]
+    .map((e) => `<option value="${esc(e)}" ${periodValue === e ? 'selected' : ''}>${esc(e || '全部时期')}</option>`)
     .join('');
 
   return `
@@ -247,8 +252,7 @@ function filtersView(s: AdminState): string {
     <input type="search" data-field="q" value="${esc(s.filters.q)}" placeholder="搜名称 / 别名 / id" />
     <select data-field="filter-category">${categoryOptions}</select>
     <select data-field="filter-region">${regionOptions}</select>
-    ${showPolity ? `<select data-field="filter-polity">${polityOptions}</select>` : ''}
-    ${showEra ? `<select data-field="filter-era">${eraOptions}</select>` : ''}
+    <select data-field="filter-period" ${periodDisabled ? 'disabled title="先选择范围"' : ''}>${periodOptions}</select>
     <select data-field="filter-difficulty">${diffOptions}</select>
     <select data-field="filter-retired">${retireOptions}</select>
     <button class="a-btn" data-action="reload">刷新</button>

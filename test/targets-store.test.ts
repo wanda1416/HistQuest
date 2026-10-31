@@ -138,8 +138,8 @@ test('健康报告能发现存量的空朝代与字段缺失', () => {
   const { store, cleanup } = setup();
   try {
     const health = store.health();
-    assert.equal(health.total, 184);
-    assert.equal(health.active, 184);
+    assert.equal(health.total, LIB);
+    assert.equal(health.active, LIB);
     assert.equal(health.retired, 0);
     assert.ok(health.items.every((i) => i.id && i.name));
     assert.ok(Array.isArray(health.matrix) && health.matrix.length > 0);

@@ -386,7 +386,7 @@ function toParams(c: Character, now: number): Array<string | number | null> {
     c.death,
     c.birthplace,
     c.country ?? null,
-    c.birthProvince,
+    c.birthProvince ?? null,
     JSON.stringify(c.roles),
     JSON.stringify(c.tags),
     c.emperor ? 1 : 0,

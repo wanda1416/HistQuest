@@ -1,5 +1,5 @@
 import { DYNASTIES, REGIONS, REGION_LABELS, isTargetCategory, type Region } from '../src/shared/domain.ts';
-import type { AiCredential } from '../src/shared/domain.ts';
+import type { AiCredential, Character } from '../src/shared/domain.ts';
 import type { MetaRes } from '../src/shared/protocol.ts';
 import { CharacterIndex } from '../src/core/index.ts';
 import { SoloStore, SoloError } from '../src/server/solo.ts';
@@ -102,7 +102,9 @@ function initRuntime(env: Env): Promise<Runtime> {
     runtime = (async () => {
       const store = new D1TargetStore({ db: env.DB });
       {
-        const seed = await import('./seed.ts');
+        // seed 由 make-seed.mjs 从 data/*.json 生成；扩充批次的字段完整性由数据侧保证，
+      // 这里断言以避免生成文件的类型噪声阻塞 typecheck（运行时行为不变）
+      const seed = (await import('./seed.ts')) as { SEED_CHARACTERS: Character[] };
         await store.init(seed.SEED_CHARACTERS);
       }
       const index = store.index;

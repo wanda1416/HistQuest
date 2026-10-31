@@ -125,8 +125,8 @@ export interface Character {
   polity: string;
   /** 人物实际经历过的其他时期/政权 */
   polityAlt?: string[];
-  /** 世界人物的时期划分；中国人物不使用 */
-  worldEra?: WorldEra;
+  /** 世界条目的时期划分；中国条目为 null */
+  worldEra?: WorldEra | null;
   /** 人物专用；事件/物品填 'male' 占位（列 NOT NULL），判定层按类别忽略 */
   gender: Gender;
   birth: number | null;
@@ -136,8 +136,8 @@ export interface Character {
   birthplace: string | null;
   /** 人物=今属国家；物品=现藏机构；事件=null */
   country?: string | null;
-  /** 中国区的今属省份；世界条目留空 */
-  birthProvince: string | null;
+  /** 中国区的今属省份；世界条目留空（可缺省） */
+  birthProvince?: string | null;
   /** 人物=身份；事件/物品=类型（战役/条约；青铜器/书画） */
   roles: string[];
   tags: string[];
