@@ -8958,5 +8958,1352 @@
   "emperor": false,
   "notable": "西汉儒学家，建议罢黜百家独尊儒术。",
   "difficulty": 2
+ },
+ {
+  "id": "xiahoudun",
+  "name": "夏侯惇",
+  "aliases": [
+   "元让",
+   "盲夏侯"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": null,
+  "death": 220,
+  "birthplace": "沛国谯（今安徽亳州）",
+  "birthProvince": "安徽",
+  "roles": [
+   "将领"
+  ],
+  "tags": [
+   "曹魏",
+   "曹操族弟",
+   "拔矢啖睛"
+  ],
+  "emperor": false,
+  "notable": "曹操麾下元从大将，作战被射伤左目。",
+  "difficulty": 2
+ },
+ {
+  "id": "xiahouyuan",
+  "name": "夏侯渊",
+  "aliases": [
+   "妙才"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": null,
+  "death": 219,
+  "birthplace": "沛国谯（今安徽亳州）",
+  "birthProvince": "安徽",
+  "roles": [
+   "将领"
+  ],
+  "tags": [
+   "曹魏",
+   "虎步关右",
+   "定军山"
+  ],
+  "emperor": false,
+  "notable": "曹魏西线统帅，定军山之战被黄忠斩杀。",
+  "difficulty": 2
+ },
+ {
+  "id": "zhangliao",
+  "name": "张辽",
+  "aliases": [
+   "张文远"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": 169,
+  "death": 222,
+  "birthplace": "雁门马邑（今山西朔州）",
+  "birthProvince": "山西",
+  "roles": [
+   "将领"
+  ],
+  "tags": [
+   "曹魏",
+   "五子良将",
+   "合肥之战"
+  ],
+  "emperor": false,
+  "notable": "合肥之战以八百人突袭孙权大军。",
+  "difficulty": 1,
+  "polityAlt": [
+   "东汉"
+  ]
+ },
+ {
+  "id": "xuhuang",
+  "name": "徐晃",
+  "aliases": [
+   "公明"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": null,
+  "death": 227,
+  "birthplace": "河东杨县（今山西洪洞）",
+  "birthProvince": "山西",
+  "roles": [
+   "将领"
+  ],
+  "tags": [
+   "曹魏",
+   "五子良将",
+   "樊城之战"
+  ],
+  "emperor": false,
+  "notable": "曹魏五子良将之一，樊城之战击退关羽。",
+  "difficulty": 2
+ },
+ {
+  "id": "zhanghe",
+  "name": "张郃",
+  "aliases": [
+   "儁乂"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": null,
+  "death": 231,
+  "birthplace": "河间鄚县（今河北任丘）",
+  "birthProvince": "河北",
+  "roles": [
+   "将领"
+  ],
+  "tags": [
+   "曹魏",
+   "五子良将",
+   "街亭之战"
+  ],
+  "emperor": false,
+  "notable": "街亭之战击败马谡，后追击蜀军中伏而亡。",
+  "difficulty": 2
+ },
+ {
+  "id": "yuejin",
+  "name": "乐进",
+  "aliases": [
+   "文谦"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": null,
+  "death": 218,
+  "birthplace": "阳平卫国（今河南清丰）",
+  "birthProvince": "河南",
+  "roles": [
+   "将领"
+  ],
+  "tags": [
+   "曹魏",
+   "五子良将",
+   "每战先登"
+  ],
+  "emperor": false,
+  "notable": "曹魏五子良将之一，以每战先登著称。",
+  "difficulty": 3
+ },
+ {
+  "id": "dianwei",
+  "name": "典韦",
+  "aliases": [
+   "古之恶来"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": null,
+  "death": 197,
+  "birthplace": "陈留己吾（今河南宁陵）",
+  "birthProvince": "河南",
+  "roles": [
+   "将领",
+   "护卫"
+  ],
+  "tags": [
+   "曹魏",
+   "曹操护卫",
+   "宛城之战"
+  ],
+  "emperor": false,
+  "notable": "宛城之战力战护曹操脱险，战死于门前。",
+  "difficulty": 1
+ },
+ {
+  "id": "xuchu",
+  "name": "许褚",
+  "aliases": [
+   "仲康",
+   "虎痴"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": null,
+  "death": 227,
+  "birthplace": "谯国谯县（今安徽亳州）",
+  "birthProvince": "安徽",
+  "roles": [
+   "将领",
+   "护卫"
+  ],
+  "tags": [
+   "曹魏",
+   "曹操护卫",
+   "虎侯"
+  ],
+  "emperor": false,
+  "notable": "曹操帐下宿卫统领，号虎痴、虎侯。",
+  "difficulty": 2
+ },
+ {
+  "id": "xunyu",
+  "name": "荀彧",
+  "aliases": [
+   "文若",
+   "荀令君"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": 163,
+  "death": 212,
+  "birthplace": "颍川颍阴（今河南许昌）",
+  "birthProvince": "河南",
+  "roles": [
+   "谋士",
+   "政治家"
+  ],
+  "tags": [
+   "曹魏",
+   "王佐之才",
+   "迎奉天子"
+  ],
+  "emperor": false,
+  "notable": "规划迎奉天子与统一北方方略，居中持重。",
+  "difficulty": 2,
+  "polityAlt": [
+   "东汉"
+  ]
+ },
+ {
+  "id": "xunyou",
+  "name": "荀攸",
+  "aliases": [
+   "公达"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": 157,
+  "death": 214,
+  "birthplace": "颍川颍阴（今河南许昌）",
+  "birthProvince": "河南",
+  "roles": [
+   "谋士"
+  ],
+  "tags": [
+   "曹魏",
+   "军师",
+   "十二奇策"
+  ],
+  "emperor": false,
+  "notable": "曹操谋主，设奇计破吕布、袁绍诸役。",
+  "difficulty": 3,
+  "polityAlt": [
+   "东汉"
+  ]
+ },
+ {
+  "id": "chengyu",
+  "name": "程昱",
+  "aliases": [
+   "仲德"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": 141,
+  "death": 220,
+  "birthplace": "东郡东阿（今山东阳谷）",
+  "birthProvince": "山东",
+  "roles": [
+   "谋士",
+   "政治家"
+  ],
+  "tags": [
+   "曹魏",
+   "守鄄城",
+   "筹粮"
+  ],
+  "emperor": false,
+  "notable": "为曹操守鄄城筹粮，官至卫尉。",
+  "difficulty": 3,
+  "polityAlt": [
+   "东汉"
+  ]
+ },
+ {
+  "id": "jiaxu",
+  "name": "贾诩",
+  "aliases": [
+   "文和",
+   "毒士"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": 147,
+  "death": 223,
+  "birthplace": "武威姑臧（今甘肃武威）",
+  "birthProvince": "甘肃",
+  "roles": [
+   "谋士"
+  ],
+  "tags": [
+   "曹魏",
+   "算无遗策",
+   "凉州"
+  ],
+  "emperor": false,
+  "notable": "献计李傕攻长安，后助曹操定关中离间马韩。",
+  "difficulty": 2,
+  "polityAlt": [
+   "东汉"
+  ]
+ },
+ {
+  "id": "caopi",
+  "name": "曹丕",
+  "aliases": [
+   "子桓",
+   "魏文帝"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": 187,
+  "death": 226,
+  "birthplace": "沛国谯（今安徽亳州）",
+  "birthProvince": "安徽",
+  "roles": [
+   "皇帝",
+   "政治家",
+   "诗人"
+  ],
+  "tags": [
+   "曹魏",
+   "代汉称帝",
+   "九品中正制",
+   "典论论文"
+  ],
+  "emperor": true,
+  "notable": "代汉称帝建魏，行九品中正制。",
+  "difficulty": 1,
+  "polityAlt": [
+   "东汉"
+  ]
+ },
+ {
+  "id": "caozhi",
+  "name": "曹植",
+  "aliases": [
+   "子建",
+   "陈思王"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": 192,
+  "death": 232,
+  "birthplace": "沛国谯（今安徽亳州）",
+  "birthProvince": "安徽",
+  "roles": [
+   "文人",
+   "诗人"
+  ],
+  "tags": [
+   "曹魏",
+   "七步诗",
+   "洛神赋",
+   "建安风骨"
+  ],
+  "emperor": false,
+  "notable": "作《洛神赋》，世传七步成诗。",
+  "difficulty": 1,
+  "polityAlt": [
+   "东汉"
+  ]
+ },
+ {
+  "id": "zhonghui",
+  "name": "钟会",
+  "aliases": [
+   "士季"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": 225,
+  "death": 264,
+  "birthplace": "颍川长社（今河南长葛）",
+  "birthProvince": "河南",
+  "roles": [
+   "将领",
+   "谋士"
+  ],
+  "tags": [
+   "曹魏",
+   "伐蜀",
+   "淮南三叛"
+  ],
+  "emperor": false,
+  "notable": "主谋伐蜀，灭蜀后与姜维据蜀谋反被杀。",
+  "difficulty": 2
+ },
+ {
+  "id": "dengai",
+  "name": "邓艾",
+  "aliases": [
+   "士载"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": 197,
+  "death": 264,
+  "birthplace": "义阳棘阳（今河南新野）",
+  "birthProvince": "河南",
+  "roles": [
+   "将领"
+  ],
+  "tags": [
+   "曹魏",
+   "偷渡阴平",
+   "灭蜀"
+  ],
+  "emperor": false,
+  "notable": "偷渡阴平直取成都，迫降蜀汉后主。",
+  "difficulty": 2,
+  "polityAlt": [
+   "东汉"
+  ]
+ },
+ {
+  "id": "yangxiu",
+  "name": "杨修",
+  "aliases": [
+   "德祖"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": 175,
+  "death": 219,
+  "birthplace": "弘农华阴（今陕西华阴）",
+  "birthProvince": "陕西",
+  "roles": [
+   "文人"
+  ],
+  "tags": [
+   "曹魏",
+   "主簿",
+   "鸡肋"
+  ],
+  "emperor": false,
+  "notable": "任曹操主簿，后因罪被杀。",
+  "difficulty": 2,
+  "polityAlt": [
+   "东汉"
+  ]
+ },
+ {
+  "id": "pangtong",
+  "name": "庞统",
+  "aliases": [
+   "士元",
+   "凤雏"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": 179,
+  "death": 214,
+  "birthplace": "荆州襄阳（今湖北襄阳）",
+  "birthProvince": "湖北",
+  "roles": [
+   "谋士"
+  ],
+  "tags": [
+   "蜀汉",
+   "凤雏",
+   "落凤坡"
+  ],
+  "emperor": false,
+  "notable": "献计取益州，进围雒县时中流矢而亡。",
+  "difficulty": 1,
+  "polityAlt": [
+   "东汉"
+  ]
+ },
+ {
+  "id": "machao",
+  "name": "马超",
+  "aliases": [
+   "孟起",
+   "锦马超"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": 176,
+  "death": 222,
+  "birthplace": "扶风茂陵（今陕西兴平）",
+  "birthProvince": "陕西",
+  "roles": [
+   "将领"
+  ],
+  "tags": [
+   "蜀汉",
+   "五虎上将",
+   "西凉",
+   "潼关之战"
+  ],
+  "emperor": false,
+  "notable": "凉州军阀马腾之子，后归蜀官至骠骑将军。",
+  "difficulty": 1,
+  "polityAlt": [
+   "东汉"
+  ]
+ },
+ {
+  "id": "huangzhong",
+  "name": "黄忠",
+  "aliases": [
+   "汉升"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": null,
+  "death": 220,
+  "birthplace": "南阳（今河南南阳）",
+  "birthProvince": "河南",
+  "roles": [
+   "将领"
+  ],
+  "tags": [
+   "蜀汉",
+   "五虎上将",
+   "定军山"
+  ],
+  "emperor": false,
+  "notable": "定军山之战阵斩夏侯渊，官至后将军。",
+  "difficulty": 1
+ },
+ {
+  "id": "weiyan",
+  "name": "魏延",
+  "aliases": [
+   "文长"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": null,
+  "death": 234,
+  "birthplace": "义阳（今河南桐柏）",
+  "birthProvince": "河南",
+  "roles": [
+   "将领"
+  ],
+  "tags": [
+   "蜀汉",
+   "汉中太守",
+   "子午谷奇谋"
+  ],
+  "emperor": false,
+  "notable": "镇守汉中十余年，诸葛亮死后与杨仪相攻被杀。",
+  "difficulty": 2
+ },
+ {
+  "id": "jiangwei",
+  "name": "姜维",
+  "aliases": [
+   "伯约"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": 202,
+  "death": 264,
+  "birthplace": "天水冀县（今甘肃甘谷）",
+  "birthProvince": "甘肃",
+  "roles": [
+   "将领"
+  ],
+  "tags": [
+   "蜀汉",
+   "北伐",
+   "诸葛亮传人"
+  ],
+  "emperor": false,
+  "notable": "蜀汉后期大将军，继承诸葛亮遗志多次北伐中原。",
+  "difficulty": 1,
+  "polityAlt": [
+   "东汉"
+  ]
+ },
+ {
+  "id": "madai",
+  "name": "马岱",
+  "aliases": [],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": null,
+  "death": null,
+  "birthplace": "扶风茂陵（今陕西兴平）",
+  "birthProvince": "陕西",
+  "roles": [
+   "将领"
+  ],
+  "tags": [
+   "蜀汉",
+   "马超族弟",
+   "斩魏延"
+  ],
+  "emperor": false,
+  "notable": "马超族弟，奉命斩杀魏延。",
+  "difficulty": 3
+ },
+ {
+  "id": "fazheng",
+  "name": "法正",
+  "aliases": [
+   "孝直"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": 176,
+  "death": 220,
+  "birthplace": "右扶风郿县（今陕西眉县）",
+  "birthProvince": "陕西",
+  "roles": [
+   "谋士"
+  ],
+  "tags": [
+   "蜀汉",
+   "取益州",
+   "汉中之战"
+  ],
+  "emperor": false,
+  "notable": "辅佐刘备取益州，汉中之战献策斩夏侯渊。",
+  "difficulty": 2,
+  "polityAlt": [
+   "东汉"
+  ]
+ },
+ {
+  "id": "liushan",
+  "name": "刘禅",
+  "aliases": [
+   "公嗣",
+   "阿斗",
+   "后主"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": 207,
+  "death": 271,
+  "birthplace": "荆州（今湖北一带）",
+  "birthProvince": "湖北",
+  "roles": [
+   "皇帝"
+  ],
+  "tags": [
+   "蜀汉",
+   "乐不思蜀",
+   "投降曹魏"
+  ],
+  "emperor": true,
+  "notable": "蜀汉后主，263年降魏，留乐不思蜀之语。",
+  "difficulty": 1,
+  "polityAlt": [
+   "东汉",
+   "西晋"
+  ]
+ },
+ {
+  "id": "yanyan",
+  "name": "严颜",
+  "aliases": [],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": null,
+  "death": null,
+  "birthplace": "巴郡（今重庆一带）",
+  "birthProvince": "重庆",
+  "roles": [
+   "将领"
+  ],
+  "tags": [
+   "蜀汉",
+   "义释",
+   "巴郡太守"
+  ],
+  "emperor": false,
+  "notable": "巴郡老将，被张飞义释后归顺。",
+  "difficulty": 3
+ },
+ {
+  "id": "liyan",
+  "name": "李严",
+  "aliases": [
+   "正方"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": null,
+  "death": 234,
+  "birthplace": "南阳（今河南南阳）",
+  "birthProvince": "河南",
+  "roles": [
+   "政治家"
+  ],
+  "tags": [
+   "蜀汉",
+   "托孤大臣",
+   "废为民"
+  ],
+  "emperor": false,
+  "notable": "刘备托孤重臣，后因运粮误期被废为民。",
+  "difficulty": 3
+ },
+ {
+  "id": "jiangwan",
+  "name": "蒋琬",
+  "aliases": [
+   "公琰"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": null,
+  "death": 246,
+  "birthplace": "零陵湘乡（今湖南湘乡）",
+  "birthProvince": "湖南",
+  "roles": [
+   "政治家"
+  ],
+  "tags": [
+   "蜀汉",
+   "尚书令",
+   "诸葛亮继任"
+  ],
+  "emperor": false,
+  "notable": "诸葛亮死后执掌蜀汉政务，官至大司马。",
+  "difficulty": 2
+ },
+ {
+  "id": "feiyi",
+  "name": "费祎",
+  "aliases": [
+   "文伟"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": null,
+  "death": 253,
+  "birthplace": "江夏鄳县（今河南罗山）",
+  "birthProvince": "河南",
+  "roles": [
+   "政治家",
+   "外交家"
+  ],
+  "tags": [
+   "蜀汉",
+   "尚书令",
+   "使吴"
+  ],
+  "emperor": false,
+  "notable": "多次出使东吴，主政时休士养民，遇刺身亡。",
+  "difficulty": 2
+ },
+ {
+  "id": "maliang",
+  "name": "马良",
+  "aliases": [
+   "季常",
+   "白眉马良"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": 187,
+  "death": 222,
+  "birthplace": "荆州襄阳（今湖北襄阳）",
+  "birthProvince": "湖北",
+  "roles": [
+   "文人",
+   "官员"
+  ],
+  "tags": [
+   "蜀汉",
+   "白眉",
+   "夷陵之战"
+  ],
+  "emperor": false,
+  "notable": "眉中有白毛，乡谚称马氏五常白眉最良。",
+  "difficulty": 2,
+  "polityAlt": [
+   "东汉"
+  ]
+ },
+ {
+  "id": "masu",
+  "name": "马谡",
+  "aliases": [
+   "幼常"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": 190,
+  "death": 228,
+  "birthplace": "荆州襄阳（今湖北襄阳）",
+  "birthProvince": "湖北",
+  "roles": [
+   "谋士",
+   "官员"
+  ],
+  "tags": [
+   "蜀汉",
+   "街亭之战",
+   "挥泪斩马谡"
+  ],
+  "emperor": false,
+  "notable": "街亭之役违令舍水上山，兵败被处死。",
+  "difficulty": 2,
+  "polityAlt": [
+   "东汉"
+  ]
+ },
+ {
+  "id": "sunshangxiang",
+  "name": "孙尚香",
+  "aliases": [
+   "孙夫人",
+   "弓腰姬"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "female",
+  "birth": null,
+  "death": null,
+  "birthplace": "吴郡富春（今浙江杭州富阳）",
+  "birthProvince": "浙江",
+  "roles": [
+   "美女"
+  ],
+  "tags": [
+   "东吴",
+   "孙权之妹",
+   "刘备之妻"
+  ],
+  "emperor": false,
+  "notable": "孙权之妹，嫁刘备为夫人。",
+  "difficulty": 2
+ },
+ {
+  "id": "ganning",
+  "name": "甘宁",
+  "aliases": [
+   "兴霸",
+   "锦帆贼"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": null,
+  "death": 220,
+  "birthplace": "巴郡临江（今重庆忠县）",
+  "birthProvince": "重庆",
+  "roles": [
+   "将领"
+  ],
+  "tags": [
+   "东吴",
+   "百骑劫曹营",
+   "西陵太守"
+  ],
+  "emperor": false,
+  "notable": "曾率百骑夜袭曹营，官至西陵太守。",
+  "difficulty": 2
+ },
+ {
+  "id": "zhoutai",
+  "name": "周泰",
+  "aliases": [
+   "幼平"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": null,
+  "death": 229,
+  "birthplace": "九江下蔡（今安徽凤台）",
+  "birthProvince": "安徽",
+  "roles": [
+   "将领"
+  ],
+  "tags": [
+   "东吴",
+   "救孙权",
+   "浑身伤疤"
+  ],
+  "emperor": false,
+  "notable": "多次舍身护孙权，遍体创伤。",
+  "difficulty": 2
+ },
+ {
+  "id": "huanggai",
+  "name": "黄盖",
+  "aliases": [
+   "公覆"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": null,
+  "death": null,
+  "birthplace": "零陵泉陵（今湖南永州）",
+  "birthProvince": "湖南",
+  "roles": [
+   "将领"
+  ],
+  "tags": [
+   "东吴",
+   "赤壁之战",
+   "苦肉计"
+  ],
+  "emperor": false,
+  "notable": "赤壁之战献火攻策，诈降纵火烧曹军船阵。",
+  "difficulty": 1
+ },
+ {
+  "id": "chengpu",
+  "name": "程普",
+  "aliases": [
+   "德谋",
+   "程公"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": null,
+  "death": null,
+  "birthplace": "右北平土垠（今河北丰润）",
+  "birthProvince": "河北",
+  "roles": [
+   "将领"
+  ],
+  "tags": [
+   "东吴",
+   "江表之虎臣",
+   "三朝元老"
+  ],
+  "emperor": false,
+  "notable": "历仕孙坚孙策孙权三朝，居江东诸将之首。",
+  "difficulty": 3
+ },
+ {
+  "id": "handang",
+  "name": "韩当",
+  "aliases": [
+   "义公"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": null,
+  "death": 226,
+  "birthplace": "辽西令支（今河北迁安）",
+  "birthProvince": "河北",
+  "roles": [
+   "将领"
+  ],
+  "tags": [
+   "东吴",
+   "江表之虎臣",
+   "石城侯"
+  ],
+  "emperor": false,
+  "notable": "随孙氏转战三代，累官至昭武将军。",
+  "difficulty": 3
+ },
+ {
+  "id": "lvfan",
+  "name": "吕范",
+  "aliases": [
+   "子衡"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": null,
+  "death": 228,
+  "birthplace": "汝南细阳（今安徽太和）",
+  "birthProvince": "安徽",
+  "roles": [
+   "将领",
+   "政治家"
+  ],
+  "tags": [
+   "东吴",
+   "随孙策起兵",
+   "大司马"
+  ],
+  "emperor": false,
+  "notable": "早年随孙策征战，官至吴国大司马。",
+  "difficulty": 3
+ },
+ {
+  "id": "zhugejin",
+  "name": "诸葛瑾",
+  "aliases": [
+   "子瑜"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": 174,
+  "death": 241,
+  "birthplace": "琅琊阳都（今山东沂南）",
+  "birthProvince": "山东",
+  "roles": [
+   "政治家",
+   "外交家"
+  ],
+  "tags": [
+   "东吴",
+   "诸葛亮之兄",
+   "温和"
+  ],
+  "emperor": false,
+  "notable": "诸葛亮之兄，仕吴官至大将军。",
+  "difficulty": 2,
+  "polityAlt": [
+   "东汉"
+  ]
+ },
+ {
+  "id": "lukang",
+  "name": "陆抗",
+  "aliases": [
+   "幼节"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": 226,
+  "death": 274,
+  "birthplace": "吴郡吴县（今江苏苏州）",
+  "birthProvince": "江苏",
+  "roles": [
+   "将领"
+  ],
+  "tags": [
+   "东吴",
+   "西陵之战",
+   "陆逊之子"
+  ],
+  "emperor": false,
+  "notable": "陆逊之子，西陵之战平步阐叛乱守吴西境。",
+  "difficulty": 2,
+  "polityAlt": [
+   "西晋"
+  ]
+ },
+ {
+  "id": "daqiao",
+  "name": "大乔",
+  "aliases": [
+   "桥公大女"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "female",
+  "birth": null,
+  "death": null,
+  "birthplace": "庐江皖县（今安徽潜山）",
+  "birthProvince": "安徽",
+  "roles": [
+   "美女"
+  ],
+  "tags": [
+   "东吴",
+   "江东二乔",
+   "孙策之妻"
+  ],
+  "emperor": false,
+  "notable": "桥公长女，嫁孙策为妻。",
+  "difficulty": 1
+ },
+ {
+  "id": "xiaoqiao",
+  "name": "小乔",
+  "aliases": [
+   "桥公小女"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "female",
+  "birth": null,
+  "death": null,
+  "birthplace": "庐江皖县（今安徽潜山）",
+  "birthProvince": "安徽",
+  "roles": [
+   "美女"
+  ],
+  "tags": [
+   "东吴",
+   "江东二乔",
+   "周瑜之妻"
+  ],
+  "emperor": false,
+  "notable": "桥公幼女，嫁周瑜为妻。",
+  "difficulty": 1
+ },
+ {
+  "id": "bulianshi",
+  "name": "步练师",
+  "aliases": [
+   "步夫人"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "female",
+  "birth": null,
+  "death": 238,
+  "birthplace": "淮阴（今江苏淮安）",
+  "birthProvince": "江苏",
+  "roles": [
+   "皇后"
+  ],
+  "tags": [
+   "东吴",
+   "孙权宠妃",
+   "追封皇后"
+  ],
+  "emperor": false,
+  "notable": "孙权宠妃，死后追封皇后。",
+  "difficulty": 3
+ },
+ {
+  "id": "zhangzhao",
+  "name": "张昭",
+  "aliases": [
+   "子布"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": 156,
+  "death": 236,
+  "birthplace": "彭城（今江苏徐州）",
+  "birthProvince": "江苏",
+  "roles": [
+   "政治家",
+   "文人"
+  ],
+  "tags": [
+   "东吴",
+   "托孤重臣",
+   "内事不决"
+  ],
+  "emperor": false,
+  "notable": "辅佐孙策孙权两代，受托孤之重任。",
+  "difficulty": 2,
+  "polityAlt": [
+   "东汉"
+  ]
+ },
+ {
+  "id": "hanxiandi",
+  "name": "刘协",
+  "aliases": [
+   "汉献帝",
+   "伯和"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": 181,
+  "death": 234,
+  "birthplace": "洛阳（今河南洛阳）",
+  "birthProvince": "河南",
+  "roles": [
+   "皇帝"
+  ],
+  "tags": [
+   "东汉末帝",
+   "禅位曹丕",
+   "山阳公"
+  ],
+  "emperor": true,
+  "notable": "东汉末帝，220年禅位曹丕，封山阳公。",
+  "difficulty": 2,
+  "polityAlt": [
+   "东汉"
+  ]
+ },
+ {
+  "id": "menghuo",
+  "name": "孟获",
+  "aliases": [],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": null,
+  "death": null,
+  "birthplace": "南中益州郡（今云南一带）",
+  "birthProvince": "云南",
+  "roles": [
+   "首领"
+  ],
+  "tags": [
+   "南中",
+   "七擒七纵",
+   "降蜀"
+  ],
+  "emperor": false,
+  "notable": "南中豪帅，史载诸葛亮南征时降蜀。",
+  "difficulty": 2
+ },
+ {
+  "id": "zhenmi",
+  "name": "甄宓",
+  "aliases": [
+   "甄夫人",
+   "文昭皇后"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "female",
+  "birth": 183,
+  "death": 221,
+  "birthplace": "中山无极（今河北无极）",
+  "birthProvince": "河北",
+  "roles": [
+   "美女",
+   "皇后"
+  ],
+  "tags": [
+   "曹魏",
+   "曹丕之妻",
+   "追封皇后"
+  ],
+  "emperor": false,
+  "notable": "袁熙之妻后归曹丕，追谥文昭皇后。",
+  "difficulty": 2,
+  "polityAlt": [
+   "东汉"
+  ]
+ },
+ {
+  "id": "huaxin",
+  "name": "华歆",
+  "aliases": [
+   "子鱼"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "male",
+  "birth": 157,
+  "death": 232,
+  "birthplace": "平原高唐（今山东禹城）",
+  "birthProvince": "山东",
+  "roles": [
+   "政治家"
+  ],
+  "tags": [
+   "曹魏",
+   "太尉",
+   "割席分交"
+  ],
+  "emperor": false,
+  "notable": "归魏后官至太尉，与管宁有割席之典。",
+  "difficulty": 3,
+  "polityAlt": [
+   "东汉"
+  ]
+ },
+ {
+  "id": "wangyi",
+  "name": "王异",
+  "aliases": [
+   "士异"
+  ],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "female",
+  "birth": null,
+  "death": null,
+  "birthplace": "天水（今甘肃天水）",
+  "birthProvince": "甘肃",
+  "roles": [
+   "谋士"
+  ],
+  "tags": [
+   "曹魏",
+   "赵昂之妻",
+   "守冀城"
+  ],
+  "emperor": false,
+  "notable": "赵昂之妻，助夫守冀城谋划抗马超。",
+  "difficulty": 3
+ },
+ {
+  "id": "xinianying",
+  "name": "辛宪英",
+  "aliases": [],
+  "region": "cn",
+  "polity": "三国",
+  "gender": "female",
+  "birth": 190,
+  "death": 269,
+  "birthplace": "陇西（今甘肃一带）",
+  "birthProvince": "甘肃",
+  "roles": [
+   "文人"
+  ],
+  "tags": [
+   "曹魏",
+   "辛毗之女",
+   "智识过人"
+  ],
+  "emperor": false,
+  "notable": "辛毗之女，预判曹爽必败、钟会必反。",
+  "difficulty": 3,
+  "polityAlt": [
+   "东汉",
+   "西晋"
+  ]
  }
 ]
