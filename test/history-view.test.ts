@@ -136,7 +136,7 @@ const adminBase: AdminState = {
   },
   list: [],
   total: 0,
-  filters: { q: '', category: '', polity: '', region: '', difficulty: '', retired: '' },
+  filters: { q: '', category: '', polity: '', region: '', worldEra: '', difficulty: '', retired: '' },
   view: 'history',
   draft: null,
   originalId: null,

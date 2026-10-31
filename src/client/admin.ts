@@ -14,7 +14,7 @@ let state: AdminState = {
   meta: null,
   list: [],
   total: 0,
-  filters: { q: '', category: '', polity: '', region: '', difficulty: '', retired: '' },
+  filters: { q: '', category: '', polity: '', region: '', worldEra: '', difficulty: '', retired: '' },
   view: 'list',
   draft: null,
   originalId: null,
@@ -123,6 +123,7 @@ async function loadList(): Promise<void> {
   if (state.filters.q) qs.set('q', state.filters.q);
   if (state.filters.category) qs.set('category', state.filters.category);
   if (state.filters.polity) qs.set('polity', state.filters.polity);
+  if (state.filters.worldEra) qs.set('worldEra', state.filters.worldEra);
   if (state.filters.region) qs.set('region', state.filters.region);
   if (state.filters.difficulty) qs.set('difficulty', state.filters.difficulty);
   if (state.filters.retired) qs.set('retired', state.filters.retired);
@@ -269,7 +270,16 @@ function handleField(el: HTMLElement): void {
     return;
   }
   if (field === 'filter-region') {
+    // 联动清空：换范围后，朝代（中国）/时期（世界）可能不再适用
     state.filters.region = (el as HTMLSelectElement).value;
+    state.filters.polity = '';
+    state.filters.worldEra = '';
+    state.listPage = 1;
+    void loadList();
+    return;
+  }
+  if (field === 'filter-era') {
+    state.filters.worldEra = (el as HTMLSelectElement).value;
     state.listPage = 1;
     void loadList();
     return;

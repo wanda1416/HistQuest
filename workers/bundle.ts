@@ -430,6 +430,7 @@ async function handleAdmin(req: Request, url: URL, rt: Runtime): Promise<Respons
       types: vocab.types,
       provinces: vocab.provinces,
       polities: vocab.polities,
+      worldErasByRegion: vocab.worldErasByRegion,
       regions: REGIONS.map((value) => ({ value, label: REGION_LABELS[value] })),
       total: rt.store.total,
       categories: rt.store.categories,
@@ -445,6 +446,7 @@ async function handleAdmin(req: Request, url: URL, rt: Runtime): Promise<Respons
     const region = (params.get('region') ?? '').trim();
     const difficulty = Number(params.get('difficulty'));
     const retired = params.get('retired') ?? '';
+    const worldEra = (url.searchParams.get("worldEra") ?? "").trim();
 
     let items = rt.store.list();
     if (q) items = items.filter((c) => [c.id, c.name, ...c.aliases].some((v) => v.toLowerCase().includes(q)));
@@ -455,6 +457,7 @@ async function handleAdmin(req: Request, url: URL, rt: Runtime): Promise<Respons
     if (category) items = items.filter((c) => (c.category ?? 'character') === category);
     if (retired === '1') items = items.filter((c) => c.retired);
     if (retired === '0') items = items.filter((c) => !c.retired);
+    if (worldEra) items = items.filter((c) => c.worldEra === worldEra);
     items.sort((a, b) => a.name.localeCompare(b.name, 'zh'));
     // 分页：默认全量（老调用方兼容）；显式传 limit 才切页。total 永远是过滤后的总数。
     const total = items.length;

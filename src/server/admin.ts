@@ -112,9 +112,9 @@ export function createAdminRoutes(deps: AdminDeps): express.Router {
       difficulties: DIFFICULTIES,
       roles: vocab.roles,
       types: vocab.types,
+      worldErasByRegion: vocab.worldErasByRegion,
       provinces: vocab.provinces,
       polities: vocab.polities,
-      regions: REGIONS.map((value) => ({ value, label: REGION_LABELS[value] })),
       total: deps.store.total,
       categories: deps.store.categories,
       active: deps.store.activeCount,
@@ -128,6 +128,7 @@ export function createAdminRoutes(deps: AdminDeps): express.Router {
     const region = String(req.query.region ?? '').trim();
     const difficulty = Number(req.query.difficulty);
     const retired = String(req.query.retired ?? '');
+  const worldEra = String(req.query.worldEra ?? "").trim();
 
     let items = deps.store.list();
     if (q) {
@@ -142,6 +143,7 @@ export function createAdminRoutes(deps: AdminDeps): express.Router {
     if (category) items = items.filter((c) => (c.category ?? 'character') === category);
     if (retired === '1') items = items.filter((c) => c.retired);
     if (retired === '0') items = items.filter((c) => !c.retired);
+  if (worldEra) items = items.filter((c) => c.worldEra === worldEra);
 
     items.sort((a, b) => a.name.localeCompare(b.name, 'zh'));
 

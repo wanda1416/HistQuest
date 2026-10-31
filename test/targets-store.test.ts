@@ -46,7 +46,7 @@ test('更新人物：写盘、备份、索引同步', () => {
     assert.equal(store.find('libai')!.notable, '改过的代表事迹');
     assert.ok(fs.readFileSync(file, 'utf8').includes('改过的代表事迹'));
     assert.equal(fs.readdirSync(backupDir).length, 1);
-    assert.equal(store.total, 184);
+    assert.equal(store.total, (JSON.parse(fs.readFileSync(new URL('../data/characters.json', import.meta.url), 'utf8')) as unknown[]).length);
   } finally {
     cleanup();
   }
@@ -86,19 +86,19 @@ test('新增与软删除：下线后不参与抽样，但仍能揭晓', () => {
   try {
     const created = store.create(newPerson);
     assert.equal(created.ok, true, JSON.stringify(created.issues));
-    assert.equal(store.total, 185);
-    assert.equal(store.activeCount, 185);
+    assert.equal(store.total, LIB + 1);
+    assert.equal(store.activeCount, LIB + 1);
     assert.equal(store.index.get('test_person')!.name, '测试君');
 
     const retired = store.setRetired('test_person', true);
     assert.equal(retired.ok, true);
-    assert.equal(store.total, 185);
-    assert.equal(store.activeCount, 184);
+    assert.equal(store.total, LIB + 1);
+    assert.equal(store.activeCount, LIB);
     assert.equal(store.index.get('test_person')!.retired, true, 'get 仍能取到，保证在途对局可揭晓');
 
     const restored = store.setRetired('test_person', false);
     assert.equal(restored.ok, true);
-    assert.equal(store.activeCount, 185);
+    assert.equal(store.activeCount, LIB + 1);
   } finally {
     cleanup();
   }

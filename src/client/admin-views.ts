@@ -15,6 +15,8 @@ export interface AdminMeta {
   types?: { character: string[]; event: string[]; item: string[] };
   provinces: string[];
   polities: string[];
+  /** 世界时期按文明圈分组（递进筛选：选了文明圈才列对应时期） */
+  worldErasByRegion?: Partial<Record<string, string[]>>;
   regions: Array<{ value: string; label: string }>;
   total: number;
   categories?: { character: number; event: number; item: number };
@@ -51,8 +53,10 @@ export interface AdminState {
   notice: Notice | null;
   meta: AdminMeta | null;
   list: Character[];
+  /** 全量条目（大 limit 拉一次）：世界时期下拉按真实数据生成 */
+  allTargets?: Character[];
   total: number;
-  filters: { q: string; category: string; polity: string; region: string; difficulty: string; retired: string };
+  filters: { q: string; category: string; polity: string; region: string; worldEra: string; difficulty: string; retired: string };
   view: 'list' | 'edit' | 'health' | 'users' | 'invites' | 'settings' | 'history';
   draft: Character | null;
   /** 正在编辑的原始 id；新建时为 null */
@@ -184,15 +188,7 @@ function shell(s: AdminState, body: string): string {
 function filtersView(s: AdminState): string {
   const meta = s.meta;
   if (!meta) return '<p class="a-muted">先在顶栏填入 ADMIN_TOKEN 再试。</p>';
-  const polityOptions = ['', ...meta.dynasties]
-    .map((d) => `<option value="${esc(d)}" ${s.filters.polity === d ? 'selected' : ''}>${esc(d || '全部朝代')}</option>`)
-    .join('');
-  const regionOptions = ['', ...meta.regions.map((r) => r.value)]
-    .map((value) => {
-      const label = value ? (meta.regions.find((r) => r.value === value)?.label ?? value) : '全部文明圈';
-      return `<option value="${esc(value)}" ${s.filters.region === value ? 'selected' : ''}>${esc(label)}</option>`;
-    })
-    .join('');
+
   const diffOptions = [
     ['', '全部难度'],
     ['1', '入门'],
@@ -217,12 +213,42 @@ function filtersView(s: AdminState): string {
     .map(([v, label]) => `<option value="${v}" ${s.filters.category === v ? 'selected' : ''}>${label}</option>`)
     .join('');
 
+  /**
+   * 递进筛选（与玩家端开局页同一套口径）：
+   *   类别 → 范围（全部 / 中国 / 某文明圈）→ 时期（仅中国：朝代；仅世界：worldEra）
+   * 规则：
+   * - 选了文明圈（非 cn）→ 朝代下拉隐藏（朝代是中国专属概念），且选中的朝代自动清空
+   * - 选了"中国" → 显示朝代下拉 + 中国的 worldEra 不存在，无时期下拉
+   * - 全部范围 → 朝代与世界时期都隐藏（同时筛两者会互斥）
+   * 联动清空在 admin.ts 的 handleField 里做（filter-region 分支）。
+   */
+  const region = s.filters.region;
+  const showPolity = region === 'cn';
+  const showEra = region !== '' && region !== 'cn';
+
+  const polityOptions = ['', ...meta.dynasties]
+    .map((d) => `<option value="${esc(d)}" ${s.filters.polity === d ? 'selected' : ''}>${esc(d || '全部朝代')}</option>`)
+    .join('');
+  const regionOptions = ['', ...meta.regions.map((r) => r.value)]
+    .map((value) => {
+      const label = value ? (meta.regions.find((r) => r.value === value)?.label ?? value) : '全部文明圈';
+      return `<option value="${esc(value)}" ${region === value ? 'selected' : ''}>${esc(label)}</option>`;
+    })
+    .join('');
+
+  // 世界时期：只列当前选中文明圈实际拥有的（meta.worldErasByRegion 数据驱动）
+  const eras = (region && meta.worldErasByRegion?.[region]) ?? [];
+  const eraOptions = ['', ...eras]
+    .map((e) => `<option value="${esc(e)}" ${s.filters.worldEra === e ? 'selected' : ''}>${esc(e || '全部时期')}</option>`)
+    .join('');
+
   return `
   <div class="a-filters">
-    <input type="search" data-field="q" value="${esc(s.filters.q)}" placeholder="搜姓名 / 别名 / id" />
+    <input type="search" data-field="q" value="${esc(s.filters.q)}" placeholder="搜名称 / 别名 / id" />
     <select data-field="filter-category">${categoryOptions}</select>
-    <select data-field="filter-polity">${polityOptions}</select>
     <select data-field="filter-region">${regionOptions}</select>
+    ${showPolity ? `<select data-field="filter-polity">${polityOptions}</select>` : ''}
+    ${showEra ? `<select data-field="filter-era">${eraOptions}</select>` : ''}
     <select data-field="filter-difficulty">${diffOptions}</select>
     <select data-field="filter-retired">${retireOptions}</select>
     <button class="a-btn" data-action="reload">刷新</button>
@@ -260,8 +286,8 @@ function listView(s: AdminState): string {
     .join('');
 
   return `
-  ${pagination(s, 'list', s.total, s.listPage, s.listPageSize, true)}
   ${filtersView(s)}
+  ${pagination(s, 'list', s.total, s.listPage, s.listPageSize, true)}
   <p class="a-muted">共 ${s.total} 条${s.list.length !== s.total ? `，当前显示 ${s.list.length} 条` : ''}</p>
   <table class="a-table">
     <thead>
@@ -877,7 +903,6 @@ function historyView(s: AdminState): string {
 
   return `
   <section class="a-panel">
-    ${pagination(s, 'history', s.historyTotal, s.historyPage, s.historyPageSize, true)}
     <h2 class="a-h2">对局历史（全部玩家 · ${s.historyTotal} 局）</h2>
     <div class="a-filters">
       <input type="search" data-field="history-user" value="${esc(s.historyFilters.user)}" placeholder="按用户名筛选" />
@@ -885,6 +910,7 @@ function historyView(s: AdminState): string {
       <select data-field="history-result">${resultOptions}</select>
       <button class="a-btn" data-action="reload-history">刷新</button>
     </div>
+    ${pagination(s, 'history', s.historyTotal, s.historyPage, s.historyPageSize, true)}
     <table class="a-table">
       <thead><tr><th>开局时间</th><th>玩家</th><th>结局</th><th>目标</th><th>问数</th><th>难度</th><th>操作</th></tr></thead>
       <tbody>${rows || '<tr><td colspan="7" class="a-muted">还没有对局记录</td></tr>'}</tbody>

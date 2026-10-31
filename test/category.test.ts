@@ -31,7 +31,7 @@ before(() => {
 
 test('三类种子合入同一索引，类别计数正确', () => {
   const counts = index.categoryCounts();
-  assert.equal(counts.character, 184);
+  assert.equal(counts.character, characters.length);
   assert.ok(counts.event >= 40, `事件至少 40 条，实际 ${counts.event}`);
   assert.ok(counts.item >= 40, `物品至少 40 条，实际 ${counts.item}`);
 });

@@ -1,4 +1,4 @@
-import { DYNASTIES, REGIONS, WORLD_ERAS, isTargetCategory, type Character } from '../shared/domain.ts';
+import { DYNASTIES, REGIONS, WORLD_ERAS, isTargetCategory, type Character, type Region } from '../shared/domain.ts';
 
 /**
  * 人物数据的规范化、校验与序列化（纯函数，前后端共用）。
@@ -337,10 +337,13 @@ export function collectVocab(list: Character[]): {
   polities: string[];
   /** 各类别的类型词（人物=身份；事件=战役/条约…；物品=青铜器/书画…） */
   types: Record<'character' | 'event' | 'item', string[]>;
+  /** 世界时期按文明圈分组（管理后台递进筛选：选了文明圈才列对应时期） */
+  worldErasByRegion: Partial<Record<Region, string[]>>;
 } {
   const roles = new Set<string>();
   const provinces = new Set<string>();
   const polities = new Set<string>();
+  const erasByRegion = new Map<Region, Set<string>>();
   const types: Record<'character' | 'event' | 'item', Set<string>> = {
     character: new Set(),
     event: new Set(),
@@ -355,8 +358,18 @@ export function collectVocab(list: Character[]): {
     if (c.birthProvince) provinces.add(c.birthProvince);
     // 中国朝代由 DYNASTIES 提供，这里只收集世界政权建议值
     if (c.region !== 'cn' && c.polity) polities.add(c.polity);
+    // 世界时期按文明圈归组（中国区无 worldEra，跳过）
+    if (c.region !== 'cn' && c.worldEra) {
+      const set = erasByRegion.get(c.region) ?? new Set<string>();
+      set.add(c.worldEra);
+      erasByRegion.set(c.region, set);
+    }
   }
   const byLocale = (a: string, b: string): number => a.localeCompare(b, 'zh');
+  const worldErasByRegion: Partial<Record<Region, string[]>> = {};
+  for (const [region, set] of erasByRegion) {
+    worldErasByRegion[region] = [...set].sort(byLocale);
+  }
   return {
     roles: [...roles].sort(byLocale),
     provinces: [...provinces].sort(byLocale),
@@ -366,6 +379,7 @@ export function collectVocab(list: Character[]): {
       event: [...types.event].sort(byLocale),
       item: [...types.item].sort(byLocale),
     },
+    worldErasByRegion,
   };
 }
 

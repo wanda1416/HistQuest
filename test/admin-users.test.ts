@@ -85,7 +85,7 @@ function adminStateWithUsers(): AdminState {
     },
     list: [] as Character[],
     total: 0,
-    filters: { q: '', category: '', polity: '', region: '', difficulty: '', retired: '' },
+    filters: { q: '', category: '', polity: '', region: '', worldEra: '', difficulty: '', retired: '' },
     view: 'users',
     draft: null,
     originalId: null,

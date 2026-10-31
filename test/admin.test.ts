@@ -7,6 +7,9 @@ import type { AddressInfo } from 'node:net';
 import { createApp } from '../src/server/index.ts';
 import { authorizeAdmin, isLoopback } from '../src/server/admin.ts';
 
+// 题库条目数（数据文件为准）：admin 统计断言不再写死数字
+const LIB_COUNT = (JSON.parse(fs.readFileSync(new URL('../data/characters.json', import.meta.url), 'utf8')) as unknown[]).length;
+
 /* ---------------- 纯函数：访问控制 ---------------- */
 
 test('鉴权：本机放行，远程必须带正确令牌', () => {
@@ -86,8 +89,8 @@ test('缺少 X-HQ-Admin 头一律拒绝', async () => {
 test('meta 返回朝代/身份词表与统计', async () => {
   const { status, body } = await api('/api/admin/meta');
   assert.equal(status, 200);
-  assert.equal(body.total, 184);
-  assert.equal(body.active, 184);
+  assert.equal(body.total, LIB_COUNT);
+  assert.equal(body.active, LIB_COUNT);
   assert.ok(body.dynasties.includes('蒙古'), '朝代枚举应已包含蒙古');
   assert.ok(body.roles.includes('诗人'));
 });
@@ -173,14 +176,14 @@ test('新增 → 查询 → 修改 → 导出 → 下线', async () => {
   assert.equal(retired.status, 200);
 
   const meta = await api('/api/meta', {}, false);
-  assert.equal(meta.body.dataCount, 184, '下线后不应计入可抽人物');
+  assert.equal(meta.body.dataCount, LIB_COUNT, '下线后不应计入可抽人物');
 });
 
 test('健康报告可访问且返回矩阵', async () => {
   const { status, body } = await api('/api/admin/health');
   assert.equal(status, 200);
-  assert.equal(body.total, 185);
-  assert.equal(body.active, 184);
+  assert.equal(body.total, LIB_COUNT + 1);
+  assert.equal(body.active, LIB_COUNT);
   assert.equal(body.retired, 1);
   assert.ok(Array.isArray(body.matrix));
   assert.ok(body.matrix.some((row: { polity: string }) => row.polity === '西晋'));
