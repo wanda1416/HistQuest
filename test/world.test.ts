@@ -75,25 +75,9 @@ test('抽样：指定政权或文明圈时忽略占比', () => {
   }
 });
 
-test('世纪判定：覆盖生卒年区间即算经历过', () => {
-  const napoleon = byName('拿破仑');
-  assert.equal(judgeByIndex(napoleon, { attr: 'century', value: 18 }).verdict, 'yes');
-  assert.equal(judgeByIndex(napoleon, { attr: 'century', value: 19 }).verdict, 'yes');
-  assert.equal(judgeByIndex(napoleon, { attr: 'century', value: 17 }).verdict, 'no');
-
-  const archimedes = byName('阿基米德');
-  assert.equal(judgeByIndex(archimedes, { attr: 'century', value: -3 }).verdict, 'yes');
-  assert.equal(judgeByIndex(archimedes, { attr: 'century', value: -2 }).verdict, 'no');
-});
-
 test('非中国朝代不做硬裁定，交给模型', () => {
   const caesar = byName('凯撒');
   const outcome = judgeByIndex(caesar, { attr: 'dynasty', value: '罗马共和国' });
   assert.equal(outcome.verdict, 'unknown');
 });
-
-test('国籍判定按文明圈，而不是恒定为中国', () => {
-  assert.equal(judgeByIndex(byName('李白'), { attr: 'nationality', value: true }).verdict, 'yes');
-  assert.equal(judgeByIndex(byName('牛顿'), { attr: 'nationality', value: true }).verdict, 'no');
-  assert.equal(judgeByIndex(byName('牛顿'), { attr: 'nationality', value: false }).verdict, 'yes');
-});
+

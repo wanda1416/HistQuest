@@ -38,27 +38,6 @@ const SPANS: Record<string, Span> = {
   近代: { start: 1840, end: 1949 },
 };
 
-/** 组合朝代的整体区间（问"汉朝之前"时用） */
-const GROUP_SPANS: Record<string, Span> = {
-  汉: { start: -202, end: 220 },
-  晋: { start: 265, end: 420 },
-  宋: { start: 960, end: 1279 },
-  周: { start: -1046, end: -221 },
-  五代十国: { start: 907, end: 979 },
-  先秦: { start: -3000, end: -221 },
-};
-
-export function spanOf(input: string): Span | null {
-  const canon = normalizeDynasty(input);
-  if (!canon) return null;
-  if (SPANS[canon]) return SPANS[canon];
-  if (GROUP_SPANS[canon]) return GROUP_SPANS[canon];
-  return null;
-}
-
-const MULTI = ['南北朝', '北宋', '南宋', '西汉', '东汉', '西晋', '东晋', '春秋', '战国', '三国', '五代', '蒙古', '西夏', '大理', '史前'];
-const SINGLE = ['唐', '宋', '元', '明', '清', '汉', '晋', '周', '秦', '隋', '辽', '金'];
-
 /**
  * 从问句里取"玩家问的是哪个朝代"。
  * 模型返回的 dynasty.value 有歧义（可能是"人物所属朝代"），所以判罚口径必须靠问句本身定。
@@ -74,6 +53,9 @@ export function extractDynasty(question: string): string | null {
   }
   return null;
 }
+
+const MULTI = ['南北朝', '北宋', '南宋', '西汉', '东汉', '西晋', '东晋', '春秋', '战国', '三国', '五代', '蒙古', '西夏', '大理', '史前'];
+const SINGLE = ['唐', '宋', '元', '明', '清', '汉', '晋', '周', '秦', '隋', '辽', '金'];
 
 /**
  * 生卒年覆盖过的所有时期。

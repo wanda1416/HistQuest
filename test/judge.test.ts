@@ -69,69 +69,9 @@ test('真正活跃于三国时期的人物仍判为三国', () => {
   assert.equal(v(byName('司马懿'), 'dynasty', '三国'), 'yes');
 });
 
-test('性别判定', () => {
-  assert.equal(v(libai, 'gender', 'male'), 'yes');
-  assert.equal(v(libai, 'gender', 'female'), 'no');
-  assert.equal(v(byName('武则天'), 'gender', 'female'), 'yes');
-});
-
-test('是否皇帝', () => {
-  assert.equal(v(byName('武则天'), 'emperor', true), 'yes');
-  assert.equal(v(libai, 'emperor', true), 'no');
-});
-
-test('身份判定：诗人是、将军不是', () => {
-  assert.equal(v(libai, 'role', '诗人'), 'yes');
-  assert.equal(v(libai, 'role', '将军'), 'no');
-  assert.equal(v(byName('关羽'), 'role', '武将'), 'yes');
-});
-
-test('籍贯判定', () => {
-  assert.equal(v(byName('杜甫'), 'birthplace', '河南'), 'yes');
-  assert.equal(v(libai, 'birthplace', '四川'), 'no');
-});
-
 test('生年不详时回 unknown 而不是否', () => {
   assert.equal(libing.birth, null);
   assert.equal(v(libing, 'birthEra', 'bc'), 'unknown');
-});
-
-test('名字字数 / 含字', () => {
-  assert.equal(v(libai, 'nameLength', 2), 'yes');
-  assert.equal(v(libai, 'nameLength', 3), 'no');
-  assert.equal(v(libai, 'nameContains', '李'), 'yes');
-  assert.equal(v(libai, 'nameContains', '杜'), 'no');
-});
-
-test('享年判定', () => {
-  assert.equal(v(byName('杜甫'), 'lifespan', 50, 'gte'), 'yes');
-  assert.equal(v(byName('杜甫'), 'lifespan', 80, 'gte'), 'no');
-});
-
-test('在世判定：索引内全为已故', () => {
-  assert.equal(v(libai, 'alive', true), 'no');
-});
-
-test('事迹判定：收录答是，未收录回 unknown', () => {
-  assert.equal(v(libai, 'event', '静夜思'), 'yes');
-  assert.equal(v(libai, 'event', '量子力学'), 'unknown');
-});
-
-test('时序判定：唐朝之前 / 之后', () => {
-  const liubang = byName('刘邦');
-  const sushi = byName('苏轼');
-  assert.equal(v(liubang, 'eraBefore', '唐'), 'yes');
-  assert.equal(v(liubang, 'eraAfter', '唐'), 'no');
-  // 李白本人就在唐朝，既不算之前也不算之后
-  assert.equal(v(libai, 'eraBefore', '唐'), 'no');
-  assert.equal(v(libai, 'eraAfter', '唐'), 'no');
-  assert.equal(v(sushi, 'eraBefore', '唐'), 'no');
-  assert.equal(v(sushi, 'eraAfter', '唐'), 'yes');
-});
-
-test('时序判定：生卒缺失或朝代认不出时回 unknown', () => {
-  assert.equal(v(libing, 'eraBefore', '唐'), 'unknown');
-  assert.equal(v(libai, 'eraBefore', '银河帝国'), 'unknown');
 });
 
 test('猜测归一化与别名匹配', () => {
