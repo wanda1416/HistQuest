@@ -430,6 +430,8 @@ export function raceView(s: State): string {
         </div>
       </div>
 
+      ${spectator ? '' : voteBar(room)}
+
       ${statusLine}
 
       <div class="race-split">
@@ -466,7 +468,6 @@ export function raceView(s: State): string {
         </div>
       </div>
 
-      ${spectator ? '' : voteBar(room)}
       ${s.raceGuessOpen ? guessModal(s) : ''}
     </section>`,
   );

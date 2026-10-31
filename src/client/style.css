@@ -2315,3 +2315,14 @@ a.btn {
 .race-mine .ask-form .voice-btn {
   flex-shrink: 0;
 }
+
+/* 投票条移到对抗屏顶部后：sticky 保持滚动可见，并加左侧强调线 */
+.vote-bar {
+  position: sticky;
+  top: 12px;
+  z-index: 5;
+  border-left: 3px solid var(--gold);
+}
+.vote-bar.is-open {
+  border-left-color: var(--vermilion);
+}
