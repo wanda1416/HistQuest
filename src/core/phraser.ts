@@ -52,26 +52,6 @@ export function clarify(query: ParsedQuery, verdict: Verdict, note?: string): st
       const raw = String(query.value ?? '').replace(/(朝|代|时期|时代)$/g, '');
       return DYNASTY_NOTES[raw] ?? '按生卒年与朝代起止时间，判断他是否经历过这个时期。';
     }
-    case 'century':
-      return '按生卒年与该世纪是否有重叠判断。';
-    case 'role':
-      return '身份按主要社会角色计，兼擅某项不算。';
-    case 'birthplace':
-      return '籍贯按出生地的古地名折算今省份判断。';
-    case 'nameLength':
-      return '按本名字数计，不含称号与谥号。';
-    case 'lifespan':
-      return '按史料所载生卒年推算，取整岁。';
-    case 'birthEra':
-      return '以出生年份是否早于公元元年为准。';
-    case 'emperor':
-      return '以是否正式即位为君主为准（皇帝、国王、法老、苏丹等）。';
-    case 'alive':
-      return '索引内均为已故历史人物。';
-    case 'nationality':
-      return '以是否属于中国历史人物为准。';
-    case 'event':
-      return verdict === 'unknown' ? '只比对索引收录的代表作品与事迹。' : undefined;
     default:
       return undefined;
   }

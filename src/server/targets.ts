@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { DYNASTIES, REGIONS, type Character, type TargetCategory } from '../shared/domain.ts';
+import { DYNASTIES, REGIONS, WORLD_ERAS, type Character, type TargetCategory } from '../shared/domain.ts';
 import { CharacterIndex } from '../core/index.ts';
 import {
   collectVocab,
@@ -46,6 +46,8 @@ export interface HealthReport {
   items: HealthItem[];
   matrix: Array<{ polity: string; levels: Record<string, number>; total: number }>;
   regionMatrix: Array<{ region: string; levels: Record<string, number>; total: number }>;
+  /** 世界时期 × 难度（region 非 cn 的条目，按 worldEra 归组） */
+  worldEraMatrix: Array<{ era: string; levels: Record<string, number>; total: number }>;
   emptyDynasties: string[];
   emptyCombos: Array<{ polity: string; difficulty: number }>;
 }
@@ -182,6 +184,18 @@ export class TargetStore {
       }
     }
 
+    const worldEraMatrix = WORLD_ERAS.map((era) => {
+      const levels: Record<string, number> = { '1': 0, '2': 0, '3': 0 };
+      let total = 0;
+      for (const c of active) {
+        if (c.region === 'cn' || c.polity !== era) continue;
+        total += 1;
+        const key = String(c.difficulty);
+        if (levels[key] !== undefined) levels[key] += 1;
+      }
+      return { era, levels, total };
+    });
+
     return {
       total: this.all.length,
       active: this.idx.size,
@@ -191,6 +205,7 @@ export class TargetStore {
       items,
       matrix,
       regionMatrix,
+      worldEraMatrix,
       emptyDynasties,
       emptyCombos,
     };

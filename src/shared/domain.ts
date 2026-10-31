@@ -153,23 +153,13 @@ export interface Character {
   retired?: boolean;
 }
 
-/** 受控属性枚举：只有这些属性允许被"确定性判定" */
+/**
+ * 受控属性枚举：只有这些属性允许被"确定性判定"。
+ * v8 精简后仅剩朝代——其余维度由模型知识作答、资料校对，
+ * 模型返回的其他 attr 值一律归一为 other。
+ */
 export const ATTRS = [
   'dynasty',
-  'eraBefore',
-  'eraAfter',
-  'gender',
-  'emperor',
-  'role',
-  'birthplace',
-  'birthEra',
-  'nameLength',
-  'nameContains',
-  'lifespan',
-  'century',
-  'alive',
-  'nationality',
-  'event',
   'other',
 ] as const;
 

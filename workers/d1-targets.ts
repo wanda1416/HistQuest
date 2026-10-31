@@ -1,4 +1,4 @@
-import { DYNASTIES, REGIONS, type Character, type TargetCategory } from '../src/shared/domain.ts';
+import { DYNASTIES, REGIONS, WORLD_ERAS, type Character, type TargetCategory } from '../src/shared/domain.ts';
 import { CharacterIndex } from '../src/core/index.ts';
 import {
   collectVocab,
@@ -174,6 +174,17 @@ export class D1TargetStore {
       }
       return { region, levels, total };
     });
+    const worldEraMatrix = WORLD_ERAS.map((era) => {
+      const levels: Record<string, number> = { '1': 0, '2': 0, '3': 0 };
+      let total = 0;
+      for (const c of active) {
+        if (c.region === 'cn' || c.polity !== era) continue;
+        levels[String(c.difficulty)] += 1;
+        total += 1;
+      }
+      return { era, levels, total };
+    });
+
     const emptyDynasties = matrix.filter((m) => m.total === 0).map((m) => m.polity);
     const emptyCombos: HealthReport['emptyCombos'] = [];
     for (const m of matrix) {
@@ -191,6 +202,7 @@ export class D1TargetStore {
       items,
       matrix,
       regionMatrix,
+      worldEraMatrix,
       emptyDynasties,
       emptyCombos,
     };

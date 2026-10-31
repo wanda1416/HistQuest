@@ -49,7 +49,7 @@ export function answerInstructions(category: TargetCategory, mode: AnswerMode = 
   }
 3. 只输出一个 JSON 对象：
    {"attr":"属性名","value":值,"verdict":"yes|no|unknown","text":"${textLimit}的中文回答","guessed":null}
-   attr 取自：dynasty / eraBefore / eraAfter / gender / emperor / role / birthplace / birthEra / nameLength / nameContains / lifespan / century / alive / nationality / event / other（归不进去就用 other；${label}问题里 gender/emperor/lifespan/alive 这些人物维度不会出现，一律用 other）
+   attr 取自：dynasty / other（归不进去就用 other）
    century 的 value 传世纪数字：19 表示公元 19 世纪，-3 表示公元前 3 世纪。
    verdict 只能是 yes / no / unknown。你的知识与资料都不足以确定时用 unknown，绝不编造。
    text 用一句话自然作答，例如"是，确实如此。"或"不是，没有这回事。"${

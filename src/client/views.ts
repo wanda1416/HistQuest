@@ -662,7 +662,10 @@ function revealView(s: State): string {
   const won = r.status === 'won';
 
   const facts = [
-    ['政权', c.polityAlt?.length ? `${c.polity}（亦经历 ${c.polityAlt.join('、')}）` : c.polity],
+    // 世界条目：polity 是时期，原政权名单独展示
+    ...(c.regime
+      ? [['政权 / 王朝', `${c.regime}（${c.polity}时期）`]]
+      : [['政权', c.polityAlt?.length ? `${c.polity}（亦经历 ${c.polityAlt.join('、')}）` : c.polity]]),
     ['身份', c.roles.join('、') || '—'],
     ['生卒', `${fmtYear(c.birth)} — ${fmtYear(c.death)}`],
     ['籍贯', c.birthplace ?? '不详'],

@@ -28,6 +28,7 @@ export interface HealthReport {
   items: HealthItem[];
   matrix: Array<{ polity: string; levels: Record<string, number>; total: number }>;
   regionMatrix: Array<{ region: string; levels: Record<string, number>; total: number }>;
+  worldEraMatrix?: Array<{ era: string; levels: Record<string, number>; total: number }>;
   emptyDynasties: string[];
   emptyCombos: Array<{ polity: string; difficulty: number }>;
 }

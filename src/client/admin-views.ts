@@ -38,6 +38,8 @@ export interface HealthReport {
   items: HealthItem[];
   matrix: Array<{ polity: string; levels: Record<string, number>; total: number }>;
   regionMatrix: Array<{ region: string; levels: Record<string, number>; total: number }>;
+  /** 世界时期 × 难度（region 非 cn 的条目，按 worldEra 归组） */
+  worldEraMatrix: Array<{ era: string; levels: Record<string, number>; total: number }>;
   emptyDynasties: string[];
   emptyCombos: Array<{ polity: string; difficulty: number }>;
 }
@@ -758,6 +760,19 @@ function healthView(s: AdminState): string {
     })
     .join('');
 
+  const eraHeader = `<tr><th>世界时期</th><th>入门</th><th>进阶</th><th>考据</th><th>合计</th></tr>`;
+  const eraRows = h.worldEraMatrix
+    .map((m) => {
+      const cell = (level: number): string =>
+        `<td class="${m.levels[String(level)] === 0 ? 'is-zero' : ''}">${m.levels[String(level)]}</td>`;
+      return `<tr>
+        <td>${esc(m.era)}${m.total === 0 ? ' <span class="a-pill is-bad">无条目</span>' : ''}</td>
+        ${cell(1)}${cell(2)}${cell(3)}
+        <td>${m.total}</td>
+      </tr>`;
+    })
+    .join('');
+
   const sorted = [...h.items].sort((a, b) => (a.level === b.level ? a.id.localeCompare(b.id) : a.level === 'error' ? -1 : 1));
   const items = sorted
     .map(
@@ -796,6 +811,14 @@ function healthView(s: AdminState): string {
     <table class="a-matrix">
       <thead><tr><th>文明圈</th><th>入门</th><th>进阶</th><th>考据</th><th>合计</th></tr></thead>
       <tbody>${regionRows}</tbody>
+    </table>
+  </div>
+
+  <div class="a-card" style="margin-bottom:16px">
+    <h3>世界时期 × 难度分布（单选「世界」开局时按时期筛选）</h3>
+    <table class="a-matrix">
+      <thead>${eraHeader}</thead>
+      <tbody>${eraRows}</tbody>
     </table>
   </div>
 

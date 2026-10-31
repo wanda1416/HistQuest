@@ -1,5 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
-import { DYNASTIES, REGIONS, type Character, type TargetCategory } from '../shared/domain.ts';
+import { DYNASTIES, REGIONS, WORLD_ERAS, type Character, type TargetCategory } from '../shared/domain.ts';
 import { CharacterIndex } from '../core/index.ts';
 import {
   collectVocab,
@@ -214,6 +214,12 @@ export class SqliteTargetStore implements TargetStoreLike {
          WHERE retired = 0 GROUP BY region, difficulty`,
       )
       .all() as unknown as Array<{ key: string; d: number; n: number }>;
+    const worldEraRows = this.db
+      .prepare(
+        `SELECT polity AS key, difficulty AS d, COUNT(*) AS n FROM targets
+         WHERE retired = 0 AND region != 'cn' GROUP BY polity, difficulty`,
+      )
+      .all() as unknown as Array<{ key: string; d: number; n: number }>;
 
     const matrix = DYNASTIES.map((polity) => {
       const levels: Record<string, number> = { '1': 0, '2': 0, '3': 0 };
@@ -235,6 +241,16 @@ export class SqliteTargetStore implements TargetStoreLike {
       return { region, levels, total };
     });
 
+    const worldEraMatrix = WORLD_ERAS.map((era) => {
+      const levels: Record<string, number> = { '1': 0, '2': 0, '3': 0 };
+      let total = 0;
+      for (const row of worldEraRows.filter((r) => r.key === era)) {
+        levels[String(row.d)] = row.n;
+        total += row.n;
+      }
+      return { era, levels, total };
+    });
+
     const emptyDynasties = matrix.filter((m) => m.total === 0).map((m) => m.polity);
     const emptyCombos: HealthReport['emptyCombos'] = [];
     for (const m of matrix) {
@@ -253,6 +269,7 @@ export class SqliteTargetStore implements TargetStoreLike {
       items,
       matrix,
       regionMatrix,
+      worldEraMatrix,
       emptyDynasties,
       emptyCombos,
     };
