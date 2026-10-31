@@ -147,25 +147,27 @@ export function validateCharacter(c: Character, opts: ValidateOptions): Issue[] 
   const idOwner = opts.others.find((o) => o.id === c.id);
   if (idOwner) err('id', 'id_duplicate', `id「${c.id}」已被「${idOwner.name}」占用`);
 
-  /* ---------------- 姓名与别名 ---------------- */
+  /* ---------------- 名称与别名（按类别调整上限与别名严格度） ---------------- */
+  const nameMax = isCharacter ? NAME_MAX : 20;
   const nameLen = charLen(c.name);
-  if (!c.name) err('name', 'name_empty', '姓名不能为空');
-  else if (nameLen < NAME_MIN || nameLen > NAME_MAX) {
-    err('name', 'name_length', `姓名需 ${NAME_MIN}–${NAME_MAX} 字，当前 ${nameLen} 字`);
+  if (!c.name) err('name', 'name_empty', isCharacter ? '姓名不能为空' : '名称不能为空');
+  else if (nameLen < NAME_MIN || nameLen > nameMax) {
+    err('name', 'name_length', `名称需 ${NAME_MIN}–${nameMax} 字，当前 ${nameLen} 字`);
   }
 
   const nameOwner = opts.others.find((o) => o.name === c.name);
-  if (nameOwner) err('name', 'name_duplicate', `姓名与「${nameOwner.name}」重复`);
+  if (nameOwner) err('name', 'name_duplicate', `名称与「${nameOwner.name}」重复`);
   const nameAsAlias = opts.others.find((o) => o.aliases.includes(c.name));
   if (nameAsAlias) {
-    err('name', 'name_conflict', `姓名与「${nameAsAlias.name}」的别名重复，猜名会同时命中两人`);
+    err('name', 'name_conflict', `名称与「${nameAsAlias.name}」的别名重复，猜名会同时命中两条`);
   }
 
   for (const alias of c.aliases) {
     const len = charLen(alias);
     const hasSpace = /\s/.test(alias);
     if (len < 2) {
-      err('aliases', 'alias_too_short', `别名「${alias}」不足 2 字：会命中大量无关猜名，解说也会被整段丢弃`);
+      // 精确匹配下单字别名不会误命中，降为 warning 提醒确认即可
+      warn('aliases', 'alias_too_short', `别名「${alias}」只有 1 字，请确认无歧义`);
     }
     // 西文名天然带空格且较长，这两项只对中文别名（中国区）有意义
     if (!hasSpace && len > 12) warn('aliases', 'alias_too_long', `别名「${alias}」超过 12 字，可能不是常用称呼`);

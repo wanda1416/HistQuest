@@ -80,7 +80,7 @@ test('严格史学分期：卒于 220 年前的东汉人物不能标注三国', 
 test('单字别名是 error，与他人重名只是 warning', () => {
   const libai = byName('李白');
   const short = normalizeCharacter({ ...libai, aliases: [...libai.aliases, '白'] });
-  assert.ok(errorsOf(short, othersOf(short)).includes('alias_too_short'));
+  assert.ok(!errorsOf(short, othersOf(short)).includes('alias_too_short'), '单字别名应降为 warning 而非 error');
 
   // 「子安」同时是王勃与施耐庵的别名：真实重名，只能提示不能拦截
   const wangbo = byName('王勃');
