@@ -1,4 +1,4 @@
-import { DYNASTIES, REGIONS, REGION_LABELS, type Region } from '../src/shared/domain.ts';
+import { DYNASTIES, REGIONS, REGION_LABELS, isTargetCategory, type Region } from '../src/shared/domain.ts';
 import type { AiCredential } from '../src/shared/domain.ts';
 import type { MetaRes } from '../src/shared/protocol.ts';
 import { CharacterIndex } from '../src/core/index.ts';
@@ -217,6 +217,7 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
       maxTurns: rt.maxTurns,
       serverModelReady: Boolean(serverCred),
       characterCount: rt.index.size,
+      categories: rt.index.categoryCounts(),
       regions: REGIONS.filter((v) => (counts.get(v) ?? 0) > 0).map((v) => ({
         value: v as Region,
         label: REGION_LABELS[v],
@@ -269,6 +270,8 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
   // ---------- 开局 ----------
   if (path === '/solo' && req.method === 'POST') {
     const difficulty = Math.min(3, Math.max(1, Number(body.difficulty) || 1));
+    const category =
+      body.category === 'mixed' || isTargetCategory(body.category) ? body.category : 'character';
     const polity = typeof body.polity === 'string' && body.polity ? body.polity : null;
     const region = typeof body.region === 'string' && body.region ? (body.region as Region) : null;
     const worldEra = typeof body.worldEra === 'string' && body.worldEra ? body.worldEra : null;
@@ -286,7 +289,7 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
       return fail(401, 'LOGIN_REQUIRED', '登录后才能开局');
     }
     const session = await rt.solo.create({
-      difficulty, polity, region, worldEra, cnShare, mode, pronoun, turns,
+      difficulty, category, polity, region, worldEra, cnShare, mode, pronoun, turns,
       userId: creator?.id ?? null,
       userName: creator?.username ?? null,
     });

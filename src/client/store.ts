@@ -8,7 +8,7 @@ import type {
   SessionView,
 } from '../shared/protocol.ts';
 import type { RoomListItem, RoomSnapshot } from '../shared/room.ts';
-import type { AnswerMode, PronounStyle } from '../shared/domain.ts';
+import type { AnswerMode, PronounStyle, TargetCategory } from '../shared/domain.ts';
 
 export type ViewName =
   | 'setup'
@@ -51,6 +51,8 @@ export interface State {
   authError: string | null;
   guessError: string | null;
   difficulty: number;
+  /** 谜底类别：人物 / 事件 / 物品 / 混合 */
+  category: TargetCategory | 'mixed';
   /** 中国朝代筛选 */
   polity: string | null;
   /** 开局范围：中国 / 世界 / 混合 */
@@ -276,6 +278,7 @@ let state: State = {
   authError: null,
   guessError: null,
   difficulty: 2,
+  category: 'character',
   polity: null,
   scope: 'mixed',
   worldEra: null,

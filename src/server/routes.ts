@@ -2,7 +2,7 @@ import express from 'express';
 import type { Request, Response } from 'express';
 import { AiError, testConnection } from '../ai/client.ts';
 import type { AiCredential } from '../shared/domain.ts';
-import { DYNASTIES, REGIONS, REGION_LABELS, type Region } from '../shared/domain.ts';
+import { DYNASTIES, REGIONS, REGION_LABELS, isTargetCategory, type Region } from '../shared/domain.ts';
 import type { AiConfig, HistoryDetail, MetaRes } from '../shared/protocol.ts';
 import type { CharacterIndex } from '../core/index.ts';
 import { config, serverModelReady } from '../config.ts';
@@ -84,6 +84,7 @@ export function createRoutes(deps: RouteDeps): express.Router {
       maxTurns: config.soloTurns,
       serverModelReady: serverModelReady(),
       characterCount: index.size,
+      categories: index.categoryCounts(),
       regions: REGIONS.filter((value) => (counts.get(value) ?? 0) > 0).map((value) => ({
         value: value as Region,
         label: REGION_LABELS[value],
@@ -119,6 +120,7 @@ export function createRoutes(deps: RouteDeps): express.Router {
     }
 
     const body = req.body as {
+      category?: unknown;
       difficulty?: unknown;
       polity?: unknown;
       region?: unknown;
@@ -129,6 +131,10 @@ export function createRoutes(deps: RouteDeps): express.Router {
       turns?: unknown;
     };
     const difficulty = Math.min(3, Math.max(1, Number(body?.difficulty) || 1));
+    // 类别：character / event / item / mixed；缺省人物（向后兼容老客户端）
+    const rawCategory = body?.category;
+    const category =
+      rawCategory === 'mixed' || isTargetCategory(rawCategory) ? rawCategory : 'character';
     const polity = typeof body?.polity === 'string' && body.polity ? body.polity : null;
     const region =
       typeof body?.region === 'string' && body.region
@@ -146,6 +152,7 @@ export function createRoutes(deps: RouteDeps): express.Router {
     // 归属玩家：未启用账号系统时（JSON 存储模式）可能为空
     const session = await deps.solo.create({
       difficulty,
+      category,
       polity,
       region,
       worldEra,

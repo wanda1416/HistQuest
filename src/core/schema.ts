@@ -1,4 +1,4 @@
-import { DYNASTIES, REGIONS, WORLD_ERAS, type Character } from '../shared/domain.ts';
+import { DYNASTIES, REGIONS, WORLD_ERAS, isTargetCategory, type Character } from '../shared/domain.ts';
 
 /**
  * 人物数据的规范化、校验与序列化（纯函数，前后端共用）。
@@ -91,9 +91,11 @@ export function normalizeCharacter(raw: unknown): Character {
   const region = str(o.region);
   const country = str(o.country);
   const worldEra = str(o.worldEra);
+  const category = isTargetCategory(o.category) ? o.category : 'character';
 
   return {
     id: str(o.id),
+    ...(category !== 'character' ? { category } : {}),
     name: str(o.name),
     aliases,
     // 旧数据只有 dynasty 字段：迁移期自动落到中国区

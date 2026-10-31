@@ -1,10 +1,11 @@
-import { DYNASTIES, REGION_LABELS, type Character, type Region } from '../shared/domain.ts';
+import { DYNASTIES, CATEGORIES, REGION_LABELS, type Character, type Region, type TargetCategory } from '../shared/domain.ts';
 
 /**
  * 朝代归一与分组。
  * 玩家问"他是宋朝人吗"，北宋/南宋都应命中；问"他是汉朝人吗"，西汉/东汉都应命中。
  */
 const DYNASTY_GROUPS: Record<string, string[]> = {
+  商: ['商'],
   汉: ['西汉', '东汉'],
   两汉: ['西汉', '东汉'],
   晋: ['西晋', '东晋'],
@@ -12,7 +13,7 @@ const DYNASTY_GROUPS: Record<string, string[]> = {
   宋: ['北宋', '南宋'],
   两宋: ['北宋', '南宋'],
   周: ['西周', '春秋', '战国'],
-  先秦: ['春秋', '战国'],
+  先秦: ['商', '西周', '春秋', '战国'],
   五代: ['五代'],
   五代十国: ['五代'],
   南北朝: ['南北朝'],
@@ -44,6 +45,8 @@ export function dynastyScope(asked: string): string[] | null {
 
 export interface PickOptions {
   difficulty?: number | null;
+  /** 谜底类别；'mixed' 在三类里均匀抽。缺省=人物（向后兼容） */
+  category?: TargetCategory | 'mixed' | null;
   /** 玩家选中的中国朝代（唐/宋…）；指定后忽略 cnShare */
   polity?: string | null;
   /** 玩家选中的文明圈；指定后忽略 cnShare */
@@ -75,6 +78,13 @@ export class CharacterIndex {
     return this.list.length;
   }
 
+  /** 各类别的在库数量（未下线），供开局页展示与禁用空类别 */
+  categoryCounts(): Record<TargetCategory, number> {
+    const out: Record<TargetCategory, number> = { character: 0, event: 0, item: 0 };
+    for (const c of this.list) out[c.category ?? 'character'] += 1;
+    return out;
+  }
+
   get(id: string): Character | undefined {
     return this.byId.get(id);
   }
@@ -85,7 +95,22 @@ export class CharacterIndex {
    */
   pick(opts: PickOptions = {}): Character {
     const rng = opts.rng ?? Math.random;
-    let pool = this.list;
+
+    // 0) 类别筛选：指定类别只在该类里抽；mixed 在有候选的类别间均匀抽。
+    //    缺省=人物（老调用点与老数据兼容）。
+    const want: TargetCategory | 'mixed' = opts.category ?? 'character';
+    const byCategory = (cat: TargetCategory): Character[] =>
+      this.list.filter((c) => (c.category ?? 'character') === cat);
+    let pool: Character[];
+    if (want === 'mixed') {
+      const available = CATEGORIES.filter((cat) => byCategory(cat).length > 0);
+      if (available.length === 0) pool = this.list;
+      else pool = byCategory(available[Math.floor(rng() * available.length)]!);
+    } else {
+      pool = byCategory(want);
+      // 所选类别没有条目时回退全量池，并在返回值上保留语义（与朝代回退一致）
+      if (pool.length === 0) pool = this.list;
+    }
 
     // 1) 政权筛选：中国朝代先按分组（宋=北京+南宋）匹配
     if (opts.polity) {
@@ -129,8 +154,9 @@ export class CharacterIndex {
   redact(text: string, c: Character): string {
     if (!text) return '';
     let out = text;
+    const label = (c.category ?? 'character') === 'character' ? '该人物' : '该条目';
     const names = [c.name, ...c.aliases].filter(Boolean).sort((a, b) => b.length - a.length);
-    for (const n of names) out = out.split(n).join('该人物');
+    for (const n of names) out = out.split(n).join(label);
     return out;
   }
 
@@ -151,11 +177,39 @@ export class CharacterIndex {
   }
 
   /**
-   * 带姓名的资料卡：交给模型"用自己的知识作答"时用。
-   * 名字是召回知识的锚点——没有名字，模型对冷门人物基本答不出来。
+   * 带名称的资料卡：交给模型"用自己的知识作答"时用。
+   * 名字是召回知识的锚点——没有名字，模型对冷门条目基本答不出来。
    * 泄题风险交给提示词约束 + 输出端过滤（见 answerer.guardLeak）。
+   * 字段标签随类别变化：人物=生卒/籍贯/身份；事件=发生时间/地点/类型；
+   * 物品=年代/出土地/现藏。
    */
   brief(c: Character): string {
+    const cat = c.category ?? 'character';
+    if (cat === 'event') {
+      const rows: string[] = [`名称：${c.name}`];
+      if (c.aliases.length) rows.push(`别称：${c.aliases.join('、')}`);
+      rows.push(`文明圈：${REGION_LABELS[c.region] ?? c.region}`);
+      rows.push(`时期：${c.polity}`);
+      if (c.birth !== null) rows.push(`发生时间：${fmtYear(c.birth)}`);
+      if (c.birthplace) rows.push(`地点：${c.birthplace}`);
+      if (c.roles.length) rows.push(`类型：${c.roles.join('、')}`);
+      if (c.tags.length) rows.push(`关键词：${c.tags.join('、')}`);
+      rows.push(`经过与结果：${c.notable}`);
+      return rows.join('\n');
+    }
+    if (cat === 'item') {
+      const rows: string[] = [`名称：${c.name}`];
+      if (c.aliases.length) rows.push(`别称：${c.aliases.join('、')}`);
+      rows.push(`文明圈：${REGION_LABELS[c.region] ?? c.region}`);
+      rows.push(`时期：${c.polity}`);
+      if (c.birth !== null) rows.push(`制造年代：约${fmtYear(c.birth)}`);
+      if (c.birthplace) rows.push(`出土地：${c.birthplace}`);
+      if (c.country) rows.push(`现藏：${c.country}`);
+      if (c.roles.length) rows.push(`类型：${c.roles.join('、')}`);
+      if (c.tags.length) rows.push(`关键词：${c.tags.join('、')}`);
+      rows.push(`简介：${c.notable}`);
+      return rows.join('\n');
+    }
     const rows: string[] = [`姓名：${c.name}`];
     if (c.aliases.length) rows.push(`别称：${c.aliases.join('、')}`);
     rows.push(`文明圈：${REGION_LABELS[c.region] ?? c.region}`);

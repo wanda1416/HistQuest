@@ -53,8 +53,8 @@ export class D1SessionPersistence implements SessionPersistence {
         `INSERT INTO sessions (
            id, target_id, difficulty, polity, region, world_era, cn_share,
            turns_left, total_turns, mode, pronoun, status, history, created_at, updated_at,
-           user_id, user_name
-         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+           user_id, user_name, category
+         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
          ON CONFLICT(id) DO UPDATE SET
            turns_left = excluded.turns_left,
            mode = excluded.mode,
@@ -80,6 +80,7 @@ export class D1SessionPersistence implements SessionPersistence {
         session.updatedAt,
         session.userId ?? null,
         session.userName ?? null,
+        session.category ?? 'character',
       )
       .run();
   }
@@ -93,6 +94,7 @@ export class D1SessionPersistence implements SessionPersistence {
 interface SessionRow {
   id: string;
   target_id: string;
+  category?: string | null;
   difficulty: number;
   polity: string | null;
   region: string | null;
@@ -119,6 +121,7 @@ function rowToSession(r: SessionRow): SoloSession {
   return {
     id: r.id,
     targetId: r.target_id,
+    category: (r.category ?? 'character') as SoloSession['category'],
     difficulty: r.difficulty,
     polity: r.polity,
     region: r.region as SoloSession['region'],

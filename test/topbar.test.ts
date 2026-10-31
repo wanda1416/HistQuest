@@ -25,6 +25,7 @@ const admin: MetaUser = { username: 'boss', role: 'admin', allowServerKey: true 
 
 const session: SessionView = {
   gameId: 'g1abcdefg',
+  category: 'character',
   status: 'playing',
   turnsLeft: 12,
   difficulty: 2,

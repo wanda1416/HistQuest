@@ -285,8 +285,8 @@ function lobbyView(s: State): string {
     .join('');
 
   const scopeChips = [
-    { value: 'cn', title: '中国', desc: '只抽中国人物' },
-    { value: 'world', title: '世界', desc: '只抽外国人物' },
+    { value: 'cn', title: '中国', desc: '只抽中国条目' },
+    { value: 'world', title: '世界', desc: '只抽外国条目' },
     { value: 'mixed', title: '混合', desc: '中外按比例' },
   ]
     .map(
@@ -296,6 +296,24 @@ function lobbyView(s: State): string {
         <b>${esc(m.title)}</b><span>${esc(m.desc)}</span>
       </button>`,
     )
+    .join('');
+
+  // 谜底类别：人物 / 事件 / 物品 / 混合；空类别禁用（meta 下发各类在库数）
+  const catCounts = meta?.categories ?? { character: 0, event: 0, item: 0 };
+  const categoryChips = [
+    { value: 'character', title: '人物', desc: `${catCounts.character ?? 0} 位` },
+    { value: 'event', title: '事件', desc: `${catCounts.event ?? 0} 件` },
+    { value: 'item', title: '物品', desc: `${catCounts.item ?? 0} 件` },
+    { value: 'mixed', title: '混合', desc: '三类都抽' },
+  ]
+    .map((m) => {
+      const disabled =
+        m.value !== 'mixed' && (catCounts[m.value as keyof typeof catCounts] ?? 0) === 0;
+      return `<button class="chip-select ${s.category === m.value ? 'is-active' : ''}"
+        data-action="pick-category" data-value="${m.value}" ${disabled ? 'disabled title="该类别还没有题目"' : ''}>
+        <b>${esc(m.title)}</b><span>${esc(m.desc)}</span>
+      </button>`;
+    })
     .join('');
 
   const eraChips = ['不限', ...WORLD_ERAS]
@@ -338,8 +356,13 @@ function lobbyView(s: State): string {
       <div class="split-main">
         <div class="lobby-head">
           <p class="eyebrow">开局</p>
-          <h2>锁定一个人物</h2>
-          <p class="lede">选好范围后，服务端会随机挑一位并锁死，整局不变——刷新、关页面再回来，答案都是同一个人。</p>
+          <h2>锁定一个谜底</h2>
+          <p class="lede">选好范围后，服务端会随机挑一位并锁死，整局不变——刷新、关页面再回来，答案都是同一个。</p>
+        </div>
+
+        <div class="group">
+          <span class="group-label">猜什么</span>
+          <div class="chips">${categoryChips}</div>
         </div>
 
         <div class="group">
@@ -353,7 +376,7 @@ function lobbyView(s: State): string {
         </div>
 
         <div class="group">
-          <span class="group-label">人物范围</span>
+          <span class="group-label">${s.category === 'character' ? '人物范围' : '范围'}</span>
           <div class="chips">${scopeChips}</div>
         </div>
 

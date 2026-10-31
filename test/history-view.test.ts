@@ -15,6 +15,7 @@ const summary: HistorySummary = {
   id: 'g1',
   status: 'revealed',
   result: 'abandoned',
+  category: 'character',
   difficulty: 2,
   mode: 'strict',
   polity: '唐',

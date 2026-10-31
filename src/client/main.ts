@@ -126,6 +126,7 @@ async function startGame(): Promise<void> {
   try {
     const session = await api.startSolo({
       difficulty: s.difficulty,
+      category: s.category,
       polity: s.scope === 'cn' ? s.polity : null,
       region: null,
       worldEra: s.scope === 'world' ? s.worldEra : null,
@@ -621,6 +622,12 @@ root.addEventListener('click', (event) => {
     case 'pick-era':
       setState({ worldEra: el.dataset.value || null });
       break;
+    case 'pick-category': {
+      const value = el.dataset.value;
+      if (value !== 'character' && value !== 'event' && value !== 'item' && value !== 'mixed') break;
+      setState({ category: value });
+      break;
+    }
     case 'pick-scope': {
       const value = el.dataset.value;
       setState({

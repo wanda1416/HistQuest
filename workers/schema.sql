@@ -181,3 +181,9 @@ CREATE TABLE IF NOT EXISTS rooms (
   updated_at     INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_rooms_open ON rooms(status, created_at DESC);
+
+-- v9：谜底类别（character / event / item）——见 src/shared/domain.ts 的类别说明
+-- 人物专用列（gender/emperor…）对事件/物品填占位值，语义由 category 决定
+ALTER TABLE characters ADD COLUMN category TEXT NOT NULL DEFAULT 'character';
+ALTER TABLE sessions ADD COLUMN category TEXT NOT NULL DEFAULT 'character';
+ALTER TABLE games ADD COLUMN category TEXT NOT NULL DEFAULT 'character';

@@ -54,10 +54,12 @@ interface CharacterRow {
   difficulty: number;
   external_id: string | null;
   retired: number;
+  category?: string | null;
 }
 
 const UPSERT_COLUMNS = [
   'id',
+  'category',
   'name',
   'region',
   'polity',
@@ -365,6 +367,7 @@ export class SqliteCharacterStore implements CharacterStoreLike {
 function toParams(c: Character, now: number): Array<string | number | null> {
   return [
     c.id,
+    c.category ?? 'character',
     c.name,
     c.region,
     c.polity,
@@ -405,8 +408,10 @@ function readAll(db: DatabaseSync): Character[] {
 
 function rowToCharacter(r: CharacterRow, aliases: string[]): Character {
   const alt = safeJson<string[]>(r.polity_alt, []);
+  const category = (r.category ?? 'character') as Character['category'];
   return {
     id: r.id,
+    ...(category !== 'character' ? { category } : {}),
     name: r.name,
     aliases,
     region: r.region as Character['region'],

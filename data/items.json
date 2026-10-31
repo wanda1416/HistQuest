@@ -1,0 +1,1121 @@
+[
+  {
+    "id": "it-cn-001",
+    "category": "item",
+    "name": "司母戊鼎",
+    "aliases": [
+      "后母戊鼎"
+    ],
+    "region": "cn",
+    "worldEra": null,
+    "polity": "商",
+    "gender": "male",
+    "emperor": false,
+    "birth": -1200,
+    "death": null,
+    "birthplace": "河南安阳（殷墟出土）",
+    "country": "中国国家博物馆",
+    "birthProvince": "河南",
+    "roles": [
+      "青铜器"
+    ],
+    "tags": [
+      "商代",
+      "鼎",
+      "祭祀"
+    ],
+    "notable": "迄今出土最大最重的古代青铜礼器，重达 832.84 千克。",
+    "difficulty": 1
+  },
+  {
+    "id": "it-cn-002",
+    "category": "item",
+    "name": "四羊方尊",
+    "aliases": [],
+    "region": "cn",
+    "worldEra": null,
+    "polity": "商",
+    "gender": "male",
+    "emperor": false,
+    "birth": -1300,
+    "death": null,
+    "birthplace": "湖南宁乡（月山铺出土）",
+    "country": "中国国家博物馆",
+    "birthProvince": "湖南",
+    "roles": [
+      "青铜器"
+    ],
+    "tags": [
+      "商代",
+      "尊",
+      "四羊",
+      "祭祀"
+    ],
+    "notable": "商代青铜方尊，四角各铸一羊，为青铜铸造工艺的代表作。",
+    "difficulty": 2
+  },
+  {
+    "id": "it-cn-003",
+    "category": "item",
+    "name": "越王勾践剑",
+    "aliases": [],
+    "region": "cn",
+    "worldEra": null,
+    "polity": "春秋",
+    "gender": "male",
+    "emperor": false,
+    "birth": -500,
+    "death": null,
+    "birthplace": "湖北江陵（望山楚墓出土）",
+    "country": "湖北省博物馆",
+    "birthProvince": "湖北",
+    "roles": [
+      "兵器"
+    ],
+    "tags": [
+      "春秋",
+      "越国",
+      "勾践",
+      "剑"
+    ],
+    "notable": "越王勾践所用青铜剑，出土时寒光如新，被誉为天下第一剑。",
+    "difficulty": 1
+  },
+  {
+    "id": "it-cn-004",
+    "category": "item",
+    "name": "曾侯乙编钟",
+    "aliases": [],
+    "region": "cn",
+    "worldEra": null,
+    "polity": "战国",
+    "gender": "male",
+    "emperor": false,
+    "birth": -433,
+    "death": null,
+    "birthplace": "湖北随州（曾侯乙墓出土）",
+    "country": "湖北省博物馆",
+    "birthProvince": "湖北",
+    "roles": [
+      "乐器"
+    ],
+    "tags": [
+      "战国",
+      "编钟",
+      "曾侯乙",
+      "音乐"
+    ],
+    "notable": "战国早期大型青铜编钟，六十五件一套，可演奏完整音阶。",
+    "difficulty": 1
+  },
+  {
+    "id": "it-cn-005",
+    "category": "item",
+    "name": "兵马俑",
+    "aliases": [
+      "秦始皇兵马俑"
+    ],
+    "region": "cn",
+    "worldEra": null,
+    "polity": "秦",
+    "gender": "male",
+    "emperor": false,
+    "birth": -210,
+    "death": null,
+    "birthplace": "陕西西安（秦始皇陵东侧出土）",
+    "country": "秦始皇帝陵博物院",
+    "birthProvince": "陕西",
+    "roles": [
+      "雕塑"
+    ],
+    "tags": [
+      "秦代",
+      "陶俑",
+      "秦始皇陵",
+      "陪葬坑"
+    ],
+    "notable": "秦始皇陵陪葬的大型陶制军阵俑群，数千尊与真人大小相当。",
+    "difficulty": 1
+  },
+  {
+    "id": "it-cn-006",
+    "category": "item",
+    "name": "清明上河图",
+    "aliases": [],
+    "region": "cn",
+    "worldEra": null,
+    "polity": "北宋",
+    "gender": "male",
+    "emperor": false,
+    "birth": 1101,
+    "death": null,
+    "birthplace": "传世",
+    "country": "北京故宫博物院",
+    "birthProvince": "河南",
+    "roles": [
+      "书画"
+    ],
+    "tags": [
+      "北宋",
+      "张择端",
+      "汴京",
+      "风俗画"
+    ],
+    "notable": "北宋张择端绘汴京汴河两岸风物的长卷风俗画。",
+    "difficulty": 1
+  },
+  {
+    "id": "it-cn-007",
+    "category": "item",
+    "name": "兰亭集序",
+    "aliases": [
+      "兰亭序",
+      "兰亭序摹本"
+    ],
+    "region": "cn",
+    "worldEra": null,
+    "polity": "东晋",
+    "gender": "male",
+    "emperor": false,
+    "birth": 353,
+    "death": null,
+    "birthplace": "传世",
+    "country": "北京故宫博物院",
+    "birthProvince": "浙江",
+    "roles": [
+      "书画"
+    ],
+    "tags": [
+      "东晋",
+      "王羲之",
+      "行书",
+      "唐摹本"
+    ],
+    "notable": "王羲之兰亭雅集所书行书名迹，真迹不存，今存唐代摹本。",
+    "difficulty": 2
+  },
+  {
+    "id": "it-cn-008",
+    "category": "item",
+    "name": "千里江山图",
+    "aliases": [],
+    "region": "cn",
+    "worldEra": null,
+    "polity": "北宋",
+    "gender": "male",
+    "emperor": false,
+    "birth": 1113,
+    "death": null,
+    "birthplace": "传世",
+    "country": "北京故宫博物院",
+    "birthProvince": "北京",
+    "roles": [
+      "书画"
+    ],
+    "tags": [
+      "北宋",
+      "王希孟",
+      "青绿山水",
+      "宋徽宗"
+    ],
+    "notable": "北宋王希孟十八岁时所绘青绿山水长卷，全长近十二米。",
+    "difficulty": 2
+  },
+  {
+    "id": "it-cn-009",
+    "category": "item",
+    "name": "金缕玉衣",
+    "aliases": [],
+    "region": "cn",
+    "worldEra": null,
+    "polity": "西汉",
+    "gender": "male",
+    "emperor": false,
+    "birth": -113,
+    "death": null,
+    "birthplace": "河北满城（中山靖王刘胜墓出土）",
+    "country": "河北博物院",
+    "birthProvince": "河北",
+    "roles": [
+      "玉器"
+    ],
+    "tags": [
+      "西汉",
+      "刘胜",
+      "玉衣",
+      "丧葬"
+    ],
+    "notable": "西汉中山靖王刘胜的殓服，用两千余枚玉片以金丝编缀而成。",
+    "difficulty": 2
+  },
+  {
+    "id": "it-cn-010",
+    "category": "item",
+    "name": "长信宫灯",
+    "aliases": [],
+    "region": "cn",
+    "worldEra": null,
+    "polity": "西汉",
+    "gender": "male",
+    "emperor": false,
+    "birth": -150,
+    "death": null,
+    "birthplace": "河北满城（窦绾墓出土）",
+    "country": "河北博物院",
+    "birthProvince": "河北",
+    "roles": [
+      "青铜器"
+    ],
+    "tags": [
+      "西汉",
+      "宫灯",
+      "窦绾",
+      "环保设计"
+    ],
+    "notable": "西汉鎏金铜宫灯，宫女执灯造型，烟雾经袖管导入灯身。",
+    "difficulty": 2
+  },
+  {
+    "id": "it-cn-011",
+    "category": "item",
+    "name": "马踏飞燕",
+    "aliases": [
+      "铜奔马",
+      "马超龙雀"
+    ],
+    "region": "cn",
+    "worldEra": null,
+    "polity": "东汉",
+    "gender": "male",
+    "emperor": false,
+    "birth": 220,
+    "death": null,
+    "birthplace": "甘肃武威（雷台汉墓出土）",
+    "country": "甘肃省博物馆",
+    "birthProvince": "甘肃",
+    "roles": [
+      "青铜器"
+    ],
+    "tags": [
+      "东汉",
+      "奔马",
+      "旅游标志"
+    ],
+    "notable": "东汉青铜奔马，三足腾空一足踏飞鸟，为中国旅游标志。",
+    "difficulty": 2
+  },
+  {
+    "id": "it-cn-012",
+    "category": "item",
+    "name": "唐三彩",
+    "aliases": [
+      "唐三彩骆驼俑"
+    ],
+    "region": "cn",
+    "worldEra": null,
+    "polity": "唐",
+    "gender": "male",
+    "emperor": false,
+    "birth": 700,
+    "death": null,
+    "birthplace": "河南洛阳（唐墓与窑址出土）",
+    "country": "河南博物院",
+    "birthProvince": "河南",
+    "roles": [
+      "陶瓷"
+    ],
+    "tags": [
+      "唐代",
+      "低温铅釉",
+      "黄绿白",
+      "骆驼"
+    ],
+    "notable": "唐代低温铅釉陶器，以黄绿白三色釉著称，多作明器随葬。",
+    "difficulty": 2
+  },
+  {
+    "id": "it-cn-013",
+    "category": "item",
+    "name": "汝窑天青釉",
+    "aliases": [
+      "汝窑瓷器"
+    ],
+    "region": "cn",
+    "worldEra": null,
+    "polity": "北宋",
+    "gender": "male",
+    "emperor": false,
+    "birth": 1100,
+    "death": null,
+    "birthplace": "河南汝州（清凉寺窑址出土）",
+    "country": "北京故宫博物院",
+    "birthProvince": "河南",
+    "roles": [
+      "陶瓷"
+    ],
+    "tags": [
+      "北宋",
+      "五大名窑",
+      "天青釉",
+      "开片"
+    ],
+    "notable": "北宋宫廷用瓷，天青釉色，传世完整器不足百件。",
+    "difficulty": 3
+  },
+  {
+    "id": "it-cn-014",
+    "category": "item",
+    "name": "元青花萧何月下追韩信梅瓶",
+    "aliases": [
+      "萧何月下追韩信梅瓶"
+    ],
+    "region": "cn",
+    "worldEra": null,
+    "polity": "元",
+    "gender": "male",
+    "emperor": false,
+    "birth": 1351,
+    "death": null,
+    "birthplace": "江苏南京（江宁将军山沐英墓出土）",
+    "country": "南京市博物总馆",
+    "birthProvince": "江苏",
+    "roles": [
+      "陶瓷"
+    ],
+    "tags": [
+      "元代",
+      "青花瓷",
+      "梅瓶",
+      "人物纹"
+    ],
+    "notable": "元青花人物纹梅瓶，瓶身绘萧何月下追韩信故事，存世稀少。",
+    "difficulty": 2
+  },
+  {
+    "id": "it-cn-015",
+    "category": "item",
+    "name": "永乐大典",
+    "aliases": [],
+    "region": "cn",
+    "worldEra": null,
+    "polity": "明",
+    "gender": "male",
+    "emperor": false,
+    "birth": 1408,
+    "death": null,
+    "birthplace": "南京（明南京国子监编成）",
+    "country": "中国国家图书馆",
+    "birthProvince": "江苏",
+    "roles": [
+      "典籍"
+    ],
+    "tags": [
+      "明代",
+      "类书",
+      "解缙",
+      "朱棣"
+    ],
+    "notable": "明成祖敕修的大型类书，两万余卷，正本下落不明，存卷不足十分之一。",
+    "difficulty": 2
+  },
+  {
+    "id": "it-cn-016",
+    "category": "item",
+    "name": "四库全书",
+    "aliases": [],
+    "region": "cn",
+    "worldEra": null,
+    "polity": "清",
+    "gender": "male",
+    "emperor": false,
+    "birth": 1782,
+    "death": null,
+    "birthplace": "北京（清宫四库馆编成）",
+    "country": "中国国家图书馆",
+    "birthProvince": "北京",
+    "roles": [
+      "典籍"
+    ],
+    "tags": [
+      "清代",
+      "乾隆帝",
+      "丛书",
+      "纪昀"
+    ],
+    "notable": "乾隆帝敕编的大型丛书，收书三千余种，分藏七阁。",
+    "difficulty": 2
+  },
+  {
+    "id": "it-cn-017",
+    "category": "item",
+    "name": "何尊",
+    "aliases": [],
+    "region": "cn",
+    "worldEra": null,
+    "polity": "西周",
+    "gender": "male",
+    "emperor": false,
+    "birth": -1038,
+    "death": null,
+    "birthplace": "陕西宝鸡（贾村塬出土）",
+    "country": "宝鸡青铜器博物院",
+    "birthProvince": "陕西",
+    "roles": [
+      "青铜器"
+    ],
+    "tags": [
+      "西周",
+      "尊",
+      "宅兹中国",
+      "铭文"
+    ],
+    "notable": "西周青铜尊，铭文中最早出现“宅兹中国”一词。",
+    "difficulty": 3
+  },
+  {
+    "id": "it-cn-018",
+    "category": "item",
+    "name": "素纱襌衣",
+    "aliases": [
+      "素纱禅衣"
+    ],
+    "region": "cn",
+    "worldEra": null,
+    "polity": "西汉",
+    "gender": "male",
+    "emperor": false,
+    "birth": -150,
+    "death": null,
+    "birthplace": "湖南长沙（马王堆汉墓出土）",
+    "country": "湖南博物院",
+    "birthProvince": "湖南",
+    "roles": [
+      "丝织品"
+    ],
+    "tags": [
+      "西汉",
+      "马王堆",
+      "纱",
+      "轻若烟雾"
+    ],
+    "notable": "马王堆汉墓出土的素纱单衣，整件仅重约 49 克。",
+    "difficulty": 3
+  },
+  {
+    "id": "it-cn-019",
+    "category": "item",
+    "name": "妇好鸮尊",
+    "aliases": [],
+    "region": "cn",
+    "worldEra": null,
+    "polity": "商",
+    "gender": "male",
+    "emperor": false,
+    "birth": -1200,
+    "death": null,
+    "birthplace": "河南安阳（殷墟妇好墓出土）",
+    "country": "中国国家博物馆",
+    "birthProvince": "河南",
+    "roles": [
+      "青铜器"
+    ],
+    "tags": [
+      "商代",
+      "妇好",
+      "鸮",
+      "尊"
+    ],
+    "notable": "商王武丁配偶妇好墓出土的猫头鹰形青铜酒尊，成对铸造。",
+    "difficulty": 3
+  },
+  {
+    "id": "it-cn-020",
+    "category": "item",
+    "name": "莲鹤方壶",
+    "aliases": [],
+    "region": "cn",
+    "worldEra": null,
+    "polity": "春秋",
+    "gender": "male",
+    "emperor": false,
+    "birth": -600,
+    "death": null,
+    "birthplace": "河南新郑（李家楼郑公大墓出土）",
+    "country": "中国国家博物馆",
+    "birthProvince": "河南",
+    "roles": [
+      "青铜器"
+    ],
+    "tags": [
+      "春秋",
+      "方壶",
+      "莲瓣",
+      "立鹤"
+    ],
+    "notable": "春秋青铜方壶，壶顶莲瓣中立鹤，一对分藏两地博物馆。",
+    "difficulty": 3
+  },
+  {
+    "id": "it-cn-021",
+    "category": "item",
+    "name": "云冈石窟",
+    "aliases": [],
+    "region": "cn",
+    "worldEra": null,
+    "polity": "南北朝",
+    "gender": "male",
+    "emperor": false,
+    "birth": 460,
+    "death": null,
+    "birthplace": "山西大同（武周山南麓开凿）",
+    "country": "云冈石窟研究院",
+    "birthProvince": "山西",
+    "roles": [
+      "石窟"
+    ],
+    "tags": [
+      "北魏",
+      "佛教",
+      "昙曜五窟",
+      "石雕"
+    ],
+    "notable": "北魏皇家开凿的大型石窟群，现存主要洞窟四十五个。",
+    "difficulty": 3
+  },
+  {
+    "id": "it-cn-022",
+    "category": "item",
+    "name": "龙门石窟",
+    "aliases": [],
+    "region": "cn",
+    "worldEra": null,
+    "polity": "南北朝",
+    "gender": "male",
+    "emperor": false,
+    "birth": 493,
+    "death": null,
+    "birthplace": "河南洛阳（伊阙开凿）",
+    "country": "龙门石窟研究院",
+    "birthProvince": "河南",
+    "roles": [
+      "石窟"
+    ],
+    "tags": [
+      "北魏",
+      "唐代",
+      "卢舍那大佛",
+      "佛教"
+    ],
+    "notable": "始于北魏、盛于唐的大型石窟群，卢舍那大佛为其代表作。",
+    "difficulty": 2
+  },
+  {
+    "id": "it-cn-023",
+    "category": "item",
+    "name": "赵州桥",
+    "aliases": [
+      "安济桥"
+    ],
+    "region": "cn",
+    "worldEra": null,
+    "polity": "隋",
+    "gender": "male",
+    "emperor": false,
+    "birth": 605,
+    "death": null,
+    "birthplace": "河北赵县（洨河之上，原址保存）",
+    "country": "赵县文物部门",
+    "birthProvince": "河北",
+    "roles": [
+      "建筑"
+    ],
+    "tags": [
+      "隋代",
+      "李春",
+      "石拱桥",
+      "敞肩拱"
+    ],
+    "notable": "隋代匠师李春设计建造的单孔石拱桥，首创敞肩拱结构。",
+    "difficulty": 1
+  },
+  {
+    "id": "it-cn-024",
+    "category": "item",
+    "name": "故宫",
+    "aliases": [
+      "紫禁城",
+      "北京故宫"
+    ],
+    "region": "cn",
+    "worldEra": null,
+    "polity": "明",
+    "gender": "male",
+    "emperor": false,
+    "birth": 1420,
+    "death": null,
+    "birthplace": "北京（原址保存）",
+    "country": "北京故宫博物院",
+    "birthProvince": "北京",
+    "roles": [
+      "建筑"
+    ],
+    "tags": [
+      "明清",
+      "皇宫",
+      "中轴线",
+      "世界遗产"
+    ],
+    "notable": "明清两代皇宫紫禁城，1420 年建成，现为故宫博物院。",
+    "difficulty": 1
+  },
+  {
+    "id": "it-cn-025",
+    "category": "item",
+    "name": "史记",
+    "aliases": [
+      "《史记》",
+      "太史公书"
+    ],
+    "region": "cn",
+    "worldEra": null,
+    "polity": "西汉",
+    "gender": "male",
+    "emperor": false,
+    "birth": -91,
+    "death": null,
+    "birthplace": "传世",
+    "country": "中国国家图书馆",
+    "birthProvince": "陕西",
+    "roles": [
+      "典籍"
+    ],
+    "tags": [
+      "西汉",
+      "司马迁",
+      "纪传体",
+      "二十四史"
+    ],
+    "notable": "司马迁撰写的中国第一部纪传体通史，记黄帝至汉武帝事。",
+    "difficulty": 2
+  },
+  {
+    "id": "it-cn-026",
+    "category": "item",
+    "name": "女史箴图",
+    "aliases": [],
+    "region": "cn",
+    "worldEra": null,
+    "polity": "东晋",
+    "gender": "male",
+    "emperor": false,
+    "birth": 345,
+    "death": null,
+    "birthplace": "传世",
+    "country": "大英博物馆",
+    "birthProvince": null,
+    "roles": [
+      "书画"
+    ],
+    "tags": [
+      "东晋",
+      "顾恺之",
+      "唐摹本",
+      "流失海外"
+    ],
+    "notable": "传为东晋顾恺之所绘，现存唐摹本于 1900 年后流失英国。",
+    "difficulty": 2
+  },
+  {
+    "id": "it-cn-027",
+    "category": "item",
+    "name": "昭陵六骏",
+    "aliases": [],
+    "region": "cn",
+    "worldEra": null,
+    "polity": "唐",
+    "gender": "male",
+    "emperor": false,
+    "birth": 640,
+    "death": null,
+    "birthplace": "陕西礼泉（唐昭陵北面祭坛）",
+    "country": "西安碑林博物馆",
+    "birthProvince": "陕西",
+    "roles": [
+      "雕塑"
+    ],
+    "tags": [
+      "唐代",
+      "李世民",
+      "浮雕",
+      "战马"
+    ],
+    "notable": "唐太宗为纪念六匹战马命人刻制的浮雕，两骏现流失美国。",
+    "difficulty": 3
+  },
+  {
+    "id": "it-cn-028",
+    "category": "item",
+    "name": "舞马衔杯纹银壶",
+    "aliases": [],
+    "region": "cn",
+    "worldEra": null,
+    "polity": "唐",
+    "gender": "male",
+    "emperor": false,
+    "birth": 750,
+    "death": null,
+    "birthplace": "陕西西安（何家村窖藏出土）",
+    "country": "陕西历史博物馆",
+    "birthProvince": "陕西",
+    "roles": [
+      "金银器"
+    ],
+    "tags": [
+      "唐代",
+      "何家村",
+      "银壶",
+      "舞马"
+    ],
+    "notable": "何家村窖藏出土的鎏金银壶，壶身舞马形象印证唐代舞马之戏。",
+    "difficulty": 3
+  },
+  {
+    "id": "it-cn-029",
+    "category": "item",
+    "name": "景泰蓝",
+    "aliases": [
+      "铜胎掐丝珐琅"
+    ],
+    "region": "cn",
+    "worldEra": null,
+    "polity": "明",
+    "gender": "male",
+    "emperor": false,
+    "birth": 1450,
+    "death": null,
+    "birthplace": "北京（明代御用监制作）",
+    "country": "北京故宫博物院",
+    "birthProvince": "北京",
+    "roles": [
+      "珐琅器"
+    ],
+    "tags": [
+      "明代",
+      "景泰年间",
+      "掐丝珐琅",
+      "宫廷"
+    ],
+    "notable": "铜胎掐丝珐琅器，因明代景泰年间蓝釉工艺盛行而得名。",
+    "difficulty": 2
+  },
+  {
+    "id": "it-cn-030",
+    "category": "item",
+    "name": "越窑秘色瓷",
+    "aliases": [
+      "秘色瓷"
+    ],
+    "region": "cn",
+    "worldEra": null,
+    "polity": "唐",
+    "gender": "male",
+    "emperor": false,
+    "birth": 874,
+    "death": null,
+    "birthplace": "陕西扶风（法门寺地宫出土）",
+    "country": "法门寺博物馆",
+    "birthProvince": "陕西",
+    "roles": [
+      "陶瓷"
+    ],
+    "tags": [
+      "唐代",
+      "越窑",
+      "法门寺",
+      "青瓷"
+    ],
+    "notable": "法门寺地宫出土的唐代越窑青瓷，首次实证秘色瓷的釉色。",
+    "difficulty": 3
+  },
+  {
+    "id": "it-ww-001",
+    "category": "item",
+    "name": "罗塞塔石碑",
+    "aliases": [],
+    "region": "africa",
+    "worldEra": "古埃及",
+    "polity": "古埃及",
+    "gender": "male",
+    "emperor": false,
+    "birth": -196,
+    "death": null,
+    "birthplace": "埃及拉希德（罗塞塔，1799 年发现）",
+    "country": "大英博物馆",
+    "birthProvince": null,
+    "roles": [
+      "石碑"
+    ],
+    "tags": [
+      "古埃及",
+      "托勒密王朝",
+      "象形文字",
+      "破译关键"
+    ],
+    "notable": "刻有三种文字对照的诏令石碑，成为解读埃及象形文字的钥匙。",
+    "difficulty": 1
+  },
+  {
+    "id": "it-ww-002",
+    "category": "item",
+    "name": "汉谟拉比法典石碑",
+    "aliases": [
+      "汉谟拉比法典"
+    ],
+    "region": "west-asia",
+    "worldEra": "两河流域",
+    "polity": "古巴比伦",
+    "gender": "male",
+    "emperor": false,
+    "birth": -1754,
+    "death": null,
+    "birthplace": "伊朗苏萨（1901 年出土，原立巴比伦）",
+    "country": "法国卢浮宫",
+    "birthProvince": null,
+    "roles": [
+      "石碑"
+    ],
+    "tags": [
+      "古巴比伦",
+      "汉谟拉比",
+      "楔形文字",
+      "法典"
+    ],
+    "notable": "古巴比伦国王汉谟拉比颁布的楔形文字法典石碑，现存最早成文法典之一。",
+    "difficulty": 2
+  },
+  {
+    "id": "it-ww-003",
+    "category": "item",
+    "name": "图坦卡蒙黄金面具",
+    "aliases": [],
+    "region": "africa",
+    "worldEra": "古埃及",
+    "polity": "古埃及",
+    "gender": "male",
+    "emperor": false,
+    "birth": -1323,
+    "death": null,
+    "birthplace": "埃及帝王谷（图坦卡蒙墓出土）",
+    "country": "埃及国家博物馆",
+    "birthProvince": null,
+    "roles": [
+      "金器"
+    ],
+    "tags": [
+      "古埃及",
+      "图坦卡蒙",
+      "法老",
+      "黄金"
+    ],
+    "notable": "古埃及法老图坦卡蒙墓出土的黄金覆面面具，重约十千克。",
+    "difficulty": 1
+  },
+  {
+    "id": "it-ww-004",
+    "category": "item",
+    "name": "死海古卷",
+    "aliases": [],
+    "region": "west-asia",
+    "worldEra": "两河流域",
+    "polity": "犹太地区",
+    "gender": "male",
+    "emperor": false,
+    "birth": -150,
+    "death": null,
+    "birthplace": "巴勒斯坦昆兰（1947 年洞穴中发现）",
+    "country": "以色列博物馆",
+    "birthProvince": null,
+    "roles": [
+      "典籍"
+    ],
+    "tags": [
+      "犹太教",
+      "圣经",
+      "羊皮卷",
+      "昆兰"
+    ],
+    "notable": "昆兰洞穴发现的古代羊皮卷抄本，含现存最早的圣经文本。",
+    "difficulty": 3
+  },
+  {
+    "id": "it-ww-005",
+    "category": "item",
+    "name": "蒙娜丽莎",
+    "aliases": [],
+    "region": "europe",
+    "worldEra": "文艺复兴",
+    "polity": "佛罗伦萨",
+    "gender": "male",
+    "emperor": false,
+    "birth": 1503,
+    "death": null,
+    "birthplace": "传世",
+    "country": "法国卢浮宫",
+    "birthProvince": null,
+    "roles": [
+      "书画"
+    ],
+    "tags": [
+      "文艺复兴",
+      "达芬奇",
+      "油画",
+      "肖像画"
+    ],
+    "notable": "达芬奇绘制的女性肖像油画，现藏于法国卢浮宫。",
+    "difficulty": 1
+  },
+  {
+    "id": "it-ww-006",
+    "category": "item",
+    "name": "大宪章",
+    "aliases": [
+      "自由大宪章",
+      "《大宪章》"
+    ],
+    "region": "europe",
+    "worldEra": "中世纪",
+    "polity": "英格兰王国",
+    "gender": "male",
+    "emperor": false,
+    "birth": 1215,
+    "death": null,
+    "birthplace": "英格兰（兰尼米德签署，传世抄本存世）",
+    "country": "大英图书馆",
+    "birthProvince": null,
+    "roles": [
+      "典籍"
+    ],
+    "tags": [
+      "英格兰",
+      "约翰王",
+      "贵族",
+      "限制王权"
+    ],
+    "notable": "1215 年英格兰贵族强迫约翰王签署的文件，限制王权并确立法律原则。",
+    "difficulty": 2
+  },
+  {
+    "id": "it-ww-007",
+    "category": "item",
+    "name": "帕特农神庙雕塑",
+    "aliases": [
+      "埃尔金石雕"
+    ],
+    "region": "europe",
+    "worldEra": "古希腊",
+    "polity": "雅典",
+    "gender": "male",
+    "emperor": false,
+    "birth": -447,
+    "death": null,
+    "birthplace": "希腊雅典（帕特农神庙）",
+    "country": "大英博物馆",
+    "birthProvince": null,
+    "roles": [
+      "雕塑"
+    ],
+    "tags": [
+      "古希腊",
+      "帕特农神庙",
+      "菲狄亚斯",
+      "雅典娜"
+    ],
+    "notable": "帕特农神庙的饰带与山花雕塑，部分于 19 世纪初被运往英国。",
+    "difficulty": 2
+  },
+  {
+    "id": "it-ww-008",
+    "category": "item",
+    "name": "断臂维纳斯",
+    "aliases": [
+      "米洛的维纳斯"
+    ],
+    "region": "europe",
+    "worldEra": "古希腊",
+    "polity": "古希腊",
+    "gender": "male",
+    "emperor": false,
+    "birth": -130,
+    "death": null,
+    "birthplace": "希腊米洛岛（1820 年出土）",
+    "country": "法国卢浮宫",
+    "birthProvince": null,
+    "roles": [
+      "雕塑"
+    ],
+    "tags": [
+      "古希腊",
+      "维纳斯",
+      "大理石",
+      "阿佛洛狄忒"
+    ],
+    "notable": "米洛岛出土的大理石女神像，双臂残缺，现藏卢浮宫。",
+    "difficulty": 1
+  },
+  {
+    "id": "it-ww-009",
+    "category": "item",
+    "name": "图拉真纪功柱",
+    "aliases": [
+      "图拉真柱"
+    ],
+    "region": "europe",
+    "worldEra": "古罗马",
+    "polity": "古罗马",
+    "gender": "male",
+    "emperor": false,
+    "birth": 113,
+    "death": null,
+    "birthplace": "意大利罗马（原址保存）",
+    "country": "意大利罗马",
+    "birthProvince": null,
+    "roles": [
+      "雕塑"
+    ],
+    "tags": [
+      "古罗马",
+      "图拉真",
+      "浮雕",
+      "达契亚战争"
+    ],
+    "notable": "罗马图拉真广场的大理石纪功柱，螺旋浮雕描绘达契亚战争。",
+    "difficulty": 3
+  },
+  {
+    "id": "it-ww-010",
+    "category": "item",
+    "name": "阿布辛贝神庙",
+    "aliases": [],
+    "region": "africa",
+    "worldEra": "古埃及",
+    "polity": "古埃及",
+    "gender": "male",
+    "emperor": false,
+    "birth": -1264,
+    "death": null,
+    "birthplace": "埃及阿布辛贝（努比亚，原址保存）",
+    "country": "埃及（阿斯旺）",
+    "birthProvince": null,
+    "roles": [
+      "建筑"
+    ],
+    "tags": [
+      "古埃及",
+      "拉美西斯二世",
+      "岩窟神庙",
+      "努比亚"
+    ],
+    "notable": "拉美西斯二世开凿的岩窟神庙，因建水坝曾整体搬迁易地保存。",
+    "difficulty": 3
+  }
+]

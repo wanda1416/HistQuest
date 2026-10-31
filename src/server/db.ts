@@ -9,7 +9,7 @@ import { DatabaseSync } from 'node:sqlite';
  * 代价是要求宿主 Node ≥ 23.4（22.x 需 --experimental-sqlite）。
  */
 
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 export interface OpenOptions {
   file: string;
@@ -177,6 +177,17 @@ export function migrate(db: DatabaseSync): void {
     addColumn(db, 'games', 'finish_rank', 'INTEGER');
     db.exec('CREATE INDEX IF NOT EXISTS idx_games_room ON games(room_id)');
     db.exec(`INSERT INTO schema_migrations (version, applied_at) VALUES (5, ${Date.now()})`);
+  }
+
+  if (current < 6) {
+    // v6：谜底类别（character / event / item）。
+    // 三类共用一张 characters 表；人物专用列（gender/emperor…）对事件/物品
+    // 填占位值，语义由 category 决定——见 shared/domain.ts 的字段注释。
+    // 老数据全部视为人物（默认值），零回填。
+    addColumn(db, 'characters', 'category', "TEXT NOT NULL DEFAULT 'character'");
+    addColumn(db, 'sessions', 'category', "TEXT NOT NULL DEFAULT 'character'");
+    addColumn(db, 'games', 'category', "TEXT NOT NULL DEFAULT 'character'");
+    db.exec(`INSERT INTO schema_migrations (version, applied_at) VALUES (6, ${Date.now()})`);
   }
 }
 

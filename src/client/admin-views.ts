@@ -207,10 +207,17 @@ function listView(s: AdminState): string {
   const rows = s.list
     .map((c) => {
       const lifespan = c.birth !== null && c.death !== null;
+      const cat = c.category ?? 'character';
+      const catBadge =
+        cat === 'event'
+          ? ' <span class="a-pill">事件</span>'
+          : cat === 'item'
+            ? ' <span class="a-pill">物品</span>'
+            : '';
       return `
       <tr data-action="edit" data-id="${esc(c.id)}" class="${c.retired ? 'is-retired' : ''}">
         <td>
-          <span class="a-name">${esc(c.name)}</span>
+          <span class="a-name">${esc(c.name)}</span>${catBadge}
           ${c.retired ? ' <span class="a-pill">已下线</span>' : ''}
         </td>
         <td class="a-muted">${esc(c.id)}</td>

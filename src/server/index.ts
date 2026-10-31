@@ -105,6 +105,28 @@ export function createApp(options: AppOptions = {}): CreatedApp {
       log('db.migrated', { characters: imported, source: charactersFile });
     }
 
+    // 事件/物品种子：只导一次（库里还没有该类别时）。
+    // 与人物种子同目录（测试把 charactersFile 指到临时目录时不会误读真实种子）。
+    const seedDir = path.dirname(charactersFile);
+    const seedCategories: Array<{ file: string; category: 'event' | 'item' }> = [
+      { file: path.join(seedDir, 'events.json'), category: 'event' },
+      { file: path.join(seedDir, 'items.json'), category: 'item' },
+    ];
+    for (const seed of seedCategories) {
+      if (!fs.existsSync(seed.file)) continue;
+      const hasCategory = db
+        .prepare("SELECT COUNT(*) AS n FROM characters WHERE category = ?")
+        .get(seed.category) as { n?: number } | undefined;
+      if ((hasCategory?.n ?? 0) > 0) continue;
+      try {
+        const list = readCharacters(seed.file).map((c) => ({ ...c, category: seed.category }));
+        const imported = importCharacters(db, list);
+        log('db.seeded.category', { category: seed.category, imported, source: seed.file });
+      } catch (err) {
+        log('db.seed.category.failed', { category: seed.category, message: (err as Error).message });
+      }
+    }
+
     store = new SqliteCharacterStore({ db, backupDir, backupKeep: config.admin.backupKeep });
   } else {
     store = new CharacterStore({

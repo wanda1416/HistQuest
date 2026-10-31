@@ -1,5 +1,5 @@
 /** REST 契约：前端与后端共用，避免字段漂移。 */
-import type { AnswerMode, AnswerRecord, Character, PronounStyle, Region, SessionStatus, Verdict } from './domain.ts';
+import type { AnswerMode, AnswerRecord, Character, PronounStyle, Region, SessionStatus, TargetCategory, Verdict } from './domain.ts';
 
 export interface AiConfig {
   baseURL: string;
@@ -21,6 +21,8 @@ export interface MetaRes {
   maxTurns: number;
   serverModelReady: boolean;
   characterCount: number;
+  /** 各谜底类别的在库数量（人物/事件/物品），开局页据此展示与禁用空类别 */
+  categories?: Record<TargetCategory, number>;
   /** 可选文明圈与各自人数 */
   regions: Array<{ value: Region; label: string; count: number }>;
   /** 用户系统是否启用（Workers 部署） */
@@ -31,6 +33,8 @@ export interface MetaRes {
 
 export interface StartSoloReq {
   difficulty: number;
+  /** 谜底类别：character / event / item / mixed；缺省人物 */
+  category?: TargetCategory | 'mixed';
   /** 中国朝代筛选，null = 不限 */
   polity: string | null;
   /** 文明圈筛选，null = 不限 */
@@ -118,6 +122,8 @@ export interface HistorySummary {
   id: string;
   status: SessionStatus;
   result: GameResult;
+  /** 谜底类别 */
+  category: TargetCategory;
   difficulty: number;
   mode: AnswerMode;
   /** 开局时的筛选条件 */
@@ -172,6 +178,8 @@ export interface RecordView {
 
 export interface SessionView {
   gameId: string;
+  /** 谜底类别 */
+  category: TargetCategory;
   status: SessionStatus;
   turnsLeft: number;
   difficulty: number;

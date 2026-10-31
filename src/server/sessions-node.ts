@@ -83,6 +83,7 @@ export class JsonSessionPersistence implements SessionPersistence {
 interface SessionRow {
   id: string;
   target_id: string;
+  category?: string | null;
   difficulty: number;
   polity: string | null;
   region: string | null;
@@ -116,9 +117,9 @@ export class SqliteSessionPersistence implements SessionPersistence {
     this.db
       .prepare(
         `INSERT INTO sessions (
-           id, target_id, difficulty, polity, region, world_era, cn_share,
+           id, target_id, category, difficulty, polity, region, world_era, cn_share,
            turns_left, total_turns, mode, pronoun, status, history, created_at, updated_at
-         ) VALUES (?,?,?,?,?,?,?,?,? ,?,?,?,?,?,?)
+         ) VALUES (?,?,?,?,?,?,?,?,? ,?,?,?,?,?,?,?)
          ON CONFLICT(id) DO UPDATE SET
            turns_left = excluded.turns_left,
            mode = excluded.mode,
@@ -129,6 +130,7 @@ export class SqliteSessionPersistence implements SessionPersistence {
       .run(
         session.id,
         session.targetId,
+        session.category ?? 'character',
         session.difficulty,
         session.polity,
         session.region,
@@ -160,6 +162,7 @@ function rowToSession(r: SessionRow): SoloSession {
   return {
     id: r.id,
     targetId: r.target_id,
+    category: (r.category ?? 'character') as SoloSession['category'],
     difficulty: r.difficulty,
     polity: r.polity,
     region: r.region as SoloSession['region'],

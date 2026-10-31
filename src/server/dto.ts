@@ -25,6 +25,7 @@ export function projectHistory(list: AnswerRecord[]): RecordView[] {
 export function projectSession(s: SoloSession): SessionView {
   return {
     gameId: s.id,
+    category: s.category ?? 'character',
     status: s.status,
     turnsLeft: s.turnsLeft,
     difficulty: s.difficulty,

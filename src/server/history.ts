@@ -78,6 +78,7 @@ export interface GameRow {
   target_name: string;
   target_roles: string;
   attribution: string | null;
+  category: string | null;
   difficulty: number;
   polity: string | null;
   region: string | null;
@@ -127,6 +128,7 @@ export function rowToSummary(r: GameRow): HistorySummary {
     id: r.id,
     status: r.status as SessionStatus,
     result,
+    category: (r.category ?? 'character') as HistorySummary['category'],
     difficulty: r.difficulty,
     mode: r.mode as AnswerMode,
     polity: r.polity,
@@ -190,6 +192,7 @@ export function gameParams(session: SoloSession, target: TargetSnapshot): unknow
     JSON.stringify(target.roles),
     // 归属来源：开局时就知道玩家有没有登录，落库时一次定死
     session.userId ? 'user' : 'guest',
+    session.category ?? 'character',
     session.difficulty,
     session.polity,
     session.region,
@@ -209,9 +212,9 @@ export function gameParams(session: SoloSession, target: TargetSnapshot): unknow
 }
 
 export const UPSERT_GAME_SQL = `INSERT INTO games (
-    id, user_id, user_name, target_id, target_name, target_roles, attribution, difficulty, polity, region, world_era,
+    id, user_id, user_name, target_id, target_name, target_roles, attribution, category, difficulty, polity, region, world_era,
     mode, pronoun, turns_total, turns_left, turns_used, asks, status, started_at, ended_at, updated_at
-  ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+  ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
   ON CONFLICT(id) DO UPDATE SET
     user_id    = COALESCE(games.user_id, excluded.user_id),
     user_name  = COALESCE(games.user_name, excluded.user_name),

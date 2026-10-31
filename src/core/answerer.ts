@@ -2,6 +2,7 @@ import type { AiCredential, Attr, Character, ParsedQuery, Verdict } from '../sha
 import { ATTRS } from '../shared/domain.ts';
 import { AiError, chat, extractJson } from '../ai/client.ts';
 import { buildAnswerMessages } from '../ai/prompts.ts';
+import { CATEGORY_LABELS, type TargetCategory } from '../shared/domain.ts';
 
 /**
  * 一次调用完成"理解问题 + 用自己的知识作答"。
@@ -22,21 +23,27 @@ export interface ModelAnswer {
 
 const VERDICTS = new Set(['yes', 'no', 'unknown']);
 
-/** 最后一道泄题保险：出现姓名/别称就换成「他」 */
+/** 泄题替换的指代词：人物用「他」，事件/物品用「它」 */
+function pronounOf(c: Character): string {
+  return (c.category ?? 'character') === 'character' ? '他' : '它';
+}
+
+/** 最后一道泄题保险：出现名称/别称就换成指代词 */
 export function guardLeak(text: string, c: Character): string {
   let out = String(text ?? '').trim();
   if (!out) return '';
   const names = [c.name, ...c.aliases]
     .filter((n) => n && n.length >= 2)
     .sort((a, b) => b.length - a.length);
-  for (const n of names) out = out.split(n).join('他');
+  const p = pronounOf(c);
+  for (const n of names) out = out.split(n).join(p);
   return out;
 }
 
-/** 去名后人称堆叠到读不通（"他就是他"）就丢弃 */
+/** 去名后人称堆叠到读不通（"他就是他""它就是它"）就丢弃 */
 function readable(text: string): boolean {
   if (!text) return false;
-  return !/他就是他|他是他|他叫他/.test(text);
+  return !/(他|它)就是(他|它)|(他|它)是(他|它)|(他|它)叫(他|它)/.test(text);
 }
 
 function normalize(raw: unknown, c: Character): Omit<ModelAnswer, 'calls'> | null {
@@ -69,7 +76,7 @@ export async function modelAnswer(
   opts: { timeoutMs?: number } = {},
 ): Promise<ModelAnswer> {
   const callOpts = { timeoutMs: opts.timeoutMs, maxTokens: 900, temperature: 0 };
-  const messages = buildAnswerMessages(profile, question);
+  const messages = buildAnswerMessages(profile, question, character.category ?? 'character');
 
   let calls = 1;
   let text: string;

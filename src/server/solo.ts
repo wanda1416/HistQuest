@@ -1,4 +1,4 @@
-import type { AiCredential, AnswerMode, AnswerRecord, PronounStyle, Region, SoloSession } from '../shared/domain.ts';
+import type { AiCredential, AnswerMode, AnswerRecord, PronounStyle, Region, SoloSession, TargetCategory } from '../shared/domain.ts';
 import type { SessionPersistence } from './sessions.ts';
 import type { GameRecorder, TargetSnapshot } from './history.ts';
 import type { AskRes, GuessRes, RevealRes } from '../shared/protocol.ts';
@@ -43,6 +43,8 @@ export interface SoloStoreOptions {
 
 export interface CreateInput {
   difficulty: number;
+  /** 谜底类别：character / event / item / mixed；缺省人物（向后兼容） */
+  category?: TargetCategory | 'mixed' | null;
   /** 中国朝代筛选 */
   polity?: string | null;
   /** 文明圈筛选 */
@@ -94,6 +96,7 @@ export class SoloStore {
     const cnShare = Math.min(1, Math.max(0, input.cnShare ?? 0.5));
     const target = this.index.pick({
       difficulty: input.difficulty,
+      category: input.category ?? 'character',
       polity: input.polity ?? null,
       region: input.region ?? null,
       worldEra: input.worldEra ?? null,
@@ -106,6 +109,7 @@ export class SoloStore {
     const session: SoloSession = {
       id: this.opts.newId ? this.opts.newId() : defaultNewId(),
       targetId: target.id,
+      category: target.category ?? 'character',
       difficulty: input.difficulty,
       polity: input.polity ?? null,
       region: input.region ?? null,

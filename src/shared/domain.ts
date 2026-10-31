@@ -4,7 +4,7 @@
  */
 
 export const DYNASTIES = [
-  '春秋', '战国', '秦', '西汉', '东汉', '三国', '西晋', '东晋',
+  '商', '西周', '春秋', '战国', '秦', '西汉', '东汉', '三国', '西晋', '东晋',
   '南北朝', '隋', '唐', '五代', '北宋', '南宋', '蒙古', '元', '明', '清', '近代',
 ] as const;
 
@@ -63,33 +63,59 @@ export const REGION_LABELS: Record<Region, string> = {
 
 export type Gender = 'male' | 'female';
 
+/**
+ * 谜底类别：人物之外新增事件与物品。
+ * 数据层三类共用一张 characters 表（gender/emperor 等人物专用列对
+ * 事件/物品填占位值），判定层按类别分流——见 judge.ts / prompts.ts。
+ */
+export const CATEGORIES = ['character', 'event', 'item'] as const;
+export type TargetCategory = (typeof CATEGORIES)[number];
+
+export const CATEGORY_LABELS: Record<TargetCategory, string> = {
+  character: '人物',
+  event: '事件',
+  item: '物品',
+};
+
+export function isTargetCategory(v: unknown): v is TargetCategory {
+  return typeof v === 'string' && (CATEGORIES as readonly string[]).includes(v);
+}
+
 export interface Character {
   id: string;
+  /** 谜底类别；缺省为人物（老数据无此列） */
+  category?: TargetCategory;
   name: string;
   aliases: string[];
   /** 文明圈：中国区为 cn，世界人物按大区归类 */
   region: Region;
   /**
    * 所属政权/朝代。
-   * 中国区取 DYNASTIES 中的值（唐/宋/明…）；世界区取政权名（罗马共和国/美国…）。
+   * 人物：中国区取 DYNASTIES 中的值（唐/宋/明…），世界区取政权名；
+   * 事件：发生时期（严格分期）；物品：制造年代所属时期。
    */
   polity: string;
   /** 人物实际经历过的其他时期/政权 */
   polityAlt?: string[];
   /** 世界人物的时期划分；中国人物不使用 */
   worldEra?: WorldEra;
+  /** 人物专用；事件/物品填 'male' 占位（列 NOT NULL），判定层按类别忽略 */
   gender: Gender;
   birth: number | null;
+  /** 人物=卒年；事件/物品恒为 null */
   death: number | null;
+  /** 人物=籍贯；事件=发生地；物品=出土地（传世品填「传世」） */
   birthplace: string | null;
-  /** 今属国家/地区；世界人物必填，中国人物可留空 */
+  /** 人物=今属国家；物品=现藏机构；事件=null */
   country?: string | null;
-  /** 中国区的今属省份；世界人物留空 */
+  /** 中国区的今属省份；世界条目留空 */
   birthProvince: string | null;
+  /** 人物=身份；事件/物品=类型（战役/条约；青铜器/书画） */
   roles: string[];
   tags: string[];
-  /** 是否为君主（皇帝/国王/法老/苏丹/沙皇等） */
+  /** 是否为君主（皇帝/国王/法老/苏丹/沙皇等）；仅人物使用 */
   emperor: boolean;
+  /** 类别语义随类别变化：人物=事迹；事件=经过与结果；物品=简介 */
   notable: string;
   difficulty: number;
   externalId?: string;
@@ -188,6 +214,8 @@ export interface SoloSession {
   id: string;
   /** 服务端唯一持有，任何下行 DTO 都不得包含 */
   targetId: string;
+  /** 谜底类别；缺省人物（老会话） */
+  category?: TargetCategory;
   difficulty: number;
   /** 玩家筛选的政权（中国朝代），null = 不限 */
   polity: string | null;
