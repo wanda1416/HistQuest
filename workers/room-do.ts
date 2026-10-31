@@ -1,4 +1,4 @@
-import type { AiCredential, AnswerRecord } from '../src/shared/domain.ts';
+import type { AiCredential, AnswerRecord, Character } from '../src/shared/domain.ts';
 import {
   ROOM,
   type Room,
@@ -121,7 +121,7 @@ export class RoomDo {
         case '/snapshot':
           this.touch(userId);
           await this.refreshPresence();
-          return json(200, this.snapshotFor(userId));
+          return json(200, await this.snapshotFor(userId));
         case '/join':
           return this.onJoin(userId, userName);
         case '/cmd':
@@ -160,7 +160,7 @@ export class RoomDo {
     await this.save();
     await this.upsertDirectory(true);
     await this.state.storage.setAlarm(now + ALARM_INTERVAL_MS);
-    return json(201, this.snapshotFor(userId));
+    return json(201, await this.snapshotFor(userId));
   }
 
   /* ---------------- 加入 ---------------- */
@@ -170,7 +170,7 @@ export class RoomDo {
     await this.refreshPresence();
     const res = await this.commit({ t: 'join', userId, name: userName || '玩家' });
     if (!res.ok) return json(409, { error: res.error ?? 'JOIN_FAILED', message: joinMessage(res.error) });
-    return json(200, this.snapshotFor(userId));
+    return json(200, await this.snapshotFor(userId));
   }
 
   /* ---------------- WebSocket ---------------- */
@@ -193,7 +193,7 @@ export class RoomDo {
       if (!member || member.status === 'left') {
         await this.commit({ t: 'join', userId, name: userName || '玩家' });
       }
-      this.broadcast();
+      await this.broadcast();
     } catch (err) {
       console.error('room.ws.connect', { message: (err as Error)?.message });
     }
@@ -224,7 +224,7 @@ export class RoomDo {
 
   async webSocketClose(_ws: DoWebSocket): Promise<void> {
     await this.refreshPresence();
-    this.broadcast();
+    await this.broadcast();
   }
 
   async webSocketError(): Promise<void> {
@@ -240,7 +240,7 @@ export class RoomDo {
     await this.refreshPresence();
     const error = await this.dispatch(userId, cmd as RoomCommand);
     if (error) return json(409, { error, message: joinMessage(error) });
-    return json(200, this.snapshotFor(userId));
+    return json(200, await this.snapshotFor(userId));
   }
 
   /** 命令 → 事件 → 状态机；返回错误码（null = 成功） */
@@ -355,22 +355,32 @@ export class RoomDo {
 
   /* ---------------- 投影与广播 ---------------- */
 
-  private snapshotFor(userId: string) {
+  private async snapshotFor(userId: string) {
     const room = this.data!.room;
-    const target = room.status === 'finished' ? this.target() : undefined;
+    // finished 后要下发人物卡：索引可能还没加载（实例被回收重启过），必须先补
+    let target: Character | undefined;
+    if (room.status === 'finished') {
+      target = this.target() ?? (await this.ensureIndex(), this.target());
+    }
     return projectRoom(room, userId, Date.now(), { target: target ?? null });
   }
 
-  private broadcast(): void {
+  private async broadcast(): Promise<void> {
     const room = this.data?.room;
     if (!room) return;
+    // finished 后的广播必须带人物卡（复盘）；索引未加载则先补——这是异步的，
+    // 所以广播整体异步化，commit 里用 await 串行
+    let target: Character | undefined;
+    if (room.status === 'finished') {
+      target = this.target() ?? (await this.ensureIndex(), this.target());
+    }
     const now = Date.now();
     for (const ws of this.state.getWebSockets()) {
       const att = ws.deserializeAttachment() as { userId?: string } | null;
       if (!att?.userId) continue;
       try {
         ws.send(JSON.stringify({ t: 'snapshot', room: projectRoom(room, att.userId, now, {
-          target: room.status === 'finished' ? (this.target() ?? null) : null,
+          target: target ?? null,
         }) }));
       } catch {
         /* 连接已断，等 close 事件 */
@@ -404,7 +414,7 @@ export class RoomDo {
     await this.upsertDirectory(false);
 
     if (res.effects.some((e) => e.t === 'archive')) await this.archive();
-    if (res.effects.some((e) => e.t === 'broadcast')) this.broadcast();
+    if (res.effects.some((e) => e.t === 'broadcast')) await this.broadcast();
     if (res.effects.some((e) => e.t === 'close')) await this.closeRoom();
     return res;
   }
@@ -584,7 +594,8 @@ export class RoomDo {
     const data = this.data;
     if (!data || data.archived) return;
     const room = data.room;
-    const target = this.target();
+    // 账本必须落：索引未加载（实例重启过）时先补，不能静默放弃
+    const target = this.target() ?? (await this.ensureIndex(), this.target());
     if (!target) return;
 
     await this.upsertDirectory(true);
@@ -698,7 +709,7 @@ export class RoomDo {
     }
     // 房主掉线满 60s 需要重算一次"谁能发起投票"，靠一次唤醒把状态推到稳定
     const initiator = voteInitiator(room, now);
-    if (room.status === 'playing' && initiator !== room.hostId) this.broadcast();
+    if (room.status === 'playing' && initiator !== room.hostId) await this.broadcast();
     await this.state.storage.setAlarm(now + ALARM_INTERVAL_MS);
   }
 }

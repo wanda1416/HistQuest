@@ -251,6 +251,38 @@ test('房间 DO：状态存进 storage，换一个实例（模拟驱逐）能接
   assert.equal(snap.players.length, 2);
 });
 
+test('房间 DO：实例重启后（索引未加载）结束对局，复盘仍带人物卡', async () => {
+  // 造一个带 storage 的实例开局，然后"重启"（新实例、同一 storage、不加载索引）
+  const state = makeState();
+  const first = new RoomDo(state as never, env as never);
+  await call(first, '/new', {
+    method: 'POST',
+    userId: 'u1',
+    name: '甲',
+    body: { code: 'RM0005', settings: { turnLimit: 10, difficulty: 1 } },
+  });
+  await call(first, '/join', { method: 'POST', userId: 'u2', name: '乙' });
+  await call(first, '/cmd', { method: 'POST', userId: 'u1', body: { t: 'start' } });
+
+  // 重启：新实例只有 storage 里的房间数据，index = null
+  const rebooted = new RoomDo(state as never, env as never);
+  await call(rebooted, '/join', { method: 'POST', userId: 'u1' });
+  await call(rebooted, '/join', { method: 'POST', userId: 'u2' });
+  // 房主发起投票 + 2 人房需 2 票：乙附议 → finished（此时索引从未加载）
+  await call(rebooted, '/cmd', { method: 'POST', userId: 'u1', body: { t: 'open-vote' } });
+  const done = await call(rebooted, '/cmd', { method: 'POST', userId: 'u2', body: { t: 'cast-vote' } });
+  assert.equal((await done.json()).status, 'finished');
+
+  // 关键断言：重启后的实例也能拿到人物卡（此前 target() 返回 undefined → 快照无 reveal）
+  const snap = await json(await call(rebooted, '/snapshot', { userId: 'u1' }));
+  assert.ok(snap.reveal, '结束后快照必须带 reveal');
+  assert.equal(snap.reveal.character.name, '李白');
+
+  // 账本也必须落（archive 在索引未加载时曾静默 return）
+  const games = await d1.prepare('SELECT COUNT(*) AS n FROM games WHERE room_id IS NOT NULL').bind().first<{ n: number }>();
+  assert.ok((games!.n ?? 0) >= 2, '重启实例的结算也要落账本');
+});
+
 test('房间 DO：未登录 / 不存在的房间给出明确错误', async () => {
   const room = makeRoom();
   const noAuth = await room.fetch(new Request('https://room/snapshot'));
