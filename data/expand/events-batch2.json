@@ -1,62 +1,1697 @@
 [
-  {"id": "ev-cn-101", "category": "event", "name": "大禹治水", "aliases": [], "region": "cn", "worldEra": null, "polity": "史前", "gender": "male", "emperor": false, "birth": -2070, "death": null, "birthplace": "黄河流域（今河南、山西一带）", "country": null, "birthProvince": "河南", "roles": ["工程"], "tags": ["上古", "大禹", "治水", "三过家门而不入"], "notable": "禹改堵为疏治理黄河水患，十三年功成，后受舜禅让即位。", "difficulty": 1},
-  {"id": "ev-cn-102", "category": "event", "name": "盘庚迁殷", "aliases": [], "region": "cn", "worldEra": null, "polity": "商", "gender": "male", "emperor": false, "birth": -1300, "death": null, "birthplace": "殷（今河南安阳殷墟）", "country": null, "birthProvince": "河南", "roles": ["事件"], "tags": ["商朝", "盘庚", "殷墟", "迁都"], "notable": "商王盘庚将都城迁至殷，商朝此后政局稳定，故又称殷商。", "difficulty": 2},
-  {"id": "ev-cn-103", "category": "event", "name": "牧野之战", "aliases": ["武王伐纣"], "region": "cn", "worldEra": null, "polity": "商", "gender": "male", "emperor": false, "birth": -1046, "death": null, "birthplace": "牧野（今河南新乡市附近）", "country": null, "birthProvince": "河南", "roles": ["战役"], "tags": ["周武王", "商纣王", "商朝灭亡", "封神"], "notable": "周武王联军在牧野击败商军，纣王自焚，商朝灭亡。", "difficulty": 1},
-  {"id": "ev-cn-104", "category": "event", "name": "国人暴动", "aliases": ["彘之乱"], "region": "cn", "worldEra": null, "polity": "西周", "gender": "male", "emperor": false, "birth": -841, "death": null, "birthplace": "镐京（今陕西西安）", "country": null, "birthProvince": "陕西", "roles": ["起义"], "tags": ["西周", "周厉王", "共和行政", "道路以目"], "notable": "镐京国人驱逐周厉王，此后由周公、召公共同执政，称共和行政。", "difficulty": 2},
-  {"id": "ev-cn-105", "category": "event", "name": "烽火戏诸侯", "aliases": [], "region": "cn", "worldEra": null, "polity": "西周", "gender": "male", "emperor": false, "birth": -771, "death": null, "birthplace": "骊山（今陕西西安市临潼区）", "country": null, "birthProvince": "陕西", "roles": ["事件"], "tags": ["西周", "周幽王", "褒姒", "犬戎"], "notable": "周幽王点燃烽火博褒姒一笑，犬戎攻入镐京，西周灭亡。", "difficulty": 2},
-  {"id": "ev-cn-106", "category": "event", "name": "葵丘会盟", "aliases": [], "region": "cn", "worldEra": null, "polity": "春秋", "gender": "male", "emperor": false, "birth": -651, "death": null, "birthplace": "葵丘（今河南民权县境内）", "country": null, "birthProvince": "河南", "roles": ["会盟"], "tags": ["春秋", "齐桓公", "霸主", "管仲"], "notable": "齐桓公主持诸侯会盟，周襄王派使致祭，霸业达到顶点。", "difficulty": 3},
-  {"id": "ev-cn-107", "category": "event", "name": "合纵连横", "aliases": ["纵横家"], "region": "cn", "worldEra": null, "polity": "战国", "gender": "male", "emperor": false, "birth": -318, "death": null, "birthplace": "中原各国（今河南、陕西一带）", "country": null, "birthProvince": "河南", "roles": ["外交"], "tags": ["战国", "苏秦", "张仪", "纵横家"], "notable": "苏秦主张六国合纵抗秦，张仪以连横破纵，游说之风盛行。", "difficulty": 3},
-  {"id": "ev-cn-108", "category": "event", "name": "马陵之战", "aliases": [], "region": "cn", "worldEra": null, "polity": "战国", "gender": "male", "emperor": false, "birth": -341, "death": null, "birthplace": "马陵（今山东莘县或郯城一带）", "country": null, "birthProvince": "山东", "roles": ["战役"], "tags": ["战国", "孙膑", "庞涓", "魏国", "齐国"], "notable": "孙膑以减灶之计诱魏军入马陵设伏，庞涓兵败自刎。", "difficulty": 3},
-  {"id": "ev-cn-109", "category": "event", "name": "都江堰修建", "aliases": [], "region": "cn", "worldEra": null, "polity": "战国", "gender": "male", "emperor": false, "birth": -256, "death": null, "birthplace": "岷江（今四川成都市都江堰市）", "country": null, "birthProvince": "四川", "roles": ["工程"], "tags": ["战国", "李冰", "蜀郡", "水利工程", "天府之国"], "notable": "秦蜀郡守李冰父子主持修建都江堰，成都平原自此旱涝保收。", "difficulty": 1},
-  {"id": "ev-cn-110", "category": "event", "name": "秦灭六国", "aliases": ["秦统一六国"], "region": "cn", "worldEra": null, "polity": "秦", "gender": "male", "emperor": false, "birth": -230, "death": null, "birthplace": "咸阳（今陕西咸阳市，发令地）", "country": null, "birthProvince": "陕西", "roles": ["战争"], "tags": ["秦朝", "秦始皇", "统一", "韩赵魏楚燕齐"], "notable": "秦王嬴政十年间依次攻灭六国，公元前221年完成统一。", "difficulty": 2},
-  {"id": "ev-cn-111", "category": "event", "name": "文景之治", "aliases": [], "region": "cn", "worldEra": null, "polity": "西汉", "gender": "male", "emperor": false, "birth": -180, "death": null, "birthplace": "长安（今陕西西安）", "country": null, "birthProvince": "陕西", "roles": ["治世"], "tags": ["西汉", "汉文帝", "汉景帝", "轻徭薄赋", "休养生息"], "notable": "汉文帝、景帝轻徭薄赋、与民休息，国力逐渐恢复。", "difficulty": 2},
-  {"id": "ev-cn-112", "category": "event", "name": "罢黜百家，独尊儒术", "aliases": ["罢黜百家"], "region": "cn", "worldEra": null, "polity": "西汉", "gender": "male", "emperor": false, "birth": -134, "death": null, "birthplace": "长安（今陕西西安）", "country": null, "birthProvince": "陕西", "roles": ["改革"], "tags": ["西汉", "汉武帝", "董仲舒", "儒学"], "notable": "董仲舒建议汉武帝尊崇儒学，儒学自此成为官方正统思想。", "difficulty": 2},
-  {"id": "ev-cn-113", "category": "event", "name": "光武中兴", "aliases": [], "region": "cn", "worldEra": null, "polity": "东汉", "gender": "male", "emperor": false, "birth": 25, "death": null, "birthplace": "鄗城（今河北柏乡县境内，刘秀即位地）", "country": null, "birthProvince": "河北", "roles": ["治世"], "tags": ["东汉", "光武帝", "刘秀", "休养生息"], "notable": "刘秀重建汉室并推行安抚政策，社会恢复，史称光武中兴。", "difficulty": 2},
-  {"id": "ev-cn-114", "category": "event", "name": "黄巾起义", "aliases": [], "region": "cn", "worldEra": null, "polity": "东汉", "gender": "male", "emperor": false, "birth": 184, "death": null, "birthplace": "巨鹿（今河北邢台市平乡县一带）", "country": null, "birthProvince": "河北", "roles": ["起义"], "tags": ["东汉", "张角", "太平道", "苍天已死"], "notable": "张角以太平道聚众起义，动摇东汉统治，州牧割据由此加剧。", "difficulty": 2},
-  {"id": "ev-cn-115", "category": "event", "name": "九品中正制", "aliases": ["九品官人法"], "region": "cn", "worldEra": null, "polity": "三国", "gender": "male", "emperor": false, "birth": 220, "death": null, "birthplace": "洛阳（今河南洛阳）", "country": null, "birthProvince": "河南", "roles": ["建制"], "tags": ["曹魏", "曹丕", "陈群", "选官制度"], "notable": "曹丕采纳陈群建议设中正官评定人才等第，成为魏晋选官制度。", "difficulty": 3},
-  {"id": "ev-cn-116", "category": "event", "name": "八王之乱", "aliases": [], "region": "cn", "worldEra": null, "polity": "西晋", "gender": "male", "emperor": false, "birth": 291, "death": null, "birthplace": "洛阳（今河南洛阳）", "country": null, "birthProvince": "河南", "roles": ["叛乱"], "tags": ["西晋", "司马氏诸王", "贾南风", "五胡乱华前奏"], "notable": "西晋宗室八王争夺中央权力，混战十六年，西晋由盛转衰。", "difficulty": 3},
-  {"id": "ev-cn-117", "category": "event", "name": "孝文帝改革", "aliases": ["孝文帝汉化改革"], "region": "cn", "worldEra": null, "polity": "南北朝", "gender": "male", "emperor": false, "birth": 494, "death": null, "birthplace": "洛阳（今河南洛阳，迁都后推行地）", "country": null, "birthProvince": "河南", "roles": ["改革"], "tags": ["北魏", "孝文帝", "汉化", "迁都洛阳"], "notable": "北魏孝文帝迁都洛阳，改汉姓、行汉语，推进鲜卑政权汉化。", "difficulty": 2},
-  {"id": "ev-cn-118", "category": "event", "name": "科举制创立", "aliases": ["隋创科举"], "region": "cn", "worldEra": null, "polity": "隋", "gender": "male", "emperor": false, "birth": 605, "death": null, "birthplace": "大兴城（今陕西西安）", "country": null, "birthProvince": "陕西", "roles": ["建制"], "tags": ["隋朝", "隋炀帝", "进士科", "选官制度"], "notable": "隋炀帝设进士科，以考试取士，科举制度由此创立。", "difficulty": 2},
-  {"id": "ev-cn-119", "category": "event", "name": "大运河开凿", "aliases": ["隋唐大运河", "京杭大运河开凿"], "region": "cn", "worldEra": null, "polity": "隋", "gender": "male", "emperor": false, "birth": 605, "death": null, "birthplace": "洛阳（今河南洛阳，中心）", "country": null, "birthProvince": "河南", "roles": ["工程"], "tags": ["隋朝", "隋炀帝", "通济渠", "南北贯通"], "notable": "隋炀帝征发民力开凿以洛阳为中心的大运河，贯通南北水运。", "difficulty": 1},
-  {"id": "ev-cn-120", "category": "event", "name": "贞观之治", "aliases": [], "region": "cn", "worldEra": null, "polity": "唐", "gender": "male", "emperor": false, "birth": 627, "death": null, "birthplace": "长安（今陕西西安）", "country": null, "birthProvince": "陕西", "roles": ["治世"], "tags": ["唐朝", "唐太宗", "魏征", "虚心纳谏"], "notable": "唐太宗任贤纳谏、轻徭薄赋，政治清明，史称贞观之治。", "difficulty": 1},
-  {"id": "ev-cn-121", "category": "event", "name": "安西都护府设立", "aliases": [], "region": "cn", "worldEra": null, "polity": "唐", "gender": "male", "emperor": false, "birth": 640, "death": null, "birthplace": "龟兹（今新疆库车）", "country": null, "birthProvince": "新疆", "roles": ["建制"], "tags": ["唐朝", "西域", "丝绸之路", "安西四镇"], "notable": "唐朝在西域设立军政机构，管辖龟兹、疏勒、于阗、碎叶四镇。", "difficulty": 3},
-  {"id": "ev-cn-122", "category": "event", "name": "开元盛世", "aliases": [], "region": "cn", "worldEra": null, "polity": "唐", "gender": "male", "emperor": false, "birth": 713, "death": null, "birthplace": "长安（今陕西西安）", "country": null, "birthProvince": "陕西", "roles": ["治世"], "tags": ["唐朝", "唐玄宗", "姚崇", "宋璟"], "notable": "唐玄宗前期整顿吏治、发展生产，唐朝进入全盛时期。", "difficulty": 2},
-  {"id": "ev-cn-123", "category": "event", "name": "黄巢起义", "aliases": ["唐末农民起义"], "region": "cn", "worldEra": null, "polity": "唐", "gender": "male", "emperor": false, "birth": 875, "death": null, "birthplace": "曹州冤句（今山东菏泽境内）", "country": null, "birthProvince": "山东", "roles": ["起义"], "tags": ["唐朝", "黄巢", "流动作战", "冲天香阵"], "notable": "黄巢率众起义转战大半个中国，880 年攻入长安称帝。", "difficulty": 2},
-  {"id": "ev-cn-124", "category": "event", "name": "庆历新政", "aliases": [], "region": "cn", "worldEra": null, "polity": "北宋", "gender": "male", "emperor": false, "birth": 1043, "death": null, "birthplace": "东京（今河南开封）", "country": null, "birthProvince": "河南", "roles": ["改革"], "tags": ["北宋", "宋仁宗", "范仲淹", "明黜陟"], "notable": "范仲淹上《答手诏条陈十事》，整顿吏治，新政一年余而罢。", "difficulty": 3},
-  {"id": "ev-cn-125", "category": "event", "name": "王安石变法", "aliases": ["熙宁变法"], "region": "cn", "worldEra": null, "polity": "北宋", "gender": "male", "emperor": false, "birth": 1069, "death": null, "birthplace": "东京（今河南开封）", "country": null, "birthProvince": "河南", "roles": ["变法"], "tags": ["北宋", "宋神宗", "王安石", "青苗法", "保甲法"], "notable": "王安石在宋神宗支持下推行青苗、免役等新法，旨在富国强兵。", "difficulty": 1},
-  {"id": "ev-cn-126", "category": "event", "name": "岳飞北伐", "aliases": [], "region": "cn", "worldEra": null, "polity": "南宋", "gender": "male", "emperor": false, "birth": 1134, "death": null, "birthplace": "鄂州（今湖北武汉，出师地）", "country": null, "birthProvince": "湖北", "roles": ["战役"], "tags": ["南宋", "岳飞", "收复襄阳", "抗金"], "notable": "岳飞自鄂州多次北上攻金，收复襄阳六郡等大片失地。", "difficulty": 2},
-  {"id": "ev-cn-127", "category": "event", "name": "绍兴和议", "aliases": [], "region": "cn", "worldEra": null, "polity": "南宋", "gender": "male", "emperor": false, "birth": 1141, "death": null, "birthplace": "临安（今浙江杭州）", "country": null, "birthProvince": "浙江", "roles": ["条约"], "tags": ["南宋", "金朝", "宋高宗", "秦桧", "岁贡"], "notable": "宋金议和，宋向金称臣、划淮水为界，岳飞此前被害。", "difficulty": 3},
-  {"id": "ev-cn-128", "category": "event", "name": "隆兴和议", "aliases": [], "region": "cn", "worldEra": null, "polity": "南宋", "gender": "male", "emperor": false, "birth": 1164, "death": null, "birthplace": "临安（今浙江杭州）", "country": null, "birthProvince": "浙江", "roles": ["条约"], "tags": ["南宋", "金朝", "宋孝宗", "隆兴北伐"], "notable": "隆兴北伐失利后宋金重订和约，改为叔侄之国，维持和平。", "difficulty": 3},
-  {"id": "ev-cn-129", "category": "event", "name": "成吉思汗统一蒙古", "aliases": ["蒙古建国"], "region": "cn", "worldEra": null, "polity": "蒙古", "gender": "male", "emperor": false, "birth": 1206, "death": null, "birthplace": "斡难河源（今蒙古国鄂嫩河一带）", "country": null, "birthProvince": null, "roles": ["建制"], "tags": ["蒙古", "铁木真", "千户制", "大汗"], "notable": "铁木真统一草原各部，在斡难河源召开忽里勒台，尊号成吉思汗。", "difficulty": 2},
-  {"id": "ev-cn-130", "category": "event", "name": "马可·波罗来华", "aliases": [], "region": "cn", "worldEra": null, "polity": "元", "gender": "male", "emperor": false, "birth": 1275, "death": null, "birthplace": "上都（今内蒙古正蓝旗境内）", "country": null, "birthProvince": "内蒙古", "roles": ["外交"], "tags": ["元朝", "忽必烈", "马可·波罗", "行纪"], "notable": "威尼斯人马可·波罗抵达上都觐见忽必烈，留华十七年。", "difficulty": 2},
-  {"id": "ev-cn-131", "category": "event", "name": "行省制度确立", "aliases": ["行中书省"], "region": "cn", "worldEra": null, "polity": "元", "gender": "male", "emperor": false, "birth": 1281, "death": null, "birthplace": "大都（今北京）", "country": null, "birthProvince": "北京", "roles": ["建制"], "tags": ["元朝", "行政区划", "中书省", "地方制度"], "notable": "元朝在地方设行中书省管辖各地，行省制度影响后世省制。", "difficulty": 3},
-  {"id": "ev-cn-132", "category": "event", "name": "一条鞭法", "aliases": ["张居正改革"], "region": "cn", "worldEra": null, "polity": "明", "gender": "male", "emperor": false, "birth": 1581, "death": null, "birthplace": "北京（今北京市，诏令推行地）", "country": null, "birthProvince": "北京", "roles": ["改革"], "tags": ["明朝", "张居正", "赋役制度", "白银"], "notable": "张居正在全国推行一条鞭法，赋役合并折银征收。", "difficulty": 3},
-  {"id": "ev-cn-133", "category": "event", "name": "隆庆开关", "aliases": ["白银货币化"], "region": "cn", "worldEra": null, "polity": "明", "gender": "male", "emperor": false, "birth": 1567, "death": null, "birthplace": "月港（今福建漳州市境内）", "country": null, "birthProvince": "福建", "roles": ["事件"], "tags": ["明朝", "隆庆帝", "海禁开放", "白银流入"], "notable": "明穆宗解除海禁开放月港通商，海外白银大量流入中国。", "difficulty": 3},
-  {"id": "ev-cn-134", "category": "event", "name": "尼布楚条约", "aliases": [], "region": "cn", "worldEra": null, "polity": "清", "gender": "male", "emperor": false, "birth": 1689, "death": null, "birthplace": "尼布楚（今俄罗斯涅尔琴斯克）", "country": null, "birthProvince": null, "roles": ["条约"], "tags": ["清朝", "康熙帝", "沙俄", "东北边界"], "notable": "清俄划定东段边界，条约以满、俄、拉丁文本签署。", "difficulty": 3},
-  {"id": "ev-cn-135", "category": "event", "name": "摊丁入亩", "aliases": ["摊丁入地"], "region": "cn", "worldEra": null, "polity": "清", "gender": "male", "emperor": false, "birth": 1723, "death": null, "birthplace": "北京（今北京市，诏令推行地）", "country": null, "birthProvince": "北京", "roles": ["改革"], "tags": ["清朝", "雍正帝", "赋役制度", "人头税"], "notable": "雍正朝将丁银摊入田赋一并征收，人头税负担逐渐废止。", "difficulty": 3},
-  {"id": "ev-cn-136", "category": "event", "name": "金瓶掣签", "aliases": [], "region": "cn", "worldEra": null, "polity": "清", "gender": "male", "emperor": false, "birth": 1793, "death": null, "birthplace": "拉萨大昭寺（今西藏拉萨）", "country": null, "birthProvince": "西藏", "roles": ["建制"], "tags": ["清朝", "乾隆帝", "西藏", "活佛转世"], "notable": "清廷颁金瓶于拉萨，大活佛转世灵童须经理藩院监督掣签认定。", "difficulty": 3},
-  {"id": "ev-cn-137", "category": "event", "name": "文字狱", "aliases": ["清代文字狱"], "region": "cn", "worldEra": null, "polity": "清", "gender": "male", "emperor": false, "birth": 1663, "death": null, "birthplace": "湖州（今浙江湖州，庄廷鑨明史案发地）", "country": null, "birthProvince": "浙江", "roles": ["事件"], "tags": ["清朝", "明史案", "思想控制", "康雍乾"], "notable": "庄廷鑨明史案开清代文字狱先声，因文字获罪者屡见。", "difficulty": 2},
-  {"id": "ev-cn-138", "category": "event", "name": "闭关锁国", "aliases": ["一口通商"], "region": "cn", "worldEra": null, "polity": "清", "gender": "male", "emperor": false, "birth": 1757, "death": null, "birthplace": "广州（今广东广州）", "country": null, "birthProvince": "广东", "roles": ["政策"], "tags": ["清朝", "乾隆帝", "广州十三行", "一口通商"], "notable": "乾隆帝限定西洋贸易只在广州一口进行，对外交往日趋封闭。", "difficulty": 2},
-  {"id": "ev-cn-139", "category": "event", "name": "洋务运动", "aliases": ["自强运动"], "region": "cn", "worldEra": null, "polity": "近代", "gender": "male", "emperor": false, "birth": 1861, "death": null, "birthplace": "北京（今北京市，总理衙门设立地）", "country": null, "birthProvince": "北京", "roles": ["改革"], "tags": ["清朝", "曾国藩", "李鸿章", "江南制造总局", "师夷长技"], "notable": "清廷兴办军事民用工业与新式学堂，倡导中学为体西学为用。", "difficulty": 1},
-  {"id": "ev-cn-140", "category": "event", "name": "甲午战争", "aliases": ["甲午中日战争"], "region": "cn", "worldEra": null, "polity": "近代", "gender": "male", "emperor": false, "birth": 1894, "death": null, "birthplace": "丰岛海域（今朝鲜半岛西南海域）", "country": null, "birthProvince": "山东", "roles": ["战争"], "tags": ["清朝", "日本", "黄海海战", "马关条约"], "notable": "中日开战，北洋水师战败，次年签订《马关条约》割地赔款。", "difficulty": 1},
-  {"id": "ev-cn-141", "category": "event", "name": "义和团运动", "aliases": ["庚子事变"], "region": "cn", "worldEra": null, "polity": "近代", "gender": "male", "emperor": false, "birth": 1899, "death": null, "birthplace": "山东（今山东聊城一带，兴起地）", "country": null, "birthProvince": "山东", "roles": ["运动"], "tags": ["清朝", "义和团", "扶清灭洋", "八国联军"], "notable": "义和团以扶清灭洋为号兴起，八国联军借此侵华，北京陷落。", "difficulty": 2},
-  {"id": "ev-cn-142", "category": "event", "name": "五四运动", "aliases": [], "region": "cn", "worldEra": null, "polity": "近代", "gender": "male", "emperor": false, "birth": 1919, "death": null, "birthplace": "北京（今北京市，天安门一带）", "country": null, "birthProvince": "北京", "roles": ["运动"], "tags": ["民国", "学生运动", "巴黎和会", "新文化"], "notable": "北京学生抗议巴黎和会山东条款，游行请愿，各地纷纷响应。", "difficulty": 1},
-  {"id": "ev-ww-101", "category": "event", "name": "查士丁尼法典颁布", "aliases": ["查士丁尼民法典", "民法大全"], "region": "europe", "worldEra": "古罗马", "polity": "拜占庭帝国", "gender": "male", "emperor": false, "birth": 529, "death": null, "birthplace": "君士坦丁堡（今土耳其伊斯坦布尔）", "country": null, "birthProvince": null, "roles": ["建制"], "tags": ["拜占庭", "查士丁尼一世", "罗马法", "法典编纂"], "notable": "拜占庭皇帝查士丁尼下令编纂历代罗马法令，形成系统法典。", "difficulty": 3},
-  {"id": "ev-ww-102", "category": "event", "name": "穆罕默德创立伊斯兰教", "aliases": ["伊斯兰教创立"], "region": "west-asia", "worldEra": "中世纪", "polity": "阿拉伯半岛", "gender": "male", "emperor": false, "birth": 610, "death": null, "birthplace": "麦加（今沙特阿拉伯麦加）", "country": null, "birthProvince": null, "roles": ["事件"], "tags": ["阿拉伯", "穆罕默德", "古兰经", "麦加"], "notable": "穆罕默德在麦加开始传教，伊斯兰教由此兴起于阿拉伯半岛。", "difficulty": 2},
-  {"id": "ev-ww-103", "category": "event", "name": "阿拉伯帝国建立", "aliases": [], "region": "west-asia", "worldEra": "中世纪", "polity": "阿拉伯帝国", "gender": "male", "emperor": false, "birth": 632, "death": null, "birthplace": "麦地那（今沙特阿拉伯麦地那）", "country": null, "birthProvince": null, "roles": ["建制"], "tags": ["阿拉伯", "哈里发", "扩张", "政教合一"], "notable": "穆罕默德去世后哈里发国家对外扩张，逐渐形成横跨欧亚非的帝国。", "difficulty": 2},
-  {"id": "ev-ww-104", "category": "event", "name": "《大宪章》签署", "aliases": ["大宪章", "自由大宪章"], "region": "europe", "worldEra": "中世纪", "polity": "英格兰王国", "gender": "male", "emperor": false, "birth": 1215, "death": null, "birthplace": "兰尼米德（今英国泰晤士河畔兰尼米德）", "country": null, "birthProvince": null, "roles": ["条约"], "tags": ["英格兰", "约翰王", "贵族", "王权限制"], "notable": "英格兰贵族迫使约翰王签署大宪章，确立王在法下原则。", "difficulty": 2},
-  {"id": "ev-ww-105", "category": "event", "name": "蒙古西征", "aliases": ["蒙古西征欧洲"], "region": "europe", "worldEra": "中世纪", "polity": "蒙古帝国", "gender": "male", "emperor": false, "birth": 1237, "death": null, "birthplace": "基辅（今乌克兰基辅，长子西征重镇）", "country": null, "birthProvince": null, "roles": ["战争"], "tags": ["蒙古帝国", "拔都", "长子西征", "东欧"], "notable": "拔都率军西征，攻破基辅，兵锋直抵中欧多瑙河流域。", "difficulty": 3},
-  {"id": "ev-ww-106", "category": "event", "name": "黑死病流行", "aliases": ["欧洲鼠疫大流行"], "region": "europe", "worldEra": "中世纪", "polity": "西欧诸国", "gender": "male", "emperor": false, "birth": 1347, "death": null, "birthplace": "墨西拿（今意大利西西里岛墨西拿，登陆地）", "country": null, "birthProvince": null, "roles": ["事件"], "tags": ["鼠疫", "欧洲", "人口锐减", "中世纪"], "notable": "鼠疫经商船传入欧洲并迅速蔓延，数年间人口大幅减少。", "difficulty": 2},
-  {"id": "ev-ww-107", "category": "event", "name": "君士坦丁堡陷落", "aliases": ["1453年君士坦丁堡之陷"], "region": "europe", "worldEra": "中世纪", "polity": "奥斯曼帝国", "gender": "male", "emperor": false, "birth": 1453, "death": null, "birthplace": "君士坦丁堡（今土耳其伊斯坦布尔）", "country": null, "birthProvince": null, "roles": ["战役"], "tags": ["奥斯曼", "穆罕默德二世", "拜占庭灭亡", "乌尔班巨炮"], "notable": "奥斯曼苏丹穆罕默德二世攻破君士坦丁堡，拜占庭帝国灭亡。", "difficulty": 2},
-  {"id": "ev-ww-108", "category": "event", "name": "宗教改革", "aliases": ["路德改革", "九十五条论纲"], "region": "europe", "worldEra": "文艺复兴", "polity": "神圣罗马帝国", "gender": "male", "emperor": false, "birth": 1517, "death": null, "birthplace": "维滕贝格（今德国维滕贝格）", "country": null, "birthProvince": null, "roles": ["运动"], "tags": ["马丁·路德", "九十五条论纲", "新教", "赎罪券"], "notable": "马丁·路德发表九十五条论纲抨击赎罪券，新教运动由此展开。", "difficulty": 2},
-  {"id": "ev-ww-109", "category": "event", "name": "三十年战争", "aliases": [], "region": "europe", "worldEra": "启蒙时代", "polity": "神圣罗马帝国", "gender": "male", "emperor": false, "birth": 1618, "death": null, "birthplace": "布拉格（今捷克布拉格，掷出窗外事件）", "country": null, "birthProvince": null, "roles": ["战争"], "tags": ["欧洲", "新教", "天主教", "威斯特伐利亚和约"], "notable": "因宗教与邦国矛盾爆发全欧战争，1648年以威斯特伐利亚和约结束。", "difficulty": 3},
-  {"id": "ev-ww-110", "category": "event", "name": "美国独立战争", "aliases": ["北美独立战争"], "region": "americas", "worldEra": "启蒙时代", "polity": "英国", "gender": "male", "emperor": false, "birth": 1775, "death": null, "birthplace": "莱克星敦（今美国马萨诸塞州莱克星敦）", "country": null, "birthProvince": null, "roles": ["革命"], "tags": ["北美十三州", "华盛顿", "独立宣言", "英国"], "notable": "北美十三州殖民地起兵抗英，1783年英国承认美国独立。", "difficulty": 1},
-  {"id": "ev-ww-111", "category": "event", "name": "路易斯安那购地", "aliases": [], "region": "americas", "worldEra": "19 世纪上半叶", "polity": "美国", "gender": "male", "emperor": false, "birth": 1803, "death": null, "birthplace": "华盛顿（今美国华盛顿，签约地）", "country": null, "birthProvince": null, "roles": ["条约"], "tags": ["美国", "杰斐逊", "法国", "领土扩张"], "notable": "美国以约1500万美元从法国购得路易斯安那，领土大幅扩展。", "difficulty": 2},
-  {"id": "ev-ww-112", "category": "event", "name": "拿破仑加冕称帝", "aliases": ["拿破仑称帝"], "region": "europe", "worldEra": "19 世纪上半叶", "polity": "法兰西第一帝国", "gender": "male", "emperor": false, "birth": 1804, "death": null, "birthplace": "巴黎圣母院（今法国巴黎）", "country": null, "birthProvince": null, "roles": ["事件"], "tags": ["拿破仑", "法兰西第一帝国", "教皇", "加冕"], "notable": "拿破仑在巴黎圣母院加冕称帝，建立法兰西第一帝国。", "difficulty": 1},
-  {"id": "ev-ww-113", "category": "event", "name": "滑铁卢战役", "aliases": [], "region": "europe", "worldEra": "19 世纪上半叶", "polity": "法兰西第一帝国", "gender": "male", "emperor": false, "birth": 1815, "death": null, "birthplace": "滑铁卢（今比利时滑铁卢）", "country": null, "birthProvince": null, "roles": ["战役"], "tags": ["拿破仑", "威灵顿", "布吕歇尔", "百日王朝"], "notable": "拿破仑被英普联军击败于滑铁卢，百日王朝随之终结。", "difficulty": 2},
-  {"id": "ev-ww-114", "category": "event", "name": "达尔文发表《物种起源》", "aliases": ["物种起源出版"], "region": "europe", "worldEra": "19 世纪下半叶", "polity": "英国", "gender": "male", "emperor": false, "birth": 1859, "death": null, "birthplace": "伦敦（今英国伦敦，出版地）", "country": null, "birthProvince": null, "roles": ["发现"], "tags": ["达尔文", "进化论", "自然选择", "博物学"], "notable": "达尔文出版《物种起源》，提出以自然选择为核心的进化论。", "difficulty": 2},
-  {"id": "ev-ww-115", "category": "event", "name": "诺贝尔奖首次颁发", "aliases": ["诺贝尔奖设立"], "region": "europe", "worldEra": "20 世纪初", "polity": "瑞典", "gender": "male", "emperor": false, "birth": 1901, "death": null, "birthplace": "斯德哥尔摩（今瑞典斯德哥尔摩）", "country": null, "birthProvince": null, "roles": ["建制"], "tags": ["诺贝尔", "瑞典", "奖项", "科学奖励"], "notable": "依据诺贝尔遗嘱设立的奖项在斯德哥尔摩首次颁发。", "difficulty": 2},
-  {"id": "ev-ww-116", "category": "event", "name": "莱特兄弟首次动力飞行", "aliases": ["莱特兄弟首飞"], "region": "americas", "worldEra": "20 世纪初", "polity": "美国", "gender": "male", "emperor": false, "birth": 1903, "death": null, "birthplace": "基蒂霍克（今美国北卡罗来纳州）", "country": null, "birthProvince": null, "roles": ["发现"], "tags": ["莱特兄弟", "飞机", "航空", "飞行者一号"], "notable": "莱特兄弟驾驶飞行者一号完成人类首次有动力载人飞行。", "difficulty": 1},
-  {"id": "ev-ww-117", "category": "event", "name": "福特流水线投产", "aliases": ["流水线生产"], "region": "americas", "worldEra": "20 世纪初", "polity": "美国", "gender": "male", "emperor": false, "birth": 1913, "death": null, "birthplace": "海兰帕克（今美国密歇根州底特律附近）", "country": null, "birthProvince": null, "roles": ["工程"], "tags": ["福特", "T型车", "流水线", "大规模生产"], "notable": "福特公司在汽车装配中引入流水线，大幅缩短生产工时。", "difficulty": 2},
-  {"id": "ev-ww-118", "category": "event", "name": "巴拿马运河通航", "aliases": [], "region": "americas", "worldEra": "20 世纪初", "polity": "美国", "gender": "male", "emperor": false, "birth": 1914, "death": null, "birthplace": "巴拿马运河（今巴拿马）", "country": null, "birthProvince": null, "roles": ["工程"], "tags": ["巴拿马", "运河", "大西洋", "太平洋"], "notable": "连接大西洋与太平洋的巴拿马运河建成通航，船程大幅缩短。", "difficulty": 2}
+ {
+  "id": "ev-cn-101",
+  "category": "event",
+  "name": "大禹治水",
+  "aliases": [],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "史前",
+  "gender": "male",
+  "emperor": false,
+  "birth": -2070,
+  "death": null,
+  "birthplace": "黄河流域（今河南、山西一带）",
+  "country": null,
+  "birthProvince": "河南",
+  "roles": [
+   "工程"
+  ],
+  "tags": [
+   "上古",
+   "大禹",
+   "治水",
+   "三过家门而不入"
+  ],
+  "notable": "禹改堵为疏治理黄河水患，十三年功成，后受舜禅让即位。",
+  "difficulty": 1
+ },
+ {
+  "id": "ev-cn-102",
+  "category": "event",
+  "name": "盘庚迁殷",
+  "aliases": [],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "商",
+  "gender": "male",
+  "emperor": false,
+  "birth": -1300,
+  "death": null,
+  "birthplace": "殷（今河南安阳殷墟）",
+  "country": null,
+  "birthProvince": "河南",
+  "roles": [
+   "事件"
+  ],
+  "tags": [
+   "商朝",
+   "盘庚",
+   "殷墟",
+   "迁都"
+  ],
+  "notable": "商王盘庚将都城迁至殷，商朝此后政局稳定，故又称殷商。",
+  "difficulty": 2
+ },
+ {
+  "id": "ev-cn-103",
+  "category": "event",
+  "name": "牧野之战",
+  "aliases": [
+   "武王伐纣"
+  ],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "商",
+  "gender": "male",
+  "emperor": false,
+  "birth": -1046,
+  "death": null,
+  "birthplace": "牧野（今河南新乡市附近）",
+  "country": null,
+  "birthProvince": "河南",
+  "roles": [
+   "战役"
+  ],
+  "tags": [
+   "周武王",
+   "商纣王",
+   "商朝灭亡",
+   "封神"
+  ],
+  "notable": "周武王联军在牧野击败商军，纣王自焚，商朝灭亡。",
+  "difficulty": 1
+ },
+ {
+  "id": "ev-cn-104",
+  "category": "event",
+  "name": "国人暴动",
+  "aliases": [
+   "彘之乱"
+  ],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "西周",
+  "gender": "male",
+  "emperor": false,
+  "birth": -841,
+  "death": null,
+  "birthplace": "镐京（今陕西西安）",
+  "country": null,
+  "birthProvince": "陕西",
+  "roles": [
+   "起义"
+  ],
+  "tags": [
+   "西周",
+   "周厉王",
+   "共和行政",
+   "道路以目"
+  ],
+  "notable": "镐京国人驱逐周厉王，此后由周公、召公共同执政，称共和行政。",
+  "difficulty": 2
+ },
+ {
+  "id": "ev-cn-105",
+  "category": "event",
+  "name": "烽火戏诸侯",
+  "aliases": [],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "西周",
+  "gender": "male",
+  "emperor": false,
+  "birth": -771,
+  "death": null,
+  "birthplace": "骊山（今陕西西安市临潼区）",
+  "country": null,
+  "birthProvince": "陕西",
+  "roles": [
+   "事件"
+  ],
+  "tags": [
+   "西周",
+   "周幽王",
+   "褒姒",
+   "犬戎"
+  ],
+  "notable": "周幽王点燃烽火博褒姒一笑，犬戎攻入镐京，西周灭亡。",
+  "difficulty": 2
+ },
+ {
+  "id": "ev-cn-106",
+  "category": "event",
+  "name": "葵丘会盟",
+  "aliases": [],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "春秋",
+  "gender": "male",
+  "emperor": false,
+  "birth": -651,
+  "death": null,
+  "birthplace": "葵丘（今河南民权县境内）",
+  "country": null,
+  "birthProvince": "河南",
+  "roles": [
+   "会盟"
+  ],
+  "tags": [
+   "春秋",
+   "齐桓公",
+   "霸主",
+   "管仲"
+  ],
+  "notable": "齐桓公主持诸侯会盟，周襄王派使致祭，霸业达到顶点。",
+  "difficulty": 3
+ },
+ {
+  "id": "ev-cn-107",
+  "category": "event",
+  "name": "合纵连横",
+  "aliases": [
+   "纵横家"
+  ],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "战国",
+  "gender": "male",
+  "emperor": false,
+  "birth": -318,
+  "death": null,
+  "birthplace": "中原各国（今河南、陕西一带）",
+  "country": null,
+  "birthProvince": "河南",
+  "roles": [
+   "外交"
+  ],
+  "tags": [
+   "战国",
+   "苏秦",
+   "张仪",
+   "纵横家"
+  ],
+  "notable": "苏秦主张六国合纵抗秦，张仪以连横破纵，游说之风盛行。",
+  "difficulty": 3
+ },
+ {
+  "id": "ev-cn-108",
+  "category": "event",
+  "name": "马陵之战",
+  "aliases": [],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "战国",
+  "gender": "male",
+  "emperor": false,
+  "birth": -341,
+  "death": null,
+  "birthplace": "马陵（今山东莘县或郯城一带）",
+  "country": null,
+  "birthProvince": "山东",
+  "roles": [
+   "战役"
+  ],
+  "tags": [
+   "战国",
+   "孙膑",
+   "庞涓",
+   "魏国",
+   "齐国"
+  ],
+  "notable": "孙膑以减灶之计诱魏军入马陵设伏，庞涓兵败自刎。",
+  "difficulty": 3
+ },
+ {
+  "id": "ev-cn-109",
+  "category": "event",
+  "name": "都江堰修建",
+  "aliases": [],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "战国",
+  "gender": "male",
+  "emperor": false,
+  "birth": -256,
+  "death": null,
+  "birthplace": "岷江（今四川成都市都江堰市）",
+  "country": null,
+  "birthProvince": "四川",
+  "roles": [
+   "工程"
+  ],
+  "tags": [
+   "战国",
+   "李冰",
+   "蜀郡",
+   "水利工程",
+   "天府之国"
+  ],
+  "notable": "秦蜀郡守李冰父子主持修建都江堰，成都平原自此旱涝保收。",
+  "difficulty": 1
+ },
+ {
+  "id": "ev-cn-110",
+  "category": "event",
+  "name": "秦灭六国",
+  "aliases": [
+   "秦统一六国"
+  ],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "秦",
+  "gender": "male",
+  "emperor": false,
+  "birth": -230,
+  "death": null,
+  "birthplace": "咸阳（今陕西咸阳市，发令地）",
+  "country": null,
+  "birthProvince": "陕西",
+  "roles": [
+   "战争"
+  ],
+  "tags": [
+   "秦朝",
+   "秦始皇",
+   "统一",
+   "韩赵魏楚燕齐"
+  ],
+  "notable": "秦王嬴政十年间依次攻灭六国，公元前221年完成统一。",
+  "difficulty": 2
+ },
+ {
+  "id": "ev-cn-111",
+  "category": "event",
+  "name": "文景之治",
+  "aliases": [],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "西汉",
+  "gender": "male",
+  "emperor": false,
+  "birth": -180,
+  "death": null,
+  "birthplace": "长安（今陕西西安）",
+  "country": null,
+  "birthProvince": "陕西",
+  "roles": [
+   "治世"
+  ],
+  "tags": [
+   "西汉",
+   "汉文帝",
+   "汉景帝",
+   "轻徭薄赋",
+   "休养生息"
+  ],
+  "notable": "汉文帝、景帝轻徭薄赋、与民休息，国力逐渐恢复。",
+  "difficulty": 2
+ },
+ {
+  "id": "ev-cn-112",
+  "category": "event",
+  "name": "罢黜百家，独尊儒术",
+  "aliases": [
+   "罢黜百家"
+  ],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "西汉",
+  "gender": "male",
+  "emperor": false,
+  "birth": -134,
+  "death": null,
+  "birthplace": "长安（今陕西西安）",
+  "country": null,
+  "birthProvince": "陕西",
+  "roles": [
+   "改革"
+  ],
+  "tags": [
+   "西汉",
+   "汉武帝",
+   "董仲舒",
+   "儒学"
+  ],
+  "notable": "董仲舒建议汉武帝尊崇儒学，儒学自此成为官方正统思想。",
+  "difficulty": 2
+ },
+ {
+  "id": "ev-cn-113",
+  "category": "event",
+  "name": "光武中兴",
+  "aliases": [],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "东汉",
+  "gender": "male",
+  "emperor": false,
+  "birth": 25,
+  "death": null,
+  "birthplace": "鄗城（今河北柏乡县境内，刘秀即位地）",
+  "country": null,
+  "birthProvince": "河北",
+  "roles": [
+   "治世"
+  ],
+  "tags": [
+   "东汉",
+   "光武帝",
+   "刘秀",
+   "休养生息"
+  ],
+  "notable": "刘秀重建汉室并推行安抚政策，社会恢复，史称光武中兴。",
+  "difficulty": 2
+ },
+ {
+  "id": "ev-cn-114",
+  "category": "event",
+  "name": "黄巾起义",
+  "aliases": [],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "东汉",
+  "gender": "male",
+  "emperor": false,
+  "birth": 184,
+  "death": null,
+  "birthplace": "巨鹿（今河北邢台市平乡县一带）",
+  "country": null,
+  "birthProvince": "河北",
+  "roles": [
+   "起义"
+  ],
+  "tags": [
+   "东汉",
+   "张角",
+   "太平道",
+   "苍天已死"
+  ],
+  "notable": "张角以太平道聚众起义，动摇东汉统治，州牧割据由此加剧。",
+  "difficulty": 2
+ },
+ {
+  "id": "ev-cn-115",
+  "category": "event",
+  "name": "九品中正制",
+  "aliases": [
+   "九品官人法"
+  ],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "三国",
+  "gender": "male",
+  "emperor": false,
+  "birth": 220,
+  "death": null,
+  "birthplace": "洛阳（今河南洛阳）",
+  "country": null,
+  "birthProvince": "河南",
+  "roles": [
+   "建制"
+  ],
+  "tags": [
+   "曹魏",
+   "曹丕",
+   "陈群",
+   "选官制度"
+  ],
+  "notable": "曹丕采纳陈群建议设中正官评定人才等第，成为魏晋选官制度。",
+  "difficulty": 3
+ },
+ {
+  "id": "ev-cn-116",
+  "category": "event",
+  "name": "八王之乱",
+  "aliases": [],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "西晋",
+  "gender": "male",
+  "emperor": false,
+  "birth": 291,
+  "death": null,
+  "birthplace": "洛阳（今河南洛阳）",
+  "country": null,
+  "birthProvince": "河南",
+  "roles": [
+   "叛乱"
+  ],
+  "tags": [
+   "西晋",
+   "司马氏诸王",
+   "贾南风",
+   "五胡乱华前奏"
+  ],
+  "notable": "西晋宗室八王争夺中央权力，混战十六年，西晋由盛转衰。",
+  "difficulty": 3
+ },
+ {
+  "id": "ev-cn-117",
+  "category": "event",
+  "name": "孝文帝改革",
+  "aliases": [
+   "孝文帝汉化改革"
+  ],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "南北朝",
+  "gender": "male",
+  "emperor": false,
+  "birth": 494,
+  "death": null,
+  "birthplace": "洛阳（今河南洛阳，迁都后推行地）",
+  "country": null,
+  "birthProvince": "河南",
+  "roles": [
+   "改革"
+  ],
+  "tags": [
+   "北魏",
+   "孝文帝",
+   "汉化",
+   "迁都洛阳"
+  ],
+  "notable": "北魏孝文帝迁都洛阳，改汉姓、行汉语，推进鲜卑政权汉化。",
+  "difficulty": 2
+ },
+ {
+  "id": "ev-cn-118",
+  "category": "event",
+  "name": "科举制创立",
+  "aliases": [
+   "隋创科举"
+  ],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "隋",
+  "gender": "male",
+  "emperor": false,
+  "birth": 605,
+  "death": null,
+  "birthplace": "大兴城（今陕西西安）",
+  "country": null,
+  "birthProvince": "陕西",
+  "roles": [
+   "建制"
+  ],
+  "tags": [
+   "隋朝",
+   "隋炀帝",
+   "进士科",
+   "选官制度"
+  ],
+  "notable": "隋炀帝设进士科，以考试取士，科举制度由此创立。",
+  "difficulty": 2
+ },
+ {
+  "id": "ev-cn-119",
+  "category": "event",
+  "name": "大运河开凿",
+  "aliases": [
+   "隋唐大运河",
+   "京杭大运河开凿"
+  ],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "隋",
+  "gender": "male",
+  "emperor": false,
+  "birth": 605,
+  "death": null,
+  "birthplace": "洛阳（今河南洛阳，中心）",
+  "country": null,
+  "birthProvince": "河南",
+  "roles": [
+   "工程"
+  ],
+  "tags": [
+   "隋朝",
+   "隋炀帝",
+   "通济渠",
+   "南北贯通"
+  ],
+  "notable": "隋炀帝征发民力开凿以洛阳为中心的大运河，贯通南北水运。",
+  "difficulty": 1
+ },
+ {
+  "id": "ev-cn-120",
+  "category": "event",
+  "name": "贞观之治",
+  "aliases": [],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "唐",
+  "gender": "male",
+  "emperor": false,
+  "birth": 627,
+  "death": null,
+  "birthplace": "长安（今陕西西安）",
+  "country": null,
+  "birthProvince": "陕西",
+  "roles": [
+   "治世"
+  ],
+  "tags": [
+   "唐朝",
+   "唐太宗",
+   "魏征",
+   "虚心纳谏"
+  ],
+  "notable": "唐太宗任贤纳谏、轻徭薄赋，政治清明，史称贞观之治。",
+  "difficulty": 1
+ },
+ {
+  "id": "ev-cn-121",
+  "category": "event",
+  "name": "安西都护府设立",
+  "aliases": [],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "唐",
+  "gender": "male",
+  "emperor": false,
+  "birth": 640,
+  "death": null,
+  "birthplace": "龟兹（今新疆库车）",
+  "country": null,
+  "birthProvince": "新疆",
+  "roles": [
+   "建制"
+  ],
+  "tags": [
+   "唐朝",
+   "西域",
+   "丝绸之路",
+   "安西四镇"
+  ],
+  "notable": "唐朝在西域设立军政机构，管辖龟兹、疏勒、于阗、碎叶四镇。",
+  "difficulty": 3
+ },
+ {
+  "id": "ev-cn-122",
+  "category": "event",
+  "name": "开元盛世",
+  "aliases": [],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "唐",
+  "gender": "male",
+  "emperor": false,
+  "birth": 713,
+  "death": null,
+  "birthplace": "长安（今陕西西安）",
+  "country": null,
+  "birthProvince": "陕西",
+  "roles": [
+   "治世"
+  ],
+  "tags": [
+   "唐朝",
+   "唐玄宗",
+   "姚崇",
+   "宋璟"
+  ],
+  "notable": "唐玄宗前期整顿吏治、发展生产，唐朝进入全盛时期。",
+  "difficulty": 2
+ },
+ {
+  "id": "ev-cn-123",
+  "category": "event",
+  "name": "黄巢起义",
+  "aliases": [
+   "唐末农民起义"
+  ],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "唐",
+  "gender": "male",
+  "emperor": false,
+  "birth": 875,
+  "death": null,
+  "birthplace": "曹州冤句（今山东菏泽境内）",
+  "country": null,
+  "birthProvince": "山东",
+  "roles": [
+   "起义"
+  ],
+  "tags": [
+   "唐朝",
+   "黄巢",
+   "流动作战",
+   "冲天香阵"
+  ],
+  "notable": "黄巢率众起义转战大半个中国，880 年攻入长安称帝。",
+  "difficulty": 2
+ },
+ {
+  "id": "ev-cn-124",
+  "category": "event",
+  "name": "庆历新政",
+  "aliases": [],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "北宋",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1043,
+  "death": null,
+  "birthplace": "东京（今河南开封）",
+  "country": null,
+  "birthProvince": "河南",
+  "roles": [
+   "改革"
+  ],
+  "tags": [
+   "北宋",
+   "宋仁宗",
+   "范仲淹",
+   "明黜陟"
+  ],
+  "notable": "范仲淹上《答手诏条陈十事》，整顿吏治，新政一年余而罢。",
+  "difficulty": 3
+ },
+ {
+  "id": "ev-cn-125",
+  "category": "event",
+  "name": "王安石变法",
+  "aliases": [
+   "熙宁变法"
+  ],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "北宋",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1069,
+  "death": null,
+  "birthplace": "东京（今河南开封）",
+  "country": null,
+  "birthProvince": "河南",
+  "roles": [
+   "变法"
+  ],
+  "tags": [
+   "北宋",
+   "宋神宗",
+   "王安石",
+   "青苗法",
+   "保甲法"
+  ],
+  "notable": "王安石在宋神宗支持下推行青苗、免役等新法，旨在富国强兵。",
+  "difficulty": 1
+ },
+ {
+  "id": "ev-cn-126",
+  "category": "event",
+  "name": "岳飞北伐",
+  "aliases": [],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "南宋",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1134,
+  "death": null,
+  "birthplace": "鄂州（今湖北武汉，出师地）",
+  "country": null,
+  "birthProvince": "湖北",
+  "roles": [
+   "战役"
+  ],
+  "tags": [
+   "南宋",
+   "岳飞",
+   "收复襄阳",
+   "抗金"
+  ],
+  "notable": "岳飞自鄂州多次北上攻金，收复襄阳六郡等大片失地。",
+  "difficulty": 2
+ },
+ {
+  "id": "ev-cn-127",
+  "category": "event",
+  "name": "绍兴和议",
+  "aliases": [],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "南宋",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1141,
+  "death": null,
+  "birthplace": "临安（今浙江杭州）",
+  "country": null,
+  "birthProvince": "浙江",
+  "roles": [
+   "条约"
+  ],
+  "tags": [
+   "南宋",
+   "金朝",
+   "宋高宗",
+   "秦桧",
+   "岁贡"
+  ],
+  "notable": "宋金议和，宋向金称臣、划淮水为界，岳飞此前被害。",
+  "difficulty": 3
+ },
+ {
+  "id": "ev-cn-128",
+  "category": "event",
+  "name": "隆兴和议",
+  "aliases": [],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "南宋",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1164,
+  "death": null,
+  "birthplace": "临安（今浙江杭州）",
+  "country": null,
+  "birthProvince": "浙江",
+  "roles": [
+   "条约"
+  ],
+  "tags": [
+   "南宋",
+   "金朝",
+   "宋孝宗",
+   "隆兴北伐"
+  ],
+  "notable": "隆兴北伐失利后宋金重订和约，改为叔侄之国，维持和平。",
+  "difficulty": 3
+ },
+ {
+  "id": "ev-cn-129",
+  "category": "event",
+  "name": "成吉思汗统一蒙古",
+  "aliases": [
+   "蒙古建国"
+  ],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "蒙古",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1206,
+  "death": null,
+  "birthplace": "斡难河源（今蒙古国鄂嫩河一带）",
+  "country": null,
+  "birthProvince": null,
+  "roles": [
+   "建制"
+  ],
+  "tags": [
+   "蒙古",
+   "铁木真",
+   "千户制",
+   "大汗"
+  ],
+  "notable": "铁木真统一草原各部，在斡难河源召开忽里勒台，尊号成吉思汗。",
+  "difficulty": 2
+ },
+ {
+  "id": "ev-cn-130",
+  "category": "event",
+  "name": "马可·波罗来华",
+  "aliases": [],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "元",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1275,
+  "death": null,
+  "birthplace": "上都（今内蒙古正蓝旗境内）",
+  "country": null,
+  "birthProvince": "内蒙古",
+  "roles": [
+   "外交"
+  ],
+  "tags": [
+   "元朝",
+   "忽必烈",
+   "马可·波罗",
+   "行纪"
+  ],
+  "notable": "威尼斯人马可·波罗抵达上都觐见忽必烈，留华十七年。",
+  "difficulty": 2
+ },
+ {
+  "id": "ev-cn-131",
+  "category": "event",
+  "name": "行省制度确立",
+  "aliases": [
+   "行中书省"
+  ],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "元",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1281,
+  "death": null,
+  "birthplace": "大都（今北京）",
+  "country": null,
+  "birthProvince": "北京",
+  "roles": [
+   "建制"
+  ],
+  "tags": [
+   "元朝",
+   "行政区划",
+   "中书省",
+   "地方制度"
+  ],
+  "notable": "元朝在地方设行中书省管辖各地，行省制度影响后世省制。",
+  "difficulty": 3
+ },
+ {
+  "id": "ev-cn-132",
+  "category": "event",
+  "name": "一条鞭法",
+  "aliases": [
+   "张居正改革"
+  ],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "明",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1581,
+  "death": null,
+  "birthplace": "北京（今北京市，诏令推行地）",
+  "country": null,
+  "birthProvince": "北京",
+  "roles": [
+   "改革"
+  ],
+  "tags": [
+   "明朝",
+   "张居正",
+   "赋役制度",
+   "白银"
+  ],
+  "notable": "张居正在全国推行一条鞭法，赋役合并折银征收。",
+  "difficulty": 3
+ },
+ {
+  "id": "ev-cn-133",
+  "category": "event",
+  "name": "隆庆开关",
+  "aliases": [
+   "白银货币化"
+  ],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "明",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1567,
+  "death": null,
+  "birthplace": "月港（今福建漳州市境内）",
+  "country": null,
+  "birthProvince": "福建",
+  "roles": [
+   "事件"
+  ],
+  "tags": [
+   "明朝",
+   "隆庆帝",
+   "海禁开放",
+   "白银流入"
+  ],
+  "notable": "明穆宗解除海禁开放月港通商，海外白银大量流入中国。",
+  "difficulty": 3
+ },
+ {
+  "id": "ev-cn-134",
+  "category": "event",
+  "name": "尼布楚条约",
+  "aliases": [],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "清",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1689,
+  "death": null,
+  "birthplace": "尼布楚（今俄罗斯涅尔琴斯克）",
+  "country": null,
+  "birthProvince": null,
+  "roles": [
+   "条约"
+  ],
+  "tags": [
+   "清朝",
+   "康熙帝",
+   "沙俄",
+   "东北边界"
+  ],
+  "notable": "清俄划定东段边界，条约以满、俄、拉丁文本签署。",
+  "difficulty": 3
+ },
+ {
+  "id": "ev-cn-135",
+  "category": "event",
+  "name": "摊丁入亩",
+  "aliases": [
+   "摊丁入地"
+  ],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "清",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1723,
+  "death": null,
+  "birthplace": "北京（今北京市，诏令推行地）",
+  "country": null,
+  "birthProvince": "北京",
+  "roles": [
+   "改革"
+  ],
+  "tags": [
+   "清朝",
+   "雍正帝",
+   "赋役制度",
+   "人头税"
+  ],
+  "notable": "雍正朝将丁银摊入田赋一并征收，人头税负担逐渐废止。",
+  "difficulty": 3
+ },
+ {
+  "id": "ev-cn-136",
+  "category": "event",
+  "name": "金瓶掣签",
+  "aliases": [],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "清",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1793,
+  "death": null,
+  "birthplace": "拉萨大昭寺（今西藏拉萨）",
+  "country": null,
+  "birthProvince": "西藏",
+  "roles": [
+   "建制"
+  ],
+  "tags": [
+   "清朝",
+   "乾隆帝",
+   "西藏",
+   "活佛转世"
+  ],
+  "notable": "清廷颁金瓶于拉萨，大活佛转世灵童须经理藩院监督掣签认定。",
+  "difficulty": 3
+ },
+ {
+  "id": "ev-cn-137",
+  "category": "event",
+  "name": "文字狱",
+  "aliases": [
+   "清代文字狱"
+  ],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "清",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1663,
+  "death": null,
+  "birthplace": "湖州（今浙江湖州，庄廷鑨明史案发地）",
+  "country": null,
+  "birthProvince": "浙江",
+  "roles": [
+   "事件"
+  ],
+  "tags": [
+   "清朝",
+   "明史案",
+   "思想控制",
+   "康雍乾"
+  ],
+  "notable": "庄廷鑨明史案开清代文字狱先声，因文字获罪者屡见。",
+  "difficulty": 2
+ },
+ {
+  "id": "ev-cn-138",
+  "category": "event",
+  "name": "闭关锁国",
+  "aliases": [
+   "一口通商"
+  ],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "清",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1757,
+  "death": null,
+  "birthplace": "广州（今广东广州）",
+  "country": null,
+  "birthProvince": "广东",
+  "roles": [
+   "政策"
+  ],
+  "tags": [
+   "清朝",
+   "乾隆帝",
+   "广州十三行",
+   "一口通商"
+  ],
+  "notable": "乾隆帝限定西洋贸易只在广州一口进行，对外交往日趋封闭。",
+  "difficulty": 2
+ },
+ {
+  "id": "ev-cn-139",
+  "category": "event",
+  "name": "洋务运动",
+  "aliases": [
+   "自强运动"
+  ],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "近代",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1861,
+  "death": null,
+  "birthplace": "北京（今北京市，总理衙门设立地）",
+  "country": null,
+  "birthProvince": "北京",
+  "roles": [
+   "改革"
+  ],
+  "tags": [
+   "清朝",
+   "曾国藩",
+   "李鸿章",
+   "江南制造总局",
+   "师夷长技"
+  ],
+  "notable": "清廷兴办军事民用工业与新式学堂，倡导中学为体西学为用。",
+  "difficulty": 1
+ },
+ {
+  "id": "ev-cn-140",
+  "category": "event",
+  "name": "甲午战争",
+  "aliases": [
+   "甲午中日战争"
+  ],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "近代",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1894,
+  "death": null,
+  "birthplace": "丰岛海域（今朝鲜半岛西南海域）",
+  "country": null,
+  "birthProvince": "山东",
+  "roles": [
+   "战争"
+  ],
+  "tags": [
+   "清朝",
+   "日本",
+   "黄海海战",
+   "马关条约"
+  ],
+  "notable": "中日开战，北洋水师战败，次年签订《马关条约》割地赔款。",
+  "difficulty": 1
+ },
+ {
+  "id": "ev-cn-141",
+  "category": "event",
+  "name": "义和团运动",
+  "aliases": [
+   "庚子事变"
+  ],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "近代",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1899,
+  "death": null,
+  "birthplace": "山东（今山东聊城一带，兴起地）",
+  "country": null,
+  "birthProvince": "山东",
+  "roles": [
+   "运动"
+  ],
+  "tags": [
+   "清朝",
+   "义和团",
+   "扶清灭洋",
+   "八国联军"
+  ],
+  "notable": "义和团以扶清灭洋为号兴起，八国联军借此侵华，北京陷落。",
+  "difficulty": 2
+ },
+ {
+  "id": "ev-cn-142",
+  "category": "event",
+  "name": "五四运动",
+  "aliases": [],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "近代",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1919,
+  "death": null,
+  "birthplace": "北京（今北京市，天安门一带）",
+  "country": null,
+  "birthProvince": "北京",
+  "roles": [
+   "运动"
+  ],
+  "tags": [
+   "民国",
+   "学生运动",
+   "巴黎和会",
+   "新文化"
+  ],
+  "notable": "北京学生抗议巴黎和会山东条款，游行请愿，各地纷纷响应。",
+  "difficulty": 1
+ },
+ {
+  "id": "ev-ww-101",
+  "category": "event",
+  "name": "查士丁尼法典颁布",
+  "aliases": [
+   "查士丁尼民法典",
+   "民法大全"
+  ],
+  "region": "europe",
+  "worldEra": "古罗马",
+  "polity": "拜占庭帝国",
+  "gender": "male",
+  "emperor": false,
+  "birth": 529,
+  "death": null,
+  "birthplace": "君士坦丁堡（今土耳其伊斯坦布尔）",
+  "country": null,
+  "birthProvince": null,
+  "roles": [
+   "建制"
+  ],
+  "tags": [
+   "拜占庭",
+   "查士丁尼一世",
+   "罗马法",
+   "法典编纂"
+  ],
+  "notable": "拜占庭皇帝查士丁尼下令编纂历代罗马法令，形成系统法典。",
+  "difficulty": 3
+ },
+ {
+  "id": "ev-ww-102",
+  "category": "event",
+  "name": "穆罕默德创立伊斯兰教",
+  "aliases": [
+   "伊斯兰教创立"
+  ],
+  "region": "west-asia",
+  "worldEra": "中世纪",
+  "polity": "阿拉伯半岛",
+  "gender": "male",
+  "emperor": false,
+  "birth": 610,
+  "death": null,
+  "birthplace": "麦加（今沙特阿拉伯麦加）",
+  "country": null,
+  "birthProvince": null,
+  "roles": [
+   "事件"
+  ],
+  "tags": [
+   "阿拉伯",
+   "穆罕默德",
+   "古兰经",
+   "麦加"
+  ],
+  "notable": "穆罕默德在麦加开始传教，伊斯兰教由此兴起于阿拉伯半岛。",
+  "difficulty": 2
+ },
+ {
+  "id": "ev-ww-103",
+  "category": "event",
+  "name": "阿拉伯帝国建立",
+  "aliases": [],
+  "region": "west-asia",
+  "worldEra": "中世纪",
+  "polity": "阿拉伯帝国",
+  "gender": "male",
+  "emperor": false,
+  "birth": 632,
+  "death": null,
+  "birthplace": "麦地那（今沙特阿拉伯麦地那）",
+  "country": null,
+  "birthProvince": null,
+  "roles": [
+   "建制"
+  ],
+  "tags": [
+   "阿拉伯",
+   "哈里发",
+   "扩张",
+   "政教合一"
+  ],
+  "notable": "穆罕默德去世后哈里发国家对外扩张，逐渐形成横跨欧亚非的帝国。",
+  "difficulty": 2
+ },
+ {
+  "id": "ev-ww-104",
+  "category": "event",
+  "name": "《大宪章》签署",
+  "aliases": [],
+  "region": "europe",
+  "worldEra": "中世纪",
+  "polity": "英格兰王国",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1215,
+  "death": null,
+  "birthplace": "兰尼米德（今英国泰晤士河畔兰尼米德）",
+  "country": null,
+  "birthProvince": null,
+  "roles": [
+   "条约"
+  ],
+  "tags": [
+   "英格兰",
+   "约翰王",
+   "贵族",
+   "王权限制"
+  ],
+  "notable": "英格兰贵族迫使约翰王签署大宪章，确立王在法下原则。",
+  "difficulty": 2
+ },
+ {
+  "id": "ev-ww-105",
+  "category": "event",
+  "name": "蒙古西征",
+  "aliases": [
+   "蒙古西征欧洲"
+  ],
+  "region": "europe",
+  "worldEra": "中世纪",
+  "polity": "蒙古帝国",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1237,
+  "death": null,
+  "birthplace": "基辅（今乌克兰基辅，长子西征重镇）",
+  "country": null,
+  "birthProvince": null,
+  "roles": [
+   "战争"
+  ],
+  "tags": [
+   "蒙古帝国",
+   "拔都",
+   "长子西征",
+   "东欧"
+  ],
+  "notable": "拔都率军西征，攻破基辅，兵锋直抵中欧多瑙河流域。",
+  "difficulty": 3
+ },
+ {
+  "id": "ev-ww-106",
+  "category": "event",
+  "name": "黑死病流行",
+  "aliases": [
+   "欧洲鼠疫大流行"
+  ],
+  "region": "europe",
+  "worldEra": "中世纪",
+  "polity": "西欧诸国",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1347,
+  "death": null,
+  "birthplace": "墨西拿（今意大利西西里岛墨西拿，登陆地）",
+  "country": null,
+  "birthProvince": null,
+  "roles": [
+   "事件"
+  ],
+  "tags": [
+   "鼠疫",
+   "欧洲",
+   "人口锐减",
+   "中世纪"
+  ],
+  "notable": "鼠疫经商船传入欧洲并迅速蔓延，数年间人口大幅减少。",
+  "difficulty": 2
+ },
+ {
+  "id": "ev-ww-107",
+  "category": "event",
+  "name": "君士坦丁堡陷落",
+  "aliases": [
+   "1453年君士坦丁堡之陷"
+  ],
+  "region": "europe",
+  "worldEra": "中世纪",
+  "polity": "奥斯曼帝国",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1453,
+  "death": null,
+  "birthplace": "君士坦丁堡（今土耳其伊斯坦布尔）",
+  "country": null,
+  "birthProvince": null,
+  "roles": [
+   "战役"
+  ],
+  "tags": [
+   "奥斯曼",
+   "穆罕默德二世",
+   "拜占庭灭亡",
+   "乌尔班巨炮"
+  ],
+  "notable": "奥斯曼苏丹穆罕默德二世攻破君士坦丁堡，拜占庭帝国灭亡。",
+  "difficulty": 2
+ },
+ {
+  "id": "ev-ww-108",
+  "category": "event",
+  "name": "宗教改革",
+  "aliases": [
+   "路德改革",
+   "九十五条论纲"
+  ],
+  "region": "europe",
+  "worldEra": "文艺复兴",
+  "polity": "神圣罗马帝国",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1517,
+  "death": null,
+  "birthplace": "维滕贝格（今德国维滕贝格）",
+  "country": null,
+  "birthProvince": null,
+  "roles": [
+   "运动"
+  ],
+  "tags": [
+   "马丁·路德",
+   "九十五条论纲",
+   "新教",
+   "赎罪券"
+  ],
+  "notable": "马丁·路德发表九十五条论纲抨击赎罪券，新教运动由此展开。",
+  "difficulty": 2
+ },
+ {
+  "id": "ev-ww-109",
+  "category": "event",
+  "name": "三十年战争",
+  "aliases": [],
+  "region": "europe",
+  "worldEra": "启蒙时代",
+  "polity": "神圣罗马帝国",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1618,
+  "death": null,
+  "birthplace": "布拉格（今捷克布拉格，掷出窗外事件）",
+  "country": null,
+  "birthProvince": null,
+  "roles": [
+   "战争"
+  ],
+  "tags": [
+   "欧洲",
+   "新教",
+   "天主教",
+   "威斯特伐利亚和约"
+  ],
+  "notable": "因宗教与邦国矛盾爆发全欧战争，1648年以威斯特伐利亚和约结束。",
+  "difficulty": 3
+ },
+ {
+  "id": "ev-ww-110",
+  "category": "event",
+  "name": "美国独立战争",
+  "aliases": [
+   "北美独立战争"
+  ],
+  "region": "americas",
+  "worldEra": "启蒙时代",
+  "polity": "英国",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1775,
+  "death": null,
+  "birthplace": "莱克星敦（今美国马萨诸塞州莱克星敦）",
+  "country": null,
+  "birthProvince": null,
+  "roles": [
+   "革命"
+  ],
+  "tags": [
+   "北美十三州",
+   "华盛顿",
+   "独立宣言",
+   "英国"
+  ],
+  "notable": "北美十三州殖民地起兵抗英，1783年英国承认美国独立。",
+  "difficulty": 1
+ },
+ {
+  "id": "ev-ww-111",
+  "category": "event",
+  "name": "路易斯安那购地",
+  "aliases": [],
+  "region": "americas",
+  "worldEra": "19 世纪上半叶",
+  "polity": "美国",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1803,
+  "death": null,
+  "birthplace": "华盛顿（今美国华盛顿，签约地）",
+  "country": null,
+  "birthProvince": null,
+  "roles": [
+   "条约"
+  ],
+  "tags": [
+   "美国",
+   "杰斐逊",
+   "法国",
+   "领土扩张"
+  ],
+  "notable": "美国以约1500万美元从法国购得路易斯安那，领土大幅扩展。",
+  "difficulty": 2
+ },
+ {
+  "id": "ev-ww-112",
+  "category": "event",
+  "name": "拿破仑加冕称帝",
+  "aliases": [
+   "拿破仑称帝"
+  ],
+  "region": "europe",
+  "worldEra": "19 世纪上半叶",
+  "polity": "法兰西第一帝国",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1804,
+  "death": null,
+  "birthplace": "巴黎圣母院（今法国巴黎）",
+  "country": null,
+  "birthProvince": null,
+  "roles": [
+   "事件"
+  ],
+  "tags": [
+   "拿破仑",
+   "法兰西第一帝国",
+   "教皇",
+   "加冕"
+  ],
+  "notable": "拿破仑在巴黎圣母院加冕称帝，建立法兰西第一帝国。",
+  "difficulty": 1
+ },
+ {
+  "id": "ev-ww-113",
+  "category": "event",
+  "name": "滑铁卢战役",
+  "aliases": [],
+  "region": "europe",
+  "worldEra": "19 世纪上半叶",
+  "polity": "法兰西第一帝国",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1815,
+  "death": null,
+  "birthplace": "滑铁卢（今比利时滑铁卢）",
+  "country": null,
+  "birthProvince": null,
+  "roles": [
+   "战役"
+  ],
+  "tags": [
+   "拿破仑",
+   "威灵顿",
+   "布吕歇尔",
+   "百日王朝"
+  ],
+  "notable": "拿破仑被英普联军击败于滑铁卢，百日王朝随之终结。",
+  "difficulty": 2
+ },
+ {
+  "id": "ev-ww-114",
+  "category": "event",
+  "name": "《物种起源》出版",
+  "aliases": [
+   "物种起源出版"
+  ],
+  "region": "europe",
+  "worldEra": "19 世纪下半叶",
+  "polity": "英国",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1859,
+  "death": null,
+  "birthplace": "伦敦（今英国伦敦，出版地）",
+  "country": null,
+  "birthProvince": null,
+  "roles": [
+   "发现"
+  ],
+  "tags": [
+   "达尔文",
+   "进化论",
+   "自然选择",
+   "博物学"
+  ],
+  "notable": "达尔文出版《物种起源》，提出以自然选择为核心的进化论。",
+  "difficulty": 2
+ },
+ {
+  "id": "ev-ww-115",
+  "category": "event",
+  "name": "诺贝尔奖首次颁发",
+  "aliases": [
+   "诺贝尔奖设立"
+  ],
+  "region": "europe",
+  "worldEra": "20 世纪初",
+  "polity": "瑞典",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1901,
+  "death": null,
+  "birthplace": "斯德哥尔摩（今瑞典斯德哥尔摩）",
+  "country": null,
+  "birthProvince": null,
+  "roles": [
+   "建制"
+  ],
+  "tags": [
+   "诺贝尔",
+   "瑞典",
+   "奖项",
+   "科学奖励"
+  ],
+  "notable": "依据诺贝尔遗嘱设立的奖项在斯德哥尔摩首次颁发。",
+  "difficulty": 2
+ },
+ {
+  "id": "ev-ww-116",
+  "category": "event",
+  "name": "莱特兄弟首次动力飞行",
+  "aliases": [
+   "莱特兄弟首飞"
+  ],
+  "region": "americas",
+  "worldEra": "20 世纪初",
+  "polity": "美国",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1903,
+  "death": null,
+  "birthplace": "基蒂霍克（今美国北卡罗来纳州）",
+  "country": null,
+  "birthProvince": null,
+  "roles": [
+   "发现"
+  ],
+  "tags": [
+   "莱特兄弟",
+   "飞机",
+   "航空",
+   "飞行者一号"
+  ],
+  "notable": "莱特兄弟驾驶飞行者一号完成人类首次有动力载人飞行。",
+  "difficulty": 1
+ },
+ {
+  "id": "ev-ww-117",
+  "category": "event",
+  "name": "福特流水线投产",
+  "aliases": [
+   "流水线生产"
+  ],
+  "region": "americas",
+  "worldEra": "20 世纪初",
+  "polity": "美国",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1913,
+  "death": null,
+  "birthplace": "海兰帕克（今美国密歇根州底特律附近）",
+  "country": null,
+  "birthProvince": null,
+  "roles": [
+   "工程"
+  ],
+  "tags": [
+   "福特",
+   "T型车",
+   "流水线",
+   "大规模生产"
+  ],
+  "notable": "福特公司在汽车装配中引入流水线，大幅缩短生产工时。",
+  "difficulty": 2
+ },
+ {
+  "id": "ev-ww-118",
+  "category": "event",
+  "name": "巴拿马运河通航",
+  "aliases": [],
+  "region": "americas",
+  "worldEra": "20 世纪初",
+  "polity": "美国",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1914,
+  "death": null,
+  "birthplace": "巴拿马运河（今巴拿马）",
+  "country": null,
+  "birthProvince": null,
+  "roles": [
+   "工程"
+  ],
+  "tags": [
+   "巴拿马",
+   "运河",
+   "大西洋",
+   "太平洋"
+  ],
+  "notable": "连接大西洋与太平洋的巴拿马运河建成通航，船程大幅缩短。",
+  "difficulty": 2
+ }
 ]

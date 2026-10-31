@@ -1,42 +1,975 @@
 [
-  {"id":"lisi","name":"李斯","aliases":["通古","李丞相"],"region":"cn","polity":"秦","gender":"male","birth":-284,"death":-208,"birthplace":"上蔡（今河南驻马店上蔡）","birthProvince":"河南","roles":["政治家","书法家"],"tags":["郡县制","小篆","焚书坑儒","谏逐客书"],"emperor":false,"notable":"辅佐秦始皇统一制度，定小篆为标准文字","difficulty":2},
-  {"id":"mengtian","name":"蒙恬","aliases":["蒙将军"],"region":"cn","polity":"秦","gender":"male","birth":null,"death":-210,"birthplace":"齐国（今山东蒙阴）","birthProvince":"山东","roles":["将军"],"tags":["北击匈奴","修长城","秦直道","毛笔"],"emperor":false,"notable":"率军北击匈奴，督修长城与秦直道","difficulty":2},
-  {"id":"xufu","name":"徐福","aliases":["徐市","君房"],"region":"cn","polity":"秦","gender":"male","birth":null,"death":null,"birthplace":"琅琊（今山东胶南一带）","birthProvince":"山东","roles":["方士"],"tags":["东渡","求仙","不老药","日本传说"],"emperor":false,"notable":"受秦始皇派遣率众出海求仙药，东渡不返","difficulty":1},
-  {"id":"fusu","name":"扶苏","aliases":["公子扶苏"],"region":"cn","polity":"秦","gender":"male","birth":null,"death":-210,"birthplace":"咸阳（今陕西咸阳）","birthProvince":"陕西","roles":["皇子"],"tags":["沙丘之变","谏始皇","蒙恬"],"emperor":false,"notable":"秦始皇长子，沙丘之变后被迫自尽","difficulty":1},
-  {"id":"xiaowendi","name":"拓跋宏","aliases":["北魏孝文帝","元宏"],"region":"cn","polity":"南北朝","gender":"male","birth":467,"death":499,"birthplace":"平城（今山西大同）","birthProvince":"山西","roles":["皇帝","政治家"],"tags":["孝文帝改革","迁都洛阳","汉化改姓"],"emperor":true,"notable":"迁都洛阳推行汉化改革，改鲜卑姓为汉姓","difficulty":2},
-  {"id":"lidao","name":"郦道元","aliases":["善长"],"region":"cn","polity":"南北朝","gender":"male","birth":470,"death":527,"birthplace":"范阳涿县（今河北涿州）","birthProvince":"河北","roles":["地理学家","文学家"],"tags":["水经注","地理","散文"],"emperor":false,"notable":"著《水经注》，记述江河千余条","difficulty":3},
-  {"id":"jiasixie","name":"贾思勰","aliases":[],"region":"cn","polity":"南北朝","gender":"male","birth":null,"death":null,"birthplace":"青州益都（今山东寿光一带）","birthProvince":"山东","roles":["农学家"],"tags":["齐民要术","农学"],"emperor":false,"notable":"著《齐民要术》，存世最早完整农书","difficulty":2},
-  {"id":"mulan","name":"花木兰","aliases":["木兰"],"region":"cn","polity":"南北朝","gender":"female","birth":null,"death":null,"birthplace":null,"birthProvince":null,"roles":["军人"],"tags":["木兰辞","替父从军","北魏","乐府"],"emperor":false,"notable":"《木兰辞》中替父从军的传奇女英雄","difficulty":1},
-  {"id":"liuxie","name":"刘勰","aliases":["彦和"],"region":"cn","polity":"南北朝","gender":"male","birth":465,"death":520,"birthplace":"东莞莒（今山东莒县）","birthProvince":"山东","roles":["文学家","文学理论家"],"tags":["文心雕龙","文学批评"],"emperor":false,"notable":"著《文心雕龙》，古代文学理论集大成之作","difficulty":3},
-  {"id":"xiaoyan","name":"萧衍","aliases":["梁武帝","叔达"],"region":"cn","polity":"南北朝","gender":"male","birth":464,"death":549,"birthplace":"南兰陵（今江苏常州武进）","birthProvince":"江苏","roles":["皇帝"],"tags":["南朝梁","侯景之乱","崇佛","舍身同泰寺"],"emperor":true,"notable":"代齐建梁，晚年崇佛遇侯景之乱饿死","difficulty":3},
-  {"id":"yangjian","name":"杨坚","aliases":["隋文帝","普六茹坚"],"region":"cn","polity":"隋","gender":"male","birth":541,"death":604,"birthplace":"冯翊般若寺（今陕西大荔）","birthProvince":"陕西","roles":["皇帝","政治家"],"tags":["开皇之治","统一南北","三省六部","开皇律"],"emperor":true,"notable":"代周建隋，统一南北，开创开皇之治","difficulty":2},
-  {"id":"yangsu","name":"杨素","aliases":["处道","越公"],"region":"cn","polity":"隋","gender":"male","birth":544,"death":606,"birthplace":"弘农华阴（今陕西华阴）","birthProvince":"陕西","roles":["将军","政治家"],"tags":["灭陈","水军","权臣"],"emperor":false,"notable":"统水军灭陈，助杨广夺位","difficulty":2},
-  {"id":"dugujialuo","name":"独孤伽罗","aliases":["独孤皇后","文献皇后"],"region":"cn","polity":"隋","gender":"female","birth":544,"death":602,"birthplace":"洛阳（今河南洛阳）","birthProvince":"河南","roles":["皇后","政治家"],"tags":["隋文帝","二圣并尊","开皇之治"],"emperor":false,"notable":"隋文帝皇后，与文帝并称二圣共掌朝政","difficulty":3},
-  {"id":"hanqinhu","name":"韩擒虎","aliases":["擒豹","韩公"],"region":"cn","polity":"隋","gender":"male","birth":538,"death":592,"birthplace":"东垣（今河南新安）","birthProvince":"河南","roles":["将军"],"tags":["灭陈","先锋","贺若弼"],"emperor":false,"notable":"灭陈之战先入建康，俘陈后主","difficulty":1},
-  {"id":"fanli","name":"范蠡","aliases":["少伯","陶朱公","鸱夷子皮"],"region":"cn","polity":"春秋","polityAlt":["战国"],"gender":"male","birth":-536,"death":-448,"birthplace":"楚国宛（今河南南阳）","birthProvince":"河南","roles":["政治家","商人"],"tags":["越国","西施","三聚三散","商圣"],"emperor":false,"notable":"助勾践灭吴，后弃官经商称陶朱公","difficulty":2},
-  {"id":"xishi","name":"西施","aliases":["施夷光","西子"],"region":"cn","polity":"春秋","gender":"female","birth":null,"death":null,"birthplace":"越国苎萝（今浙江诸暨）","birthProvince":"浙江","roles":["浣纱女"],"tags":["四大美女","沉鱼","吴越争霸"],"emperor":false,"notable":"越国献于吴王的美女，四大美女之首","difficulty":1},
-  {"id":"maosui","name":"毛遂","aliases":["毛先生"],"region":"cn","polity":"战国","gender":"male","birth":null,"death":null,"birthplace":"赵国（今河北鸡泽）","birthProvince":"河北","roles":["门客","外交家"],"tags":["毛遂自荐","锥处囊中","合纵"],"emperor":false,"notable":"自荐随平原君赴楚，按剑定合纵之约","difficulty":2},
-  {"id":"gongshuban","name":"公输班","aliases":["鲁班","公输般","班输"],"region":"cn","polity":"春秋","polityAlt":["战国"],"gender":"male","birth":-507,"death":-444,"birthplace":"鲁国（今山东曲阜）","birthProvince":"山东","roles":["工匠","发明家"],"tags":["木匠祖师","锯","云梯","墨斗"],"emperor":false,"notable":"被尊木匠祖师，传说发明锯与云梯等","difficulty":1},
-  {"id":"herodotus","name":"希罗多德","aliases":["Herodotus"],"region":"europe","polity":"波斯帝国","worldEra":"古希腊","gender":"male","birth":-484,"death":-425,"birthplace":"哈利卡纳苏斯（今土耳其博德鲁姆）","country":"土耳其","birthProvince":null,"roles":["史学家"],"tags":["历史","史学之父","希波战争"],"emperor":false,"notable":"著《历史》，被尊为西方史学之父","difficulty":2},
-  {"id":"spartacus","name":"斯巴达克斯","aliases":["Spartacus"],"region":"europe","polity":"罗马共和国","worldEra":"古罗马","gender":"male","birth":-103,"death":-71,"birthplace":"色雷斯（今巴尔干地区）","country":"保加利亚","birthProvince":null,"roles":["角斗士","起义领袖"],"tags":["斯巴达克起义","角斗士","奴隶起义"],"emperor":false,"notable":"率角斗士起义，转战意大利数年","difficulty":2},
-  {"id":"trajan","name":"图拉真","aliases":["Trajan","图拉真皇帝"],"region":"europe","polity":"罗马帝国","worldEra":"古罗马","gender":"male","birth":53,"death":117,"birthplace":"伊塔利卡（今西班牙塞维利亚）","country":"西班牙","birthProvince":null,"roles":["皇帝"],"tags":["罗马帝国极盛","图拉真广场","达契亚战争"],"emperor":true,"notable":"在位时罗马帝国版图达到最大","difficulty":2},
-  {"id":"marco_polo","name":"马可·波罗","aliases":["Marco Polo","马可波罗"],"region":"europe","polity":"威尼斯共和国","worldEra":"中世纪","gender":"male","birth":1254,"death":1324,"birthplace":"威尼斯（今意大利威尼斯）","country":"意大利","birthProvince":null,"roles":["旅行家","商人"],"tags":["马可波罗游记","元大都","丝绸之路"],"emperor":false,"notable":"游历元朝并口述《马可·波罗游记》","difficulty":1},
-  {"id":"ibn_battuta","name":"伊本·白图泰","aliases":["Ibn Battuta","白图泰"],"region":"west-asia","polity":"马林王朝","worldEra":"中世纪","gender":"male","birth":1304,"death":1369,"birthplace":"丹吉尔（今摩洛哥丹吉尔）","country":"摩洛哥","birthProvince":null,"roles":["旅行家","学者"],"tags":["旅行","印度","游记"],"emperor":false,"notable":"行程约十二万公里，著《伊本·白图泰游记》","difficulty":3},
-  {"id":"timur","name":"帖木儿","aliases":["跛子帖木儿","Tamerlane"],"region":"west-asia","polity":"帖木儿帝国","worldEra":"中世纪","gender":"male","birth":1336,"death":1405,"birthplace":"渴石（今乌兹别克斯坦沙赫里萨布兹）","country":"乌兹别克斯坦","birthProvince":null,"roles":["皇帝","军事家"],"tags":["帖木儿帝国","撒马尔罕","征服中亚"],"emperor":true,"notable":"建帖木儿帝国，定都撒马尔罕","difficulty":2},
-  {"id":"machiavelli","name":"马基雅维利","aliases":["马基雅维里","Niccolò Machiavelli"],"region":"europe","polity":"佛罗伦萨共和国","worldEra":"文艺复兴","gender":"male","birth":1469,"death":1527,"birthplace":"佛罗伦萨（今意大利佛罗伦萨）","country":"意大利","birthProvince":null,"roles":["政治家","思想家"],"tags":["君主论","政治学","佛罗伦萨"],"emperor":false,"notable":"著《君主论》，近代政治学奠基之作","difficulty":2},
-  {"id":"elizabeth1","name":"伊丽莎白一世","aliases":["童贞女王","Elizabeth I"],"region":"europe","polity":"英格兰王国","worldEra":"文艺复兴","gender":"female","birth":1533,"death":1603,"birthplace":"格林尼治（今英国伦敦）","country":"英国","birthProvince":null,"roles":["皇帝"],"tags":["都铎王朝","击败无敌舰队","莎士比亚时代"],"emperor":true,"notable":"都铎王朝君主，任内击败西班牙无敌舰队","difficulty":2},
-  {"id":"harvey","name":"哈维","aliases":["威廉·哈维","William Harvey"],"region":"europe","polity":"英格兰王国","worldEra":"科学革命","gender":"male","birth":1578,"death":1657,"birthplace":"福克斯通（今英国福克斯通）","country":"英国","birthProvince":null,"roles":["医学家","科学家"],"tags":["血液循环","心脏","生理学"],"emperor":false,"notable":"发现血液循环，著《心血运动论》","difficulty":3},
-  {"id":"kepler","name":"开普勒","aliases":["约翰内斯·开普勒","Johannes Kepler"],"region":"europe","polity":"神圣罗马帝国","worldEra":"科学革命","gender":"male","birth":1571,"death":1630,"birthplace":"魏尔德施塔特（今德国魏尔德施塔特）","country":"德国","birthProvince":null,"roles":["科学家","天文学家","数学家"],"tags":["行星运动定律","开普勒定律","第谷"],"emperor":false,"notable":"发现行星运动三定律","difficulty":2},
-  {"id":"diderot","name":"狄德罗","aliases":["德尼·狄德罗","Denis Diderot"],"region":"europe","polity":"法兰西王国","worldEra":"启蒙时代","gender":"male","birth":1713,"death":1784,"birthplace":"朗格勒（今法国朗格勒）","country":"法国","birthProvince":null,"roles":["思想家","文学家"],"tags":["百科全书派","百科全书","启蒙运动"],"emperor":false,"notable":"主编《百科全书》，百科全书派首领","difficulty":2},
-  {"id":"kant","name":"康德","aliases":["伊曼努尔·康德","Immanuel Kant"],"region":"europe","polity":"普鲁士王国","worldEra":"启蒙时代","gender":"male","birth":1724,"death":1804,"birthplace":"柯尼斯堡（今俄罗斯加里宁格勒）","country":"德国","birthProvince":null,"roles":["思想家"],"tags":["三大批判","批判哲学","启蒙运动"],"emperor":false,"notable":"著三大批判，创立德国古典哲学","difficulty":3},
-  {"id":"faraday","name":"法拉第","aliases":["迈克尔·法拉第","Michael Faraday"],"region":"europe","polity":"大不列颠及爱尔兰联合王国","worldEra":"19 世纪下半叶","gender":"male","birth":1791,"death":1867,"birthplace":"纽因顿巴茨（今英国伦敦）","country":"英国","birthProvince":null,"roles":["科学家","发明家"],"tags":["电磁感应","发电机","电解"],"emperor":false,"notable":"发现电磁感应现象，奠定电机原理","difficulty":2},
-  {"id":"watt","name":"瓦特","aliases":["詹姆斯·瓦特","James Watt"],"region":"europe","polity":"大不列颠王国","worldEra":"19 世纪上半叶","gender":"male","birth":1736,"death":1819,"birthplace":"格里诺克（今英国苏格兰）","country":"英国","birthProvince":null,"roles":["发明家","工程师"],"tags":["蒸汽机","工业革命","马力"],"emperor":false,"notable":"改良蒸汽机，推动工业革命","difficulty":1},
-  {"id":"nightingale","name":"南丁格尔","aliases":["弗洛伦斯·南丁格尔","Florence Nightingale","提灯女神"],"region":"europe","polity":"大不列颠及爱尔兰联合王国","worldEra":"19 世纪下半叶","gender":"female","birth":1820,"death":1910,"birthplace":"佛罗伦萨（今意大利佛罗伦萨）","country":"英国","birthProvince":null,"roles":["护士","统计学家"],"tags":["克里米亚战争","现代护理学","护士节"],"emperor":false,"notable":"克里米亚战争中的护士，现代护理学创始人","difficulty":2},
-  {"id":"wright_brothers","name":"莱特兄弟","aliases":["威尔伯·莱特","奥维尔·莱特","Wright Brothers"],"region":"americas","polity":"美国","worldEra":"20 世纪初","gender":"male","birth":1867,"death":1912,"birthplace":"米尔维尔（今美国印第安纳州）","country":"美国","birthProvince":null,"roles":["发明家"],"tags":["飞机","基蒂霍克","首次飞行"],"emperor":false,"notable":"1903年制成飞机，实现人类首次动力飞行","difficulty":1},
-  {"id":"einstein","name":"爱因斯坦","aliases":["阿尔伯特·爱因斯坦","Albert Einstein"],"region":"europe","polity":"德国","worldEra":"20 世纪初","gender":"male","birth":1879,"death":1955,"birthplace":"乌尔姆（今德国乌尔姆）","country":"德国","birthProvince":null,"roles":["科学家"],"tags":["相对论","光电效应","E=mc²","诺贝尔奖"],"emperor":false,"notable":"创立相对论，因光电效应研究获诺贝尔奖","difficulty":1},
-  {"id":"hammurabi","name":"汉谟拉比","aliases":["Hammurabi","汉穆拉比"],"region":"west-asia","polity":"古巴比伦王国","worldEra":"两河流域","gender":"male","birth":null,"death":-1750,"birthplace":"巴比伦（今伊拉克巴比伦）","country":"伊拉克","birthProvince":null,"roles":["皇帝"],"tags":["汉谟拉比法典","古巴比伦","楔形文字"],"emperor":true,"notable":"统一两河流域，颁布汉谟拉比法典","difficulty":2},
-  {"id":"aryabhata","name":"阿耶波多","aliases":["阿里亚哈塔","Aryabhata"],"region":"south-asia","polity":"古印度","worldEra":"古印度","gender":"male","birth":476,"death":550,"birthplace":"拘苏摩补罗（今印度巴特那附近）","country":"印度","birthProvince":null,"roles":["数学家","天文学家"],"tags":["零的概念","圆周率","阿耶波多历数书"],"emperor":false,"notable":"著《阿耶波多历数书》，系统使用十进位制","difficulty":3},
-  {"id":"cleopatra","name":"克娄巴特拉七世","aliases":["埃及艳后","Cleopatra","克娄巴特拉"],"region":"africa","polity":"托勒密王朝","worldEra":"古埃及","gender":"female","birth":-69,"death":-30,"birthplace":"亚历山大里亚（今埃及亚历山大）","country":"埃及","birthProvince":null,"roles":["皇帝","政治家"],"tags":["托勒密王朝","凯撒","安东尼"],"emperor":true,"notable":"托勒密王朝末代君主，先后结盟凯撒与安东尼","difficulty":2},
-  {"id":"truganini","name":"特鲁加尼尼","aliases":["Truganini"],"region":"oceania","polity":"塔斯马尼亚原住民","worldEra":"19 世纪下半叶","gender":"female","birth":1812,"death":1876,"birthplace":"布鲁尼岛（今澳大利亚塔斯马尼亚）","country":"澳大利亚","birthProvince":null,"roles":["原住民领袖"],"tags":["塔斯马尼亚","原住民","殖民史"],"emperor":false,"notable":"塔斯马尼亚原住民，常被记为族群最后一人","difficulty":3},
-  {"id":"taksin","name":"郑信","aliases":["达信","郑昭","Taksin"],"region":"east-asia","polity":"吞武里王朝","worldEra":"大航海时代","gender":"male","birth":1734,"death":1782,"birthplace":"阿瑜陀耶（今泰国大城）","country":"泰国","birthProvince":null,"roles":["皇帝","将军"],"tags":["吞武里王朝","复国","驱逐缅军"],"emperor":true,"notable":"驱逐缅军建吞武里王朝，被泰人尊称达信大帝","difficulty":3}
+ {
+  "id": "lisi",
+  "name": "李斯",
+  "aliases": [
+   "通古",
+   "李丞相"
+  ],
+  "region": "cn",
+  "polity": "秦",
+  "gender": "male",
+  "birth": -284,
+  "death": -208,
+  "birthplace": "上蔡（今河南驻马店上蔡）",
+  "birthProvince": "河南",
+  "roles": [
+   "政治家",
+   "书法家"
+  ],
+  "tags": [
+   "郡县制",
+   "小篆",
+   "焚书坑儒",
+   "谏逐客书"
+  ],
+  "emperor": false,
+  "notable": "辅佐秦始皇统一制度，定小篆为标准文字",
+  "difficulty": 2
+ },
+ {
+  "id": "mengtian",
+  "name": "蒙恬",
+  "aliases": [
+   "蒙将军"
+  ],
+  "region": "cn",
+  "polity": "秦",
+  "gender": "male",
+  "birth": null,
+  "death": -210,
+  "birthplace": "齐国（今山东蒙阴）",
+  "birthProvince": "山东",
+  "roles": [
+   "将军"
+  ],
+  "tags": [
+   "北击匈奴",
+   "修长城",
+   "秦直道",
+   "毛笔"
+  ],
+  "emperor": false,
+  "notable": "率军北击匈奴，督修长城与秦直道",
+  "difficulty": 2
+ },
+ {
+  "id": "xufu",
+  "name": "徐福",
+  "aliases": [
+   "徐市",
+   "君房"
+  ],
+  "region": "cn",
+  "polity": "秦",
+  "gender": "male",
+  "birth": null,
+  "death": null,
+  "birthplace": "琅琊（今山东胶南一带）",
+  "birthProvince": "山东",
+  "roles": [
+   "方士"
+  ],
+  "tags": [
+   "东渡",
+   "求仙",
+   "不老药",
+   "日本传说"
+  ],
+  "emperor": false,
+  "notable": "受秦始皇派遣率众出海求仙药，东渡不返",
+  "difficulty": 1
+ },
+ {
+  "id": "fusu",
+  "name": "扶苏",
+  "aliases": [
+   "公子扶苏"
+  ],
+  "region": "cn",
+  "polity": "秦",
+  "gender": "male",
+  "birth": null,
+  "death": -210,
+  "birthplace": "咸阳（今陕西咸阳）",
+  "birthProvince": "陕西",
+  "roles": [
+   "皇子"
+  ],
+  "tags": [
+   "沙丘之变",
+   "谏始皇",
+   "蒙恬"
+  ],
+  "emperor": false,
+  "notable": "秦始皇长子，沙丘之变后被迫自尽",
+  "difficulty": 1
+ },
+ {
+  "id": "xiaowendi",
+  "name": "拓跋宏",
+  "aliases": [
+   "北魏孝文帝",
+   "元宏"
+  ],
+  "region": "cn",
+  "polity": "南北朝",
+  "gender": "male",
+  "birth": 467,
+  "death": 499,
+  "birthplace": "平城（今山西大同）",
+  "birthProvince": "山西",
+  "roles": [
+   "皇帝",
+   "政治家"
+  ],
+  "tags": [
+   "孝文帝改革",
+   "迁都洛阳",
+   "汉化改姓"
+  ],
+  "emperor": true,
+  "notable": "迁都洛阳推行汉化改革，改鲜卑姓为汉姓",
+  "difficulty": 2
+ },
+ {
+  "id": "lidao",
+  "name": "郦道元",
+  "aliases": [
+   "善长"
+  ],
+  "region": "cn",
+  "polity": "南北朝",
+  "gender": "male",
+  "birth": 470,
+  "death": 527,
+  "birthplace": "范阳涿县（今河北涿州）",
+  "birthProvince": "河北",
+  "roles": [
+   "地理学家",
+   "文学家"
+  ],
+  "tags": [
+   "水经注",
+   "地理",
+   "散文"
+  ],
+  "emperor": false,
+  "notable": "著《水经注》，记述江河千余条",
+  "difficulty": 3
+ },
+ {
+  "id": "jiasixie",
+  "name": "贾思勰",
+  "aliases": [],
+  "region": "cn",
+  "polity": "南北朝",
+  "gender": "male",
+  "birth": null,
+  "death": null,
+  "birthplace": "青州益都（今山东寿光一带）",
+  "birthProvince": "山东",
+  "roles": [
+   "农学家"
+  ],
+  "tags": [
+   "齐民要术",
+   "农学"
+  ],
+  "emperor": false,
+  "notable": "著《齐民要术》，存世最早完整农书",
+  "difficulty": 2
+ },
+ {
+  "id": "liuxie",
+  "name": "刘勰",
+  "aliases": [
+   "彦和"
+  ],
+  "region": "cn",
+  "polity": "南北朝",
+  "gender": "male",
+  "birth": 465,
+  "death": 520,
+  "birthplace": "东莞莒（今山东莒县）",
+  "birthProvince": "山东",
+  "roles": [
+   "文学家",
+   "文学理论家"
+  ],
+  "tags": [
+   "文心雕龙",
+   "文学批评"
+  ],
+  "emperor": false,
+  "notable": "著《文心雕龙》，古代文学理论集大成之作",
+  "difficulty": 3
+ },
+ {
+  "id": "xiaoyan",
+  "name": "萧衍",
+  "aliases": [
+   "梁武帝",
+   "叔达"
+  ],
+  "region": "cn",
+  "polity": "南北朝",
+  "gender": "male",
+  "birth": 464,
+  "death": 549,
+  "birthplace": "南兰陵（今江苏常州武进）",
+  "birthProvince": "江苏",
+  "roles": [
+   "皇帝"
+  ],
+  "tags": [
+   "南朝梁",
+   "侯景之乱",
+   "崇佛",
+   "舍身同泰寺"
+  ],
+  "emperor": true,
+  "notable": "代齐建梁，晚年崇佛遇侯景之乱饿死",
+  "difficulty": 3
+ },
+ {
+  "id": "yangjian",
+  "name": "杨坚",
+  "aliases": [
+   "隋文帝",
+   "普六茹坚"
+  ],
+  "region": "cn",
+  "polity": "隋",
+  "gender": "male",
+  "birth": 541,
+  "death": 604,
+  "birthplace": "冯翊般若寺（今陕西大荔）",
+  "birthProvince": "陕西",
+  "roles": [
+   "皇帝",
+   "政治家"
+  ],
+  "tags": [
+   "开皇之治",
+   "统一南北",
+   "三省六部",
+   "开皇律"
+  ],
+  "emperor": true,
+  "notable": "代周建隋，统一南北，开创开皇之治",
+  "difficulty": 2
+ },
+ {
+  "id": "yangsu",
+  "name": "杨素",
+  "aliases": [
+   "处道",
+   "越公"
+  ],
+  "region": "cn",
+  "polity": "隋",
+  "gender": "male",
+  "birth": 544,
+  "death": 606,
+  "birthplace": "弘农华阴（今陕西华阴）",
+  "birthProvince": "陕西",
+  "roles": [
+   "将军",
+   "政治家"
+  ],
+  "tags": [
+   "灭陈",
+   "水军",
+   "权臣"
+  ],
+  "emperor": false,
+  "notable": "统水军灭陈，助杨广夺位",
+  "difficulty": 2
+ },
+ {
+  "id": "hanqinhu",
+  "name": "韩擒虎",
+  "aliases": [
+   "擒豹",
+   "韩公"
+  ],
+  "region": "cn",
+  "polity": "隋",
+  "gender": "male",
+  "birth": 538,
+  "death": 592,
+  "birthplace": "东垣（今河南新安）",
+  "birthProvince": "河南",
+  "roles": [
+   "将军"
+  ],
+  "tags": [
+   "灭陈",
+   "先锋",
+   "贺若弼"
+  ],
+  "emperor": false,
+  "notable": "灭陈之战先入建康，俘陈后主",
+  "difficulty": 1
+ },
+ {
+  "id": "xishi",
+  "name": "西施",
+  "aliases": [
+   "施夷光",
+   "西子"
+  ],
+  "region": "cn",
+  "polity": "春秋",
+  "gender": "female",
+  "birth": null,
+  "death": null,
+  "birthplace": "越国苎萝（今浙江诸暨）",
+  "birthProvince": "浙江",
+  "roles": [
+   "浣纱女"
+  ],
+  "tags": [
+   "四大美女",
+   "沉鱼",
+   "吴越争霸"
+  ],
+  "emperor": false,
+  "notable": "越国献于吴王的美女，四大美女之首",
+  "difficulty": 1
+ },
+ {
+  "id": "maosui",
+  "name": "毛遂",
+  "aliases": [
+   "毛先生"
+  ],
+  "region": "cn",
+  "polity": "战国",
+  "gender": "male",
+  "birth": null,
+  "death": null,
+  "birthplace": "赵国（今河北鸡泽）",
+  "birthProvince": "河北",
+  "roles": [
+   "门客",
+   "外交家"
+  ],
+  "tags": [
+   "毛遂自荐",
+   "锥处囊中",
+   "合纵"
+  ],
+  "emperor": false,
+  "notable": "自荐随平原君赴楚，按剑定合纵之约",
+  "difficulty": 2
+ },
+ {
+  "id": "gongshuban",
+  "name": "公输班",
+  "aliases": [
+   "鲁班",
+   "公输般",
+   "班输"
+  ],
+  "region": "cn",
+  "polity": "春秋",
+  "polityAlt": [
+   "战国"
+  ],
+  "gender": "male",
+  "birth": -507,
+  "death": -444,
+  "birthplace": "鲁国（今山东曲阜）",
+  "birthProvince": "山东",
+  "roles": [
+   "工匠",
+   "发明家"
+  ],
+  "tags": [
+   "木匠祖师",
+   "锯",
+   "云梯",
+   "墨斗"
+  ],
+  "emperor": false,
+  "notable": "被尊木匠祖师，传说发明锯与云梯等",
+  "difficulty": 1
+ },
+ {
+  "id": "herodotus",
+  "name": "希罗多德",
+  "aliases": [
+   "Herodotus"
+  ],
+  "region": "europe",
+  "polity": "波斯帝国",
+  "worldEra": "古希腊",
+  "gender": "male",
+  "birth": -484,
+  "death": -425,
+  "birthplace": "哈利卡纳苏斯（今土耳其博德鲁姆）",
+  "country": "土耳其",
+  "birthProvince": null,
+  "roles": [
+   "史学家"
+  ],
+  "tags": [
+   "历史",
+   "史学之父",
+   "希波战争"
+  ],
+  "emperor": false,
+  "notable": "著《历史》，被尊为西方史学之父",
+  "difficulty": 2
+ },
+ {
+  "id": "spartacus",
+  "name": "斯巴达克斯",
+  "aliases": [
+   "Spartacus"
+  ],
+  "region": "europe",
+  "polity": "罗马共和国",
+  "worldEra": "古罗马",
+  "gender": "male",
+  "birth": -103,
+  "death": -71,
+  "birthplace": "色雷斯（今巴尔干地区）",
+  "country": "保加利亚",
+  "birthProvince": null,
+  "roles": [
+   "角斗士",
+   "起义领袖"
+  ],
+  "tags": [
+   "斯巴达克起义",
+   "角斗士",
+   "奴隶起义"
+  ],
+  "emperor": false,
+  "notable": "率角斗士起义，转战意大利数年",
+  "difficulty": 2
+ },
+ {
+  "id": "trajan",
+  "name": "图拉真",
+  "aliases": [
+   "Trajan",
+   "图拉真皇帝"
+  ],
+  "region": "europe",
+  "polity": "罗马帝国",
+  "worldEra": "古罗马",
+  "gender": "male",
+  "birth": 53,
+  "death": 117,
+  "birthplace": "伊塔利卡（今西班牙塞维利亚）",
+  "country": "西班牙",
+  "birthProvince": null,
+  "roles": [
+   "皇帝"
+  ],
+  "tags": [
+   "罗马帝国极盛",
+   "图拉真广场",
+   "达契亚战争"
+  ],
+  "emperor": true,
+  "notable": "在位时罗马帝国版图达到最大",
+  "difficulty": 2
+ },
+ {
+  "id": "marco_polo",
+  "name": "马可·波罗",
+  "aliases": [
+   "Marco Polo",
+   "马可波罗"
+  ],
+  "region": "europe",
+  "polity": "威尼斯共和国",
+  "worldEra": "中世纪",
+  "gender": "male",
+  "birth": 1254,
+  "death": 1324,
+  "birthplace": "威尼斯（今意大利威尼斯）",
+  "country": "意大利",
+  "birthProvince": null,
+  "roles": [
+   "旅行家",
+   "商人"
+  ],
+  "tags": [
+   "马可波罗游记",
+   "元大都",
+   "丝绸之路"
+  ],
+  "emperor": false,
+  "notable": "游历元朝并口述《马可·波罗游记》",
+  "difficulty": 1
+ },
+ {
+  "id": "ibn_battuta",
+  "name": "伊本·白图泰",
+  "aliases": [
+   "Ibn Battuta",
+   "白图泰"
+  ],
+  "region": "west-asia",
+  "polity": "马林王朝",
+  "worldEra": "中世纪",
+  "gender": "male",
+  "birth": 1304,
+  "death": 1369,
+  "birthplace": "丹吉尔（今摩洛哥丹吉尔）",
+  "country": "摩洛哥",
+  "birthProvince": null,
+  "roles": [
+   "旅行家",
+   "学者"
+  ],
+  "tags": [
+   "旅行",
+   "印度",
+   "游记"
+  ],
+  "emperor": false,
+  "notable": "行程约十二万公里，著《伊本·白图泰游记》",
+  "difficulty": 3
+ },
+ {
+  "id": "timur",
+  "name": "帖木儿",
+  "aliases": [
+   "跛子帖木儿",
+   "Tamerlane"
+  ],
+  "region": "west-asia",
+  "polity": "帖木儿帝国",
+  "worldEra": "中世纪",
+  "gender": "male",
+  "birth": 1336,
+  "death": 1405,
+  "birthplace": "渴石（今乌兹别克斯坦沙赫里萨布兹）",
+  "country": "乌兹别克斯坦",
+  "birthProvince": null,
+  "roles": [
+   "皇帝",
+   "军事家"
+  ],
+  "tags": [
+   "帖木儿帝国",
+   "撒马尔罕",
+   "征服中亚"
+  ],
+  "emperor": true,
+  "notable": "建帖木儿帝国，定都撒马尔罕",
+  "difficulty": 2
+ },
+ {
+  "id": "machiavelli",
+  "name": "马基雅维利",
+  "aliases": [
+   "马基雅维里",
+   "Niccolò Machiavelli"
+  ],
+  "region": "europe",
+  "polity": "佛罗伦萨共和国",
+  "worldEra": "文艺复兴",
+  "gender": "male",
+  "birth": 1469,
+  "death": 1527,
+  "birthplace": "佛罗伦萨（今意大利佛罗伦萨）",
+  "country": "意大利",
+  "birthProvince": null,
+  "roles": [
+   "政治家",
+   "思想家"
+  ],
+  "tags": [
+   "君主论",
+   "政治学",
+   "佛罗伦萨"
+  ],
+  "emperor": false,
+  "notable": "著《君主论》，近代政治学奠基之作",
+  "difficulty": 2
+ },
+ {
+  "id": "harvey",
+  "name": "哈维",
+  "aliases": [
+   "威廉·哈维",
+   "William Harvey"
+  ],
+  "region": "europe",
+  "polity": "英格兰王国",
+  "worldEra": "科学革命",
+  "gender": "male",
+  "birth": 1578,
+  "death": 1657,
+  "birthplace": "福克斯通（今英国福克斯通）",
+  "country": "英国",
+  "birthProvince": null,
+  "roles": [
+   "医学家",
+   "科学家"
+  ],
+  "tags": [
+   "血液循环",
+   "心脏",
+   "生理学"
+  ],
+  "emperor": false,
+  "notable": "发现血液循环，著《心血运动论》",
+  "difficulty": 3
+ },
+ {
+  "id": "kepler",
+  "name": "开普勒",
+  "aliases": [
+   "约翰内斯·开普勒",
+   "Johannes Kepler"
+  ],
+  "region": "europe",
+  "polity": "神圣罗马帝国",
+  "worldEra": "科学革命",
+  "gender": "male",
+  "birth": 1571,
+  "death": 1630,
+  "birthplace": "魏尔德施塔特（今德国魏尔德施塔特）",
+  "country": "德国",
+  "birthProvince": null,
+  "roles": [
+   "科学家",
+   "天文学家",
+   "数学家"
+  ],
+  "tags": [
+   "行星运动定律",
+   "开普勒定律",
+   "第谷"
+  ],
+  "emperor": false,
+  "notable": "发现行星运动三定律",
+  "difficulty": 2
+ },
+ {
+  "id": "diderot",
+  "name": "狄德罗",
+  "aliases": [
+   "德尼·狄德罗",
+   "Denis Diderot"
+  ],
+  "region": "europe",
+  "polity": "法兰西王国",
+  "worldEra": "启蒙时代",
+  "gender": "male",
+  "birth": 1713,
+  "death": 1784,
+  "birthplace": "朗格勒（今法国朗格勒）",
+  "country": "法国",
+  "birthProvince": null,
+  "roles": [
+   "思想家",
+   "文学家"
+  ],
+  "tags": [
+   "百科全书派",
+   "百科全书",
+   "启蒙运动"
+  ],
+  "emperor": false,
+  "notable": "主编《百科全书》，百科全书派首领",
+  "difficulty": 2
+ },
+ {
+  "id": "kant",
+  "name": "康德",
+  "aliases": [
+   "伊曼努尔·康德",
+   "Immanuel Kant"
+  ],
+  "region": "europe",
+  "polity": "普鲁士王国",
+  "worldEra": "启蒙时代",
+  "gender": "male",
+  "birth": 1724,
+  "death": 1804,
+  "birthplace": "柯尼斯堡（今俄罗斯加里宁格勒）",
+  "country": "德国",
+  "birthProvince": null,
+  "roles": [
+   "思想家"
+  ],
+  "tags": [
+   "三大批判",
+   "批判哲学",
+   "启蒙运动"
+  ],
+  "emperor": false,
+  "notable": "著三大批判，创立德国古典哲学",
+  "difficulty": 3
+ },
+ {
+  "id": "faraday",
+  "name": "法拉第",
+  "aliases": [
+   "迈克尔·法拉第",
+   "Michael Faraday"
+  ],
+  "region": "europe",
+  "polity": "大不列颠及爱尔兰联合王国",
+  "worldEra": "19 世纪下半叶",
+  "gender": "male",
+  "birth": 1791,
+  "death": 1867,
+  "birthplace": "纽因顿巴茨（今英国伦敦）",
+  "country": "英国",
+  "birthProvince": null,
+  "roles": [
+   "科学家",
+   "发明家"
+  ],
+  "tags": [
+   "电磁感应",
+   "发电机",
+   "电解"
+  ],
+  "emperor": false,
+  "notable": "发现电磁感应现象，奠定电机原理",
+  "difficulty": 2
+ },
+ {
+  "id": "watt",
+  "name": "瓦特",
+  "aliases": [
+   "詹姆斯·瓦特",
+   "James Watt"
+  ],
+  "region": "europe",
+  "polity": "大不列颠王国",
+  "worldEra": "19 世纪上半叶",
+  "gender": "male",
+  "birth": 1736,
+  "death": 1819,
+  "birthplace": "格里诺克（今英国苏格兰）",
+  "country": "英国",
+  "birthProvince": null,
+  "roles": [
+   "发明家",
+   "工程师"
+  ],
+  "tags": [
+   "蒸汽机",
+   "工业革命",
+   "马力"
+  ],
+  "emperor": false,
+  "notable": "改良蒸汽机，推动工业革命",
+  "difficulty": 1
+ },
+ {
+  "id": "wright_brothers",
+  "name": "莱特兄弟",
+  "aliases": [
+   "威尔伯·莱特",
+   "奥维尔·莱特",
+   "Wright Brothers"
+  ],
+  "region": "americas",
+  "polity": "美国",
+  "worldEra": "20 世纪初",
+  "gender": "male",
+  "birth": 1867,
+  "death": 1912,
+  "birthplace": "米尔维尔（今美国印第安纳州）",
+  "country": "美国",
+  "birthProvince": null,
+  "roles": [
+   "发明家"
+  ],
+  "tags": [
+   "飞机",
+   "基蒂霍克",
+   "首次飞行"
+  ],
+  "emperor": false,
+  "notable": "1903年制成飞机，实现人类首次动力飞行",
+  "difficulty": 1
+ },
+ {
+  "id": "einstein",
+  "name": "爱因斯坦",
+  "aliases": [
+   "阿尔伯特·爱因斯坦",
+   "Albert Einstein"
+  ],
+  "region": "europe",
+  "polity": "德国",
+  "worldEra": "20 世纪初",
+  "gender": "male",
+  "birth": 1879,
+  "death": 1955,
+  "birthplace": "乌尔姆（今德国乌尔姆）",
+  "country": "德国",
+  "birthProvince": null,
+  "roles": [
+   "科学家"
+  ],
+  "tags": [
+   "相对论",
+   "光电效应",
+   "E=mc²",
+   "诺贝尔奖"
+  ],
+  "emperor": false,
+  "notable": "创立相对论，因光电效应研究获诺贝尔奖",
+  "difficulty": 1
+ },
+ {
+  "id": "hammurabi",
+  "name": "汉谟拉比",
+  "aliases": [
+   "Hammurabi",
+   "汉穆拉比"
+  ],
+  "region": "west-asia",
+  "polity": "古巴比伦王国",
+  "worldEra": "两河流域",
+  "gender": "male",
+  "birth": null,
+  "death": -1750,
+  "birthplace": "巴比伦（今伊拉克巴比伦）",
+  "country": "伊拉克",
+  "birthProvince": null,
+  "roles": [
+   "皇帝"
+  ],
+  "tags": [
+   "汉谟拉比法典",
+   "古巴比伦",
+   "楔形文字"
+  ],
+  "emperor": true,
+  "notable": "统一两河流域，颁布汉谟拉比法典",
+  "difficulty": 2
+ },
+ {
+  "id": "aryabhata",
+  "name": "阿耶波多",
+  "aliases": [
+   "阿里亚哈塔",
+   "Aryabhata"
+  ],
+  "region": "south-asia",
+  "polity": "古印度",
+  "worldEra": "古印度",
+  "gender": "male",
+  "birth": 476,
+  "death": 550,
+  "birthplace": "拘苏摩补罗（今印度巴特那附近）",
+  "country": "印度",
+  "birthProvince": null,
+  "roles": [
+   "数学家",
+   "天文学家"
+  ],
+  "tags": [
+   "零的概念",
+   "圆周率",
+   "阿耶波多历数书"
+  ],
+  "emperor": false,
+  "notable": "著《阿耶波多历数书》，系统使用十进位制",
+  "difficulty": 3
+ },
+ {
+  "id": "cleopatra",
+  "name": "克娄巴特拉七世",
+  "aliases": [
+   "埃及艳后",
+   "Cleopatra",
+   "克娄巴特拉"
+  ],
+  "region": "africa",
+  "polity": "托勒密王朝",
+  "worldEra": "古埃及",
+  "gender": "female",
+  "birth": -69,
+  "death": -30,
+  "birthplace": "亚历山大里亚（今埃及亚历山大）",
+  "country": "埃及",
+  "birthProvince": null,
+  "roles": [
+   "皇帝",
+   "政治家"
+  ],
+  "tags": [
+   "托勒密王朝",
+   "凯撒",
+   "安东尼"
+  ],
+  "emperor": true,
+  "notable": "托勒密王朝末代君主，先后结盟凯撒与安东尼",
+  "difficulty": 2
+ },
+ {
+  "id": "truganini",
+  "name": "特鲁加尼尼",
+  "aliases": [
+   "Truganini"
+  ],
+  "region": "oceania",
+  "polity": "塔斯马尼亚原住民",
+  "worldEra": "19 世纪下半叶",
+  "gender": "female",
+  "birth": 1812,
+  "death": 1876,
+  "birthplace": "布鲁尼岛（今澳大利亚塔斯马尼亚）",
+  "country": "澳大利亚",
+  "birthProvince": null,
+  "roles": [
+   "原住民领袖"
+  ],
+  "tags": [
+   "塔斯马尼亚",
+   "原住民",
+   "殖民史"
+  ],
+  "emperor": false,
+  "notable": "塔斯马尼亚原住民，常被记为族群最后一人",
+  "difficulty": 3
+ },
+ {
+  "id": "taksin",
+  "name": "郑信",
+  "aliases": [
+   "达信",
+   "郑昭",
+   "Taksin"
+  ],
+  "region": "east-asia",
+  "polity": "吞武里王朝",
+  "worldEra": "大航海时代",
+  "gender": "male",
+  "birth": 1734,
+  "death": 1782,
+  "birthplace": "阿瑜陀耶（今泰国大城）",
+  "country": "泰国",
+  "birthProvince": null,
+  "roles": [
+   "皇帝",
+   "将军"
+  ],
+  "tags": [
+   "吞武里王朝",
+   "复国",
+   "驱逐缅军"
+  ],
+  "emperor": true,
+  "notable": "驱逐缅军建吞武里王朝，被泰人尊称达信大帝",
+  "difficulty": 3
+ }
 ]
