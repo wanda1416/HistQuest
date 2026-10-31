@@ -479,8 +479,10 @@ function gameView(s: State): string {
         .join('')
     : examples(session.category ?? 'character');
 
-  const thinking = s.pending
-    ? `<div class="turn turn-a turn-thinking"><span class="verdict v-wait">判定中</span><p class="thinking"><i></i><i></i><i></i></p></div>`
+  // 乐观渲染：已提交的问题先上屏，答案槽显示判定中，响应后原位替换
+  const pendingTurn = s.pendingQuestion
+    ? `<div class="turn turn-q"><p>${esc(s.pendingQuestion)}</p></div>
+       <div class="turn turn-a turn-thinking"><span class="verdict v-wait">判定中</span><p class="thinking"><i></i><i></i><i></i></p></div>`
     : '';
 
   return shell(
@@ -541,7 +543,7 @@ function gameView(s: State): string {
 
         <div class="log" data-role="log">
           ${log}
-          ${thinking}
+          ${pendingTurn}
         </div>
 
         <form class="composer" data-role="ask-form">

@@ -40,6 +40,8 @@ export interface State {
   session: SessionView | null;
   reveal: RevealRes | null;
   pending: boolean;
+  /** 已提交、等待判定的问题：提交瞬间先上屏，响应后原位替换 */
+  pendingQuestion: string | null;
   notice: Notice | null;
   testResult: AiTestRes | null;
   guessOpen: boolean;
@@ -268,6 +270,7 @@ let state: State = {
   session: null,
   reveal: null,
   pending: false,
+  pendingQuestion: null,
   notice: null,
   testResult: null,
   guessOpen: false,

@@ -160,7 +160,8 @@ async function askQuestion(question: string): Promise<void> {
   const text = question.trim();
   if (!text) return;
 
-  setState({ pending: true, notice: null });
+  // 乐观渲染：提交瞬间先把问题上屏（答案槽显示判定中），响应后原位替换
+  setState({ pending: true, notice: null, pendingQuestion: text });
   try {
     const res = await api.ask(s.session.gameId, text, s.config);
     const record: RecordView = {
@@ -179,10 +180,17 @@ async function askQuestion(question: string): Promise<void> {
         history: [...s.session.history, record],
       },
       pending: false,
+      pendingQuestion: null,
     });
     if (res.status !== 'playing') await doReveal();
   } catch (err) {
-    setState({ pending: false, notice: { kind: 'error', text: msg(err) } });
+    // 失败把问题放回输入框，方便改一个字重试，不用重新打字
+    setState({ pending: false, notice: { kind: 'error', text: msg(err) }, pendingQuestion: null });
+    const input = root.querySelector<HTMLInputElement>('[data-role="ask-input"]');
+    if (input) {
+      input.value = text;
+      input.focus();
+    }
   }
 }
 
