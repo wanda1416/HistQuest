@@ -4,6 +4,7 @@ import {
   collectVocab,
   normalizeCharacter,
   serializeTargets,
+  targetEraFacts,
   validateCharacter,
   validateLibrary,
   type Issue,
@@ -24,29 +25,27 @@ interface D1TargetStoreOptions {
 }
 
 const UPSERT_COLUMNS = [
-  'id', 'category', 'name', 'region', 'polity', 'polity_alt', 'world_era', 'gender',
-  'birth', 'death', 'birthplace', 'country', 'birth_province', 'roles',
-  'tags', 'emperor', 'notable', 'difficulty', 'external_id', 'retired', 'updated_at',
+  'id', 'category', 'name', 'region', 'polity', 'polity_alt', 'facts',
+  'birth', 'death', 'roles',
+  'tags', 'notable', 'difficulty', 'external_id', 'retired', 'updated_at',
 ] as const;
 
 function toParams(c: Character, now: number): Array<string | number | null> {
+  // era 统一存"处于什么时期"（中国=朝代，世界=时期）；人物专用便利字段
+  // 折叠进 facts JSON（与 Node 端 targets-sqlite 同一套拆分，见 schema.targetEraFacts）
+  const { era, facts } = targetEraFacts(c);
   return [
     c.id,
     c.category ?? 'character',
     c.name,
     c.region,
-    c.polity,
+    era,
     JSON.stringify(c.polityAlt ?? []),
-    c.worldEra ?? null,
-    c.gender,
+    JSON.stringify(facts),
     c.birth ?? null,
     c.death ?? null,
-    c.birthplace ?? null,
-    c.country ?? null,
-    c.birthProvince ?? null,
     JSON.stringify(c.roles),
     JSON.stringify(c.tags),
-    c.emperor ? 1 : 0,
     c.notable,
     c.difficulty,
     null,

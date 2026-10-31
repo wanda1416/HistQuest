@@ -5,6 +5,7 @@ import {
   collectVocab,
   normalizeCharacter,
   serializeTargets,
+  targetEraFacts,
   validateCharacter,
   validateLibrary,
   type Issue,
@@ -42,16 +43,12 @@ interface CharacterRow {
   region: string;
   polity: string;
   polity_alt: string;
-  world_era: string | null;
-  gender: string;
+  /** 类别化补充事实（性别/籍贯/现藏等）：v8 起人物专用列并入此 JSON */
+  facts: string | null;
   birth: number | null;
   death: number | null;
-  birthplace: string | null;
-  country: string | null;
-  birth_province: string | null;
   roles: string;
   tags: string;
-  emperor: number;
   notable: string;
   difficulty: number;
   external_id: string | null;
@@ -66,16 +63,11 @@ const UPSERT_COLUMNS = [
   'region',
   'polity',
   'polity_alt',
-  'world_era',
-  'gender',
+  'facts',
   'birth',
   'death',
-  'birthplace',
-  'country',
-  'birth_province',
   'roles',
   'tags',
-  'emperor',
   'notable',
   'difficulty',
   'external_id',
@@ -378,18 +370,15 @@ function toParams(c: Character, now: number): Array<string | number | null> {
     c.category ?? 'character',
     c.name,
     c.region,
-    c.polity,
+    // era：中国=朝代，世界=时期（见 schema.targetEraFacts）
+    targetEraFacts(c).era,
     JSON.stringify(c.polityAlt ?? []),
-    c.worldEra ?? null,
-    c.gender,
+    // 人物专用便利字段折叠进 facts JSON（v8 起存储层不再有独立列）
+    JSON.stringify(targetEraFacts(c).facts),
     c.birth,
     c.death,
-    c.birthplace,
-    c.country ?? null,
-    c.birthProvince ?? null,
     JSON.stringify(c.roles),
     JSON.stringify(c.tags),
-    c.emperor ? 1 : 0,
     c.notable,
     c.difficulty,
     c.externalId ?? null,
@@ -398,6 +387,7 @@ function toParams(c: Character, now: number): Array<string | number | null> {
   ];
 }
 
+/** Character 便利字段 → facts JSON（存储层合并；读取时往返水合） */
 function readAll(db: DatabaseSync): Character[] {
   const rows = db.prepare('SELECT * FROM targets ORDER BY id').all() as unknown as CharacterRow[];
   const aliasRows = db
@@ -417,6 +407,7 @@ function readAll(db: DatabaseSync): Character[] {
 function rowToCharacter(r: CharacterRow, aliases: string[]): Character {
   const alt = safeJson<string[]>(r.polity_alt, []);
   const category = (r.category ?? 'character') as Character['category'];
+  const facts = safeJson<Record<string, unknown>>(r.facts ?? null, {});
   return {
     id: r.id,
     ...(category !== 'character' ? { category } : {}),
@@ -425,16 +416,18 @@ function rowToCharacter(r: CharacterRow, aliases: string[]): Character {
     region: r.region as Character['region'],
     polity: r.polity,
     ...(alt.length ? { polityAlt: alt } : {}),
-    ...(r.world_era ? { worldEra: r.world_era as Character['worldEra'] } : {}),
-    gender: r.gender as Character['gender'],
+    // 非中国条目 polity 即时期（v8 合并 world_era 后）
+    ...(r.region !== 'cn' && r.polity ? { worldEra: r.polity as Character['worldEra'] } : {}),
+    // 人物专用便利字段从 facts 往返水合（v8 起存储层无独立列）
+    gender: ((facts.gender as string) ?? 'male') as Character['gender'],
+    emperor: Boolean(facts.emperor),
     birth: r.birth,
     death: r.death,
-    birthplace: r.birthplace,
-    ...(r.country ? { country: r.country } : {}),
-    birthProvince: r.birth_province,
+    birthplace: (facts.birthplace ?? null) as string | null,
+    birthProvince: (facts.province ?? null) as string | null,
+    ...(facts.country ? { country: facts.country as string } : {}),
     roles: safeJson<string[]>(r.roles, []),
     tags: safeJson<string[]>(r.tags, []),
-    emperor: r.emperor === 1,
     notable: r.notable,
     difficulty: r.difficulty,
     ...(r.external_id ? { externalId: r.external_id } : {}),

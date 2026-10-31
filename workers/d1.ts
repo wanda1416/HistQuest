@@ -1,4 +1,5 @@
 import type { AnswerMode, AnswerRecord, Character, PronounStyle, SoloSession } from '../src/shared/domain.ts';
+import { targetEraFacts } from '../src/core/schema.ts';
 import { SESSION_TTL_MS } from '../src/server/sessions.ts';
 import type { SessionPersistence } from '../src/server/sessions.ts';
 
@@ -145,16 +146,11 @@ interface CharacterRow {
   region: string;
   polity: string;
   polity_alt: string | null;
-  world_era: string | null;
-  gender: string;
+  facts: string | null;
   birth: number | null;
   death: number | null;
-  birthplace: string | null;
-  country: string | null;
-  birth_province: string | null;
   roles: string;
   tags: string;
-  emperor: number;
   notable: string;
   difficulty: number;
   external_id: string | null;
@@ -170,6 +166,7 @@ function rowToCharacter(r: CharacterRow, aliases: string[]): Character {
     }
   };
   const category = (r.category ?? 'character') as Character['category'];
+  const facts = json<Record<string, unknown>>(r.facts ?? null, {});
   return {
     id: r.id,
     ...(category !== 'character' ? { category } : {}),
@@ -178,16 +175,18 @@ function rowToCharacter(r: CharacterRow, aliases: string[]): Character {
     region: r.region as Character['region'],
     polity: r.polity,
     polityAlt: json<string[]>(r.polity_alt, []),
-    worldEra: (r.world_era ?? undefined) as Character['worldEra'],
-    gender: r.gender as Character['gender'],
+    // 非中国条目 polity 即时期（v12 合并 world_era 后）
+    ...(r.region !== 'cn' && r.polity ? { worldEra: r.polity as Character['worldEra'] } : {}),
+    // 人物专用便利字段从 facts 往返水合（v12 起存储层无独立列）
+    gender: ((facts.gender as string) ?? 'male') as Character['gender'],
     birth: r.birth,
     death: r.death,
-    birthplace: r.birthplace,
-    country: r.country,
-    birthProvince: r.birth_province,
+    birthplace: (facts.birthplace ?? null) as string | null,
+    country: (facts.country ?? null) as string | null,
+    birthProvince: (facts.province ?? null) as string | null,
     roles: json<string[]>(r.roles, []),
     tags: json<string[]>(r.tags, []),
-    emperor: Boolean(r.emperor),
+    emperor: Boolean(facts.emperor),
     notable: r.notable,
     difficulty: r.difficulty,
     retired: Boolean(r.retired),
@@ -226,27 +225,23 @@ export async function seedTargetsIntoD1(
       db
         .prepare(
           `INSERT INTO targets (
-             id, name, region, polity, polity_alt, world_era, gender, birth, death,
-             birthplace, country, birth_province, roles, tags, emperor, notable,
+             id, category, name, region, polity, polity_alt, facts, birth, death,
+             roles, tags, notable,
              difficulty, retired, updated_at
-           ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+           ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         )
         .bind(
           c.id,
+          c.category ?? 'character',
           c.name,
           c.region,
-          c.polity,
+          targetEraFacts(c).era,
           JSON.stringify(c.polityAlt ?? []),
-          c.worldEra ?? null,
-          c.gender,
+          JSON.stringify(targetEraFacts(c).facts),
           c.birth ?? null,
           c.death ?? null,
-          c.birthplace ?? null,
-          c.country ?? null,
-          c.birthProvince ?? null,
           JSON.stringify(c.roles),
           JSON.stringify(c.tags),
-          c.emperor ? 1 : 0,
           c.notable,
           c.difficulty,
           c.retired ? 1 : 0,

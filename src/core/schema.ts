@@ -387,3 +387,31 @@ export function collectVocab(list: Character[]): {
 export function genderLabel(gender: string): string {
   return GENDER_LABEL[gender] ?? gender;
 }
+
+/**
+ * 谜底写入/读取共用的时期与事实拆分。
+ *
+ * era 统一存"处于什么时期"：中国=朝代（受控枚举，索引裁定锚点），
+ * 世界=时期（受控枚举，筛选锚点）；原政权名（佛罗伦萨/大不列颠王国…）
+ * 降级为 facts.regime 备查——判定靠模型，不依赖它。
+ * 人物专用便利字段（性别/皇帝/籍贯/省份/现藏）同样折叠进 facts。
+ */
+export function targetEraFacts(c: Character): {
+  era: string;
+  regime: string | null;
+  facts: Record<string, unknown>;
+} {
+  const isCn = c.region === 'cn';
+  const era = isCn ? c.polity : (c.worldEra ?? c.polity);
+  const regime = !isCn && c.worldEra && c.worldEra !== c.polity ? c.polity : null;
+  const facts: Record<string, unknown> = {
+    gender: c.gender ?? 'male',
+    emperor: c.emperor ? true : undefined,
+    birthplace: c.birthplace ?? undefined,
+    province: c.birthProvince ?? undefined,
+    country: c.country ?? undefined,
+    ...(regime ? { regime } : {}),
+  };
+  for (const k of Object.keys(facts)) if (facts[k] === undefined) delete facts[k];
+  return { era, regime, facts };
+}

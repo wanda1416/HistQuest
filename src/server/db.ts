@@ -9,7 +9,7 @@ import { DatabaseSync } from 'node:sqlite';
  * 代价是要求宿主 Node ≥ 23.4（22.x 需 --experimental-sqlite）。
  */
 
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 export interface OpenOptions {
   file: string;
@@ -206,6 +206,42 @@ export function migrate(db: DatabaseSync): void {
       `);
     }
     db.exec(`INSERT INTO schema_migrations (version, applied_at) VALUES (7, ${Date.now()})`);
+  }
+
+  if (current < 8) {
+    // v8：谜底表字段精简——类别化之后人物专用列（gender/emperor/birthplace/
+    // birth_province/country）对事件/物品全是占位值，world_era 与 polity
+    // 是同一语义（处于什么时期）。合并与去冗余：
+    //   world_era → 并入 polity（世界条目时期即身份）；旧政权名移入 facts.regime
+    //   gender/emperor/birthplace/birth_province/country → facts JSON
+    // 下游（brief/scrub/judge/reveal/admin）从 facts 往返水合，接口不变。
+    // 注意：先删 idx_pick_era（引用 world_era 的索引会阻止 DROP COLUMN）。
+    const t = tableExists(db, 'targets') ? 'targets' : 'characters';
+    addColumnAny(db, [t], 'facts', 'TEXT');
+    db.exec(`
+      UPDATE ${t} SET facts = json_object(
+        'gender', gender,
+        'emperor', emperor,
+        'birthplace', birthplace,
+        'province', birth_province,
+        'country', country
+      ) WHERE facts IS NULL;
+    `);
+    db.exec(`
+      UPDATE ${t} SET polity = world_era,
+        facts = json_set(facts, '$.regime', polity)
+      WHERE region != 'cn' AND world_era IS NOT NULL AND world_era != '';
+    `);
+    db.exec(`
+      DROP INDEX IF EXISTS idx_pick_era;
+      ALTER TABLE ${t} DROP COLUMN gender;
+      ALTER TABLE ${t} DROP COLUMN emperor;
+      ALTER TABLE ${t} DROP COLUMN birthplace;
+      ALTER TABLE ${t} DROP COLUMN birth_province;
+      ALTER TABLE ${t} DROP COLUMN country;
+      ALTER TABLE ${t} DROP COLUMN world_era;
+    `);
+    db.exec(`INSERT INTO schema_migrations (version, applied_at) VALUES (8, ${Date.now()})`);
   }
 }
 
