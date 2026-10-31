@@ -50,6 +50,68 @@ export function dynastyScope(asked: string): string[] | null {
   return DYNASTY_GROUPS[canon] ?? [canon];
 }
 
+/**
+ * 难度配比：选 N 难度时按此权重在 1..N 各档间加权抽样。
+ * 设计意图：高难度不等于"只出冷门题"，而是提高高难占比、保留低难保底，
+ * 避免纯冷门池把题目难度推向不可玩。
+ */
+export const DIFFICULTY_MIX: Record<number, Record<number, number>> = {
+  1: { 1: 10 },
+  2: { 1: 4, 2: 6 },
+  3: { 1: 2, 3: 5, 2: 3 },
+};
+
+/**
+ * 按难度配比从池中加权抽一个。
+ * 档位缺失（当前筛选范围里没有该难度的条目）时，其权重按比例摊给剩余档；
+ * 全池都为空时返回 undefined（调用方自行兜底）。
+ */
+function pickByDifficulty(
+  pool: Character[],
+  difficulty: number,
+  rng: () => number,
+): Character[] {
+  const mix = DIFFICULTY_MIX[difficulty] ?? { [difficulty]: 10 };
+  const tiers = new Map<number, Character[]>();
+  for (const c of pool) {
+    const d = Math.min(3, Math.max(1, c.difficulty));
+    const list = tiers.get(d) ?? [];
+    list.push(c);
+    tiers.set(d, list);
+  }
+
+  // 各档的实际权重：缺失档的权重按剩余档的原权重比例分摊
+  const weights = new Map<number, number>();
+  let missingWeight = 0;
+  for (const [d, w] of Object.entries(mix)) {
+    const lv = Number(d);
+    if (tiers.has(lv)) weights.set(lv, w);
+    else missingWeight += w;
+  }
+  const remaining = [...weights.keys()];
+  if (remaining.length === 0) return []; // 整个池空
+  if (missingWeight > 0 && remaining.length > 0) {
+    const totalBase = remaining.reduce((s, d) => s + (weights.get(d) ?? 0), 0);
+    if (totalBase > 0) {
+      for (const d of remaining) {
+        weights.set(d, (weights.get(d) ?? 0) + (missingWeight * (weights.get(d) ?? 0)) / totalBase);
+      }
+    }
+  }
+
+  // 加权抽档，再在档内均匀抽条目
+  const totalWeight = remaining.reduce((s, d) => s + (weights.get(d) ?? 0), 0);
+  let roll = rng() * totalWeight;
+  for (const d of remaining) {
+    roll -= weights.get(d) ?? 0;
+    if (roll < 0) {
+      const list = tiers.get(d)!;
+      return list;
+    }
+  }
+  return tiers.get(remaining[remaining.length - 1]!) ?? [];
+}
+
 export interface PickOptions {
   difficulty?: number | null;
   /** 谜底类别；'mixed' 在三类里均匀抽。缺省=人物（向后兼容） */
@@ -142,11 +204,11 @@ export class CharacterIndex {
 
     // 3) 难度：**按难度配比加权抽样**，不是精确匹配——高难度不是"只抽高难度"，
     //    而是混入低难度保持手感，且比例随难度上移偏向高难：
-    //    入门(1) → [1]；进阶(2) → 入门:进阶 = 4:6；考据(3) → 入门:进阶:考据 = 2:3:5。
+    //    入门(1) → 全入门；进阶(2) → 入门:进阶 = 4:6；考据(3) → 入门:进阶:考据 = 2:3:5。
     //    某一档在当前筛选范围内缺失时，其配额按权重比例摊给其余档（不静默跳档）。
-    const candidates = opts.difficulty
-      ? pickByDifficulty(pool, opts.difficulty, rng)
-      : pool;
+    //    加权抽档在 pickByDifficulty 内完成，candidates 已是"选中的那一档"。
+    const tier = opts.difficulty ? pickByDifficulty(pool, opts.difficulty, rng) : pool;
+    const candidates = tier.length > 0 ? tier : pool;
     // 5) 玩家已限定政权或文明圈时，中国占比不再生效
     if (limited) {
       return candidates[Math.floor(rng() * candidates.length)]!;
