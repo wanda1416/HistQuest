@@ -1,4 +1,4 @@
-import type { AiCredential, Attr, Character, ParsedQuery, Verdict } from '../shared/domain.ts';
+import type { AiCredential, AnswerMode, Attr, Character, ParsedQuery, Verdict } from '../shared/domain.ts';
 import { ATTRS } from '../shared/domain.ts';
 import { AiError, chat, extractJson } from '../ai/client.ts';
 import { buildAnswerMessages } from '../ai/prompts.ts';
@@ -73,10 +73,10 @@ export async function modelAnswer(
   character: Character,
   profile: string,
   question: string,
-  opts: { timeoutMs?: number } = {},
+  opts: { timeoutMs?: number; mode?: AnswerMode } = {},
 ): Promise<ModelAnswer> {
   const callOpts = { timeoutMs: opts.timeoutMs, maxTokens: 900, temperature: 0 };
-  const messages = buildAnswerMessages(profile, question, character.category ?? 'character');
+  const messages = buildAnswerMessages(profile, question, character.category ?? 'character', opts.mode);
 
   let calls = 1;
   let text: string;

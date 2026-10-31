@@ -605,9 +605,11 @@ root.addEventListener('click', (event) => {
     case 'pick-difficulty':
       setState({ difficulty: Number(el.dataset.value) });
       break;
-    case 'pick-mode':
-      setState({ mode: el.dataset.value === 'guided' ? 'guided' : 'strict' });
+    case 'pick-mode': {
+      const v = el.dataset.value;
+      setState({ mode: v === 'assist' || v === 'guided' ? v : 'strict' });
       break;
+    }
     case 'pick-turns': {
       const t = Number(el.dataset.value);
       if (Number.isFinite(t) && t >= 10) {

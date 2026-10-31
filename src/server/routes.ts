@@ -144,7 +144,7 @@ export function createRoutes(deps: RouteDeps): express.Router {
     const cnShare = Number.isFinite(share) ? Math.min(1, Math.max(0, share)) : 0.5;
     const worldEra =
       typeof body?.worldEra === 'string' && body.worldEra ? body.worldEra : null;
-    const mode = body?.mode === 'guided' ? 'guided' : 'strict';
+    const mode = body?.mode === 'assist' ? 'assist' : body?.mode === 'guided' ? 'guided' : 'strict';
     const pronoun = body?.pronoun === 'neutral' ? 'neutral' : 'normal';
     const turnsRaw = Number(body?.turns);
     const turns = Number.isFinite(turnsRaw) && turnsRaw > 0 ? Math.round(turnsRaw) : undefined;

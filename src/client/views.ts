@@ -43,7 +43,7 @@ function topbarContext(s: State): string {
 
   const parts: string[] = [];
   parts.push(s.view === 'reveal' ? '已揭晓' : `剩 ${session.turnsLeft} 问`);
-  parts.push(session.mode === 'guided' ? '解说' : '精确');
+  parts.push({ strict: '精确', guided: '解说', assist: '辅助' }[session.mode] ?? '精确');
   const scope = session.polity ?? session.worldEra;
   if (scope) parts.push(scope);
 
@@ -328,6 +328,7 @@ function lobbyView(s: State): string {
   const modeChips = [
     { value: 'strict', title: '精确', desc: '只回 是 / 否 / 无法判断' },
     { value: 'guided', title: '解说', desc: '答案后补一句判定口径' },
+    { value: 'assist', title: '辅助', desc: '判定后给一点方向提示' },
   ]
     .map(
       (m) => `
@@ -526,7 +527,11 @@ function gameView(s: State): string {
           <i class="dot"></i>
           <span>${esc(diffLabel(s))}</span>
           ${session.polity ? `<i class="dot"></i><span>${esc(session.polity)}</span>` : ''}
-          ${session.mode === 'guided' ? '<i class="dot"></i><span>解说</span>' : ''}
+          ${
+            session.mode !== 'strict'
+              ? `<i class="dot"></i><span>${{ guided: '解说', assist: '辅助' }[session.mode] ?? ''}</span>`
+              : ''
+          }
           ${
             session.history.length
               ? `<button class="btn btn-text btn-copy" data-action="copy-log">${s.copied ? '已复制' : '复制记录'}</button>`

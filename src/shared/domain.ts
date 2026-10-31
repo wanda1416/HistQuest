@@ -151,8 +151,10 @@ export type Verdict = 'yes' | 'no' | 'unknown';
  * 回答模式：
  * - strict：只给 是 / 否 / 无法判断
  * - guided：在答案后补一句判定口径说明，降低误解概率（等于降难度）
+ * - assist：更低难度——模型判定后主动给一句方向性提示（往对的方向推一把，
+ *   如「是，但并非自行登基称帝」），仍不揭示名称与别称
  */
-export type AnswerMode = 'strict' | 'guided';
+export type AnswerMode = 'strict' | 'guided' | 'assist';
 
 /** 性别词风格：normal=保留他/她；neutral=统一替换为 TA，避免一个字暴露性别 */
 export type PronounStyle = 'normal' | 'neutral';

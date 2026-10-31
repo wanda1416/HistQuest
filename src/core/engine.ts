@@ -85,7 +85,7 @@ export async function runAsk(params: AskParams): Promise<AskOutcome> {
     verdict: Verdict,
     note?: string,
   ): string | undefined => {
-    if (params.mode !== 'guided' || !query) return undefined;
+    if (params.mode === 'strict' || !query) return undefined;
     const hint = clarify(query, verdict, note);
     if (!hint) return undefined;
     const names = [params.target.name, ...params.target.aliases].filter(Boolean);
@@ -151,7 +151,7 @@ export async function runAsk(params: AskParams): Promise<AskOutcome> {
       params.target,
       params.index.brief(params.target),
       asked,
-      { timeoutMs: params.timeoutMs },
+      { timeoutMs: params.timeoutMs, mode: params.mode },
     );
     calls += answer.calls;
 
@@ -189,10 +189,11 @@ export async function runAsk(params: AskParams): Promise<AskOutcome> {
     if (basis !== 'knowledge') {
       // 结论被索引改写过，模型那句话可能与结论矛盾，改用模板
       text = phrase(verdict, 'normal', rng);
-    } else if (params.mode === 'guided' && answer.text) {
+    } else if (params.mode !== 'strict' && answer.text) {
       // 模型爱把话说满：问"是唐朝之前吗"会答"不是，她是北宋至南宋时期的人物"，
-      // 等于把没被问到的维度直接报出来。命中资料就弃用原话，改用模板 + 判法口径。
-      if (leaksProfile(answer.text, params.target)) {
+      // 等于把没被问到的维度直接报出来。guided 命中资料就弃用原话，改用模板 + 判法口径；
+      // assist 的提示本来就是要提相关维度，不做整句重写（姓名仍由 guardLeak 兜底）。
+      if (params.mode === 'guided' && leaksProfile(answer.text, params.target)) {
         text = phrase(verdict, 'normal', rng);
         hint = hintFor(query, verdict);
       } else {
