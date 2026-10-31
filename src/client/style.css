@@ -1912,7 +1912,8 @@ a.btn {
 .player-state.is-offline { color: var(--ink-3); }
 
 /* ---------- 对战：对抗 ---------- */
-.board {
+/* 排行榜列表：不得复用游戏的 .board（游戏棋盘是 grid 布局，同名会互相覆盖） */
+.race-board-list {
   list-style: none;
   margin: 0 0 10px;
   padding: 0;

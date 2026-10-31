@@ -1,7 +1,7 @@
 import type { State } from './store.ts';
 import { loadVaultSecret, normalizeQuestion } from './store.ts';
 import type { HistorySummary, RecordView } from '../shared/protocol.ts';
-import { WORLD_ERAS } from '../shared/domain.ts';
+import { WORLD_ERAS, type TargetCategory } from '../shared/domain.ts';
 import { encodeManagementKey, keyFromBase64 } from './vault.ts';
 
 export const esc = (s: unknown): string =>
@@ -448,8 +448,13 @@ function turnView(r: RecordView, canSave: boolean): string {
     </div>`;
 }
 
-function examples(): string {
-  const samples = ['他是唐朝人吗？', '他当过皇帝吗？', '他是诗人吗？', '他名字是两个字吗？', '他活在公元后吗？'];
+function examples(category: TargetCategory): string {
+  const samples =
+    category === 'event'
+      ? ['它发生在唐朝吗？', '它和战争有关吗？', '它发生在公元前吗？', '主角是皇帝吗？', '它改变了历史走向吗？']
+      : category === 'item'
+        ? ['它是青铜器吗？', '它是唐朝的东西吗？', '它出土于河南吗？', '它现在藏在博物馆吗？', '它有一千年以上历史吗？']
+        : ['他是唐朝人吗？', '他当过皇帝吗？', '他是诗人吗？', '他名字是两个字吗？', '他活在公元后吗？'];
   return `<div class="examples"><p class="examples-title">试试这样问</p><div class="chips chips-wrap">
     ${samples.map((q) => `<button class="chip-select chip-sm" data-action="fill-example" data-value="${esc(q)}">${esc(q)}</button>`).join('')}
   </div></div>`;
@@ -468,7 +473,7 @@ function gameView(s: State): string {
     ? session.history
         .map((r) => turnView(r, !r.invalid && !savedSet.has(normalizeQuestion(r.question))))
         .join('')
-    : examples();
+    : examples(session.category ?? 'character');
 
   const thinking = s.pending
     ? `<div class="turn turn-a turn-thinking"><span class="verdict v-wait">判定中</span><p class="thinking"><i></i><i></i><i></i></p></div>`
@@ -482,7 +487,9 @@ function gameView(s: State): string {
         <div class="target">
           <div class="target-seal">？</div>
           <div>
-            <p class="target-label">目标人物</p>
+            <p class="target-label">目标${
+              { character: '人物', event: '事件', item: '物品' }[session.category ?? 'character']
+            }</p>
             <p class="target-hint">开局已锁定</p>
           </div>
         </div>
@@ -494,7 +501,13 @@ function gameView(s: State): string {
         </div>
 
         <div class="rail-actions">
-          <button class="btn btn-primary" data-action="open-guess" ${s.pending ? 'disabled' : ''}>我猜是…</button>
+          <button class="btn btn-primary" data-action="open-guess" ${s.pending ? 'disabled' : ''}>${
+            session.category === 'event'
+              ? '我猜是哪件事…'
+              : session.category === 'item'
+                ? '我猜是哪件…'
+                : '我猜是…'
+          }</button>
           <button class="btn btn-ghost" data-action="reveal" ${s.pending ? 'disabled' : ''}>放弃并揭晓</button>
         </div>
 
@@ -564,13 +577,18 @@ function diffLabel(s: State): string {
 }
 
 function guessDialog(s: State): string {
+  const cat = s.session?.category ?? 'character';
+  const ariaLabel = cat === 'event' ? '猜事件' : cat === 'item' ? '猜物品' : '猜人物';
+  const title = cat === 'character' ? '你猜是谁？' : '你猜是什么？';
   return `
   <div class="dialog-mask" data-mask="1">
-    <div class="dialog" role="dialog" aria-modal="true" aria-label="猜人物">
+    <div class="dialog" role="dialog" aria-modal="true" aria-label="${ariaLabel}">
       <p class="eyebrow">抢答</p>
-      <h3 class="dialog-title">你猜是谁？</h3>
-      <p class="dialog-hint">猜错会消耗一次提问机会。别名也算对。</p>
-      <input class="input" name="guess" data-role="guess-input" placeholder="输入人物姓名" autocomplete="off" />
+      <h3 class="dialog-title">${title}</h3>
+      <p class="dialog-hint">猜错会消耗一次提问机会。别称也算对。</p>
+      <input class="input" name="guess" data-role="guess-input" placeholder="${
+        cat === 'event' ? '输入事件名称' : cat === 'item' ? '输入物品名称' : '输入人物姓名'
+      }" autocomplete="off" />
       ${s.guessError ? `<p class="testline fail">${esc(s.guessError)}</p>` : ''}
       <div class="dialog-actions">
         <button class="btn btn-text" data-action="close-guess">取消</button>

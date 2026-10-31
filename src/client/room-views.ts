@@ -336,7 +336,7 @@ function boardRows(room: RoomSnapshot): string {
       </li>`;
     })
     .join('');
-  return `<ul class="board">${rows}</ul>`;
+  return `<ul class="race-board-list">${rows}</ul>`;
 }
 
 function myLog(room: RoomSnapshot): string {
