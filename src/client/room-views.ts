@@ -1,7 +1,7 @@
 import type { State } from './store.ts';
 import type { RoomPlayerView, RoomReveal, RoomSnapshot } from '../shared/room.ts';
 import { ROOM } from '../shared/room.ts';
-import { esc, shell } from './views.ts';
+import { esc, shell, voiceButton } from './views.ts';
 
 /**
  * 对战的四个屏幕：大厅 / 房间（未开局）/ 对抗 / 复盘。
@@ -446,6 +446,7 @@ export function raceView(s: State): string {
             spectator
               ? ''
               : `<form class="ask-form" data-role="race-ask-form">
+                   ${voiceButton(s, 'race-voice')}
                    <input class="input" data-role="race-ask-input" name="question"
                      placeholder="用是/否能回答的问题，例如「他是男性吗」"
                      ${locked ? 'disabled' : ''} autocomplete="off" />

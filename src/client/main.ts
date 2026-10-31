@@ -27,6 +27,7 @@ import { renderRoomApp } from './room-views.ts';
 import { attachRoomApp } from './room-app.ts';
 import { transcriptForGame, transcriptForReview } from './format.ts';
 import { isRoomRoute, isShowing, parseRoute, routeHash, type Route } from './route.ts';
+import { VoiceInput, attachVoice } from './voice.ts';
 
 const root = document.getElementById('app')!;
 
@@ -42,6 +43,16 @@ function render(): void {
   const raceDraft = root.querySelector<HTMLInputElement>('[data-role="race-ask-input"]')?.value ?? '';
 
   root.innerHTML = isRoomRoute(currentRoute()) || s.view === 'rooms' ? renderRoomApp(s) : renderApp(s);
+
+  // 说话中的中间文字显示在提问框 placeholder 上（不进输入框——没定稿的字不该被提交）
+  const interim = s.voiceInterim || null;
+  for (const role of ['ask-input', 'race-ask-input']) {
+    const input = root.querySelector<HTMLInputElement>(`[data-role="${role}"]`);
+    if (input) {
+      input.dataset.interim = interim ? '1' : '';
+      if (interim) input.placeholder = `🎤 ${interim}`;
+    }
+  }
 
   if (s.view === 'race') {
     const log = root.querySelector<HTMLElement>('.race-log');
@@ -297,6 +308,23 @@ function go(route: Route, opts: { replace?: boolean } = {}): void {
   syncUrl(route, opts);
   void applyRoute(true);
 }
+
+/**
+ * 单人局的语音输入（🎤 按住说话）。识别出的文字填进提问框，由玩家点「问」提交——
+ * 语音只是输入法：ASR 出错要能改，破甲审查记的是最终文本。
+ */
+const soloVoice = new VoiceInput({
+  onState: (state, interim) => setState({ voiceState: state, voiceInterim: interim ?? '' }),
+  onText: (text) => {
+    const input = root.querySelector<HTMLInputElement>('[data-role="ask-input"]');
+    if (input && !input.disabled) {
+      input.value = text;
+      input.focus();
+    }
+  },
+  onError: (message) => setState({ notice: { kind: 'error', text: message } }),
+});
+attachVoice(root, 'ask-voice', { targetRole: 'ask-input', voice: soloVoice });
 
 /**
  * 对战四屏的交互与实时通道。它自己不渲染，只在路由进出时启停通道，

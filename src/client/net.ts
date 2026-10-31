@@ -128,6 +128,10 @@ export const api = {
 
   roomCmd: (code: string, cmd: RoomCommand) =>
     request<RoomSnapshot>(`/api/room/${encodeURIComponent(code)}/cmd`, jsonInit(cmd)),
+
+  /** 语音识别：音频 → 文字（只填输入框，不直接进 ask） */
+  transcribe: (form: FormData) =>
+    request<{ text: string; ms: number }>('/api/ai/transcribe', { method: 'POST', body: form }),
 };
 
 /** 房间的 WebSocket 地址（同源，靠会话 cookie 鉴权） */

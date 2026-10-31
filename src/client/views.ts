@@ -125,6 +125,26 @@ export function shell(s: State, body: string): string {
   return `${topbar(s)}<main class="stage">${notice(s)}${body}</main>`;
 }
 
+/**
+ * 🎤 语音按钮：服务端配了 ASR 模型（meta.asrReady）才渲染。
+ * 按住说话、松手识别；识别中的中间文字显示在 placeholder 上。
+ * voice-state 由 voice.ts 驱动（listening=红点闪烁 / busy=识别中）。
+ */
+export function voiceButton(s: State, action: string): string {
+  if (!s.meta?.asrReady) return '';
+  const state = s.voiceState ?? 'idle';
+  const label =
+    state === 'listening'
+      ? '松开识别'
+      : state === 'transcribing'
+        ? '识别中'
+        : '按住说话';
+  return `<button type="button" class="voice-btn is-${esc(state)}" data-action="${esc(action)}"
+    data-role="voice-btn" title="${esc(label)}" aria-label="${esc(label)}">
+    <span class="voice-icon" aria-hidden="true">🎤</span><span class="voice-label">${esc(label)}</span>
+  </button>`;
+}
+
 /* ---------------- 设置 / 引导 ---------------- */
 
 function syncPanel(s: State): string {
@@ -547,6 +567,7 @@ function gameView(s: State): string {
         </div>
 
         <form class="composer" data-role="ask-form">
+          ${voiceButton(s, 'ask-voice')}
           <input class="composer-input" name="question" data-role="ask-input" maxlength="200"
             placeholder="问一个能用是/否回答的问题…" autocomplete="off" ${s.pending ? 'disabled' : ''} />
           <button class="btn btn-send" type="submit" ${s.pending ? 'disabled' : ''}>问</button>

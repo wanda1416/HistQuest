@@ -29,6 +29,8 @@ export interface MetaRes {
   authEnabled?: boolean;
   /** 当前登录用户（未登录为 null） */
   user?: MetaUser | null;
+  /** 服务端配置了 ASR 模型：语音按钮才显示 */
+  asrReady?: boolean;
 }
 
 export interface StartSoloReq {
@@ -208,6 +210,15 @@ export interface AiTestRes {
 export interface ApiError {
   error: string;
   message: string;
+}
+
+/* ---------------- 语音识别（ASR） ---------------- */
+
+export interface TranscribeRes {
+  /** 识别出的文字（已 trim；空串表示没听清，客户端提示重试） */
+  text: string;
+  /** 服务端识别耗时（毫秒） */
+  ms: number;
 }
 
 export type { AnswerRecord, Character, SessionStatus, Verdict };

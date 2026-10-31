@@ -2,6 +2,7 @@ import type { RoomCommand, RoomSettings, RoomSnapshot } from '../shared/room.ts'
 import { ROOM } from '../shared/room.ts';
 import { ApiError, api } from './net.ts';
 import { RoomLive } from './live.ts';
+import { VoiceInput, attachVoice } from './voice.ts';
 import { getState, saveRoomCode, setState } from './store.ts';
 import { isRoomRoute, type Route } from './route.ts';
 
@@ -27,10 +28,28 @@ let live: RoomLive | null = null;
 let lobbyTimer: ReturnType<typeof setInterval> | null = null;
 let host: RoomAppHost | null = null;
 
+/**
+ * 对抗屏的语音输入：与单人（main.ts 的 soloVoice）各持一个实例，
+ * 识别出的文字填进 race-ask-input，由玩家点「提问」走同一 dispatch。
+ */
+const raceVoice = new VoiceInput({
+  onState: (state, interim) => setState({ voiceState: state, voiceInterim: interim ?? '' }),
+  onText: (text) => {
+    const input = document.querySelector<HTMLInputElement>('[data-role="race-ask-input"]');
+    if (input && !input.disabled) {
+      input.value = text;
+      input.focus();
+    }
+  },
+  onError: (message) => setState({ roomError: message }),
+});
+
 /* ---------------- 对外 ---------------- */
 
 export function attachRoomApp(root: HTMLElement, appHost: RoomAppHost): RoomApp {
   host = appHost;
+  // 🎤 按住说话：pointer 事件在 click 之前触发，voice.ts 里会 stopPropagation
+  attachVoice(root, 'race-voice', { targetRole: 'race-ask-input', voice: raceVoice });
   root.addEventListener('click', (event) => {
     const node = event.target as HTMLElement;
     // 点遮罩关掉"我猜是"弹窗

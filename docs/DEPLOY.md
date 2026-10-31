@@ -181,7 +181,53 @@ node scripts/verify-ui.ts
 
 ---
 
-## 4. 环境变量对照（Node `.env` ↔ Workers）
+## 4. 语音识别（ASR，可选）
+
+服务端配了 ASR 模型后，单人局与对战局的提问框会出现 🎤「按住说话」按钮；
+识别出的文字填进输入框，由玩家确认后提交（语音只是输入法，不直接进 ask）。
+
+走 **OpenAI 兼容 `/v1/audio/transcriptions`**（Whisper 系事实标准），
+下列服务商任选其一，模型名填进配置即可：
+
+| 服务商 | 模型名示例 | 大陆可达 | 说明 |
+|---|---|---|---|
+| 硅基流动 | `SenseVoiceSmall`（免费档）/ `FunAudioLLM/SenseVoiceSmall` | ✅ | 注册即送额度，中文效果好，推荐首选 |
+| 阿里云百炼 | `paraformer-v2` | ✅ | 有新人免费额度 |
+| Groq | `whisper-large-v3-turbo` | ❌ 需代理 | 免费额度 + 极快 |
+| 自建 | faster-whisper / SenseVoice | ✅ | 一次部署零边际成本 |
+
+### Workers 配置
+
+```bash
+# 最简：聊天与识别用同一家（同一个 baseURL/apiKey）
+#   wrangler.toml [vars] 加：
+AI_ASR_MODEL = "SenseVoiceSmall"
+
+# 聊天与识别分开（比如聊天用 DeepSeek、识别用硅基流动）：
+AI_ASR_MODEL = "SenseVoiceSmall"
+#   另注入 secret（优先于 LLM 的 key/baseURL）：
+npx wrangler secret put AI_ASR_BASE_URL   # https://api.siliconflow.cn/v1
+npx wrangler secret put AI_ASR_API_KEY    # 硅基流动的 key
+```
+
+### 本地 Node 配置（`.env`）
+
+```bash
+AI_ASR_MODEL=SenseVoiceSmall
+AI_ASR_BASE_URL=https://api.siliconflow.cn/v1   # 可选，默认复用 AI_BASE_URL
+AI_ASR_API_KEY=sk-xxx                            # 可选，默认复用 AI_API_KEY
+```
+
+配置生效后 `/api/meta` 的 `asrReady` 变 `true`，前端按钮自动出现；
+不配置则一切如旧（按钮隐藏，无任何多余请求）。
+
+**行为约定**：一次识别扣一次当日配额（与提问同额度）；音频即弃不存；
+识别文字进输入框可改可删，复盘账本记最终提交的文本。浏览器侧优先用
+Web Speech API（Chromium 原生流式，大陆不稳定，失败自动落到上面的服务端方案）。
+
+---
+
+## 5. 环境变量对照（Node `.env` ↔ Workers）
 
 | 作用 | Node（.env） | Workers（wrangler.toml `[vars]` / secret） |
 |---|---|---|

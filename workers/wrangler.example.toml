@@ -45,6 +45,8 @@ new_sqlite_classes = ["RoomDo"]
 ADMIN_USER = "your-admin-name"
 AI_BASE_URL = "https://your-llm-endpoint/v1"
 AI_MODEL = "your-model"
+# AI_ASR_MODEL = "SenseVoiceSmall"      # 语音识别模型；不配 = 语音按钮隐藏
+# AI_ASR_BASE_URL / AI_ASR_API_KEY       # ASR 专用端点（可选；不配则复用 LLM 的）
 # SOLO_TURNS = "50"
 # ADMIN_TOKEN = "长随机串，远程访问管理接口用"
 

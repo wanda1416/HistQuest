@@ -40,6 +40,10 @@ export const config = {
     model: process.env.AI_MODEL ?? '',
     temperature: num(process.env.AI_TEMPERATURE, 0.1),
     timeoutMs: num(process.env.AI_TIMEOUT_MS, 6000),
+    /** 语音识别（可选）：模型名不配则语音按钮隐藏；端点/密钥留空复用上面的 */
+    asrModel: process.env.AI_ASR_MODEL ?? '',
+    asrBaseURL: process.env.AI_ASR_BASE_URL ?? '',
+    asrApiKey: process.env.AI_ASR_API_KEY ?? '',
   },
   wikiProvider: process.env.WIKI_PROVIDER ?? 'local',
   /** 服务端允许的轮次上限；每局可在 10 到该值之间自选 */

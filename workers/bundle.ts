@@ -13,6 +13,7 @@ import { handleAuth, currentUser, ensureAdmin, type AuthUser } from './auth.ts';
 import { takeUserQuota } from './quota.ts';
 import { handleRooms } from './rooms-api.ts';
 import { RoomDo } from './room-do.ts';
+import { handleTranscribe } from './asr.ts';
 
 /** Durable Object 必须在模块层导出，wrangler 才认得这个 class */
 export { RoomDo };
@@ -31,6 +32,11 @@ interface Env {
   AI_BASE_URL?: string;
   AI_API_KEY?: string;
   AI_MODEL?: string;
+  /** 语音识别模型（OpenAI 兼容 /audio/transcriptions）；未配置 = 语音按钮隐藏 */
+  AI_ASR_MODEL?: string;
+  /** ASR 专用端点/密钥（可选；不配则复用 LLM 的） */
+  AI_ASR_BASE_URL?: string;
+  AI_ASR_API_KEY?: string;
   SOLO_TURNS?: string;
   ADMIN_TOKEN?: string;
   /** 会话签名密钥（secret）；未配置时用户系统禁用 */
@@ -62,7 +68,7 @@ interface Runtime {
   env: Env;
   maxTurns: number;
   /** 后台可改的 LLM 覆盖配置（D1 app_settings.llm）；优先于 env */
-  llmOverride: { baseURL: string; model: string; apiKey?: string } | null;
+  llmOverride: { baseURL: string; model: string; apiKey?: string; asrModel?: string; asrBaseURL?: string; asrApiKey?: string } | null;
 }
 
 /** 读 D1 的 LLM 覆盖配置 */
@@ -73,7 +79,7 @@ async function readLlmOverride(db: D1Database): Promise<Runtime['llmOverride'] |
     .first<{ v: string }>();
   if (!row) return null;
   try {
-    const parsed = JSON.parse(row.v) as { baseURL?: string; model?: string; apiKey?: string };
+    const parsed = JSON.parse(row.v) as { baseURL?: string; model?: string; apiKey?: string; asrModel?: string; asrBaseURL?: string; asrApiKey?: string };
     if (!parsed.baseURL || !parsed.model) return null;
     return { baseURL: parsed.baseURL, model: parsed.model, ...(parsed.apiKey ? { apiKey: parsed.apiKey } : {}) };
   } catch {
@@ -223,6 +229,7 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
         label: REGION_LABELS[v],
         count: counts.get(v) ?? 0,
       })),
+      asrReady: Boolean(rt.llmOverride?.asrModel ?? rt.env.AI_ASR_MODEL),
     };
     return json(200, {
       ...meta,
@@ -265,6 +272,15 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
     if (!cred) return fail(400, 'MODEL_NOT_CONFIGURED', '请填写模型地址、密钥和模型名');
     const result = await testConnection(cred);
     return json(200, result);
+  }
+
+  // ---------- 语音识别（ASR）：音频 → 文字，文字回给输入框，不直接进 ask ----------
+  if (path === '/ai/transcribe' && req.method === 'POST') {
+    const user = rt.env.SESSION_SECRET
+      ? await currentUser(rt.env.DB, req, rt.env.SESSION_SECRET)
+      : null;
+    if (!user) return fail(401, 'LOGIN_REQUIRED', '语音识别需要先登录');
+    return handleTranscribe(req, rt.env, user);
   }
 
   // ---------- 开局 ----------

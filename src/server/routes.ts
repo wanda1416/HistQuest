@@ -10,6 +10,11 @@ import type { AuthUser } from './auth.ts';
 import { projectSession } from './dto.ts';
 import type { HistoryStore } from './history.ts';
 import { SoloError, type SoloStore } from './solo.ts';
+
+/** 语音识别是否可用：模型名配置了就开（端点/密钥留空则复用 LLM 的） */
+function asrReady(): boolean {
+  return Boolean(config.ai.asrModel && (config.ai.asrBaseURL || config.ai.baseURL));
+}
 import { RateLimiter, log } from './util.ts';
 
 const DIFFICULTIES = [
@@ -94,8 +99,52 @@ export function createRoutes(deps: RouteDeps): express.Router {
       user: user
         ? { username: user.username, role: user.role, allowServerKey: user.allowServerKey }
         : null,
+      asrReady: asrReady(),
     };
     res.json(meta);
+  });
+
+  /** 语音识别：音频 → 文字（填输入框，不直接进 ask；行为约定见 docs/DECISIONS.md） */
+  router.post('/ai/transcribe', express.raw({ type: 'multipart/form-data', limit: '10mb' }), async (req, res) => {
+    const started = Date.now();
+    const user = await currentUser(req);
+    if (authEnabled && !user) {
+      return fail(res, 401, 'LOGIN_REQUIRED', '语音识别需要先登录');
+    }
+    if (!asrReady()) {
+      return fail(res, 503, 'ASR_NOT_CONFIGURED', '语音识别未配置（缺 AI_ASR_MODEL）');
+    }
+
+    try {
+      const buffer = Buffer.from(req.body as Buffer);
+      if (buffer.length === 0) return fail(res, 400, 'EMPTY_AUDIO', '音频是空的');
+      if (buffer.length > 10 * 1024 * 1024) return fail(res, 413, 'AUDIO_TOO_LARGE', '音频超过 10MB');
+
+      const upstreamForm = new FormData();
+      upstreamForm.append('file', new Blob([buffer], { type: 'audio/webm' }), 'speech.webm');
+      upstreamForm.append('model', config.ai.asrModel);
+      upstreamForm.append('prompt', '历史人物问答：「是」「否」「唐朝」「宋朝」「诗人」「皇帝」等词。');
+
+      const base = (config.ai.asrBaseURL || config.ai.baseURL).replace(/\/+$/, '');
+      const endpoint = /\/v\d+$/i.test(base) ? `${base}/audio/transcriptions` : `${base}/v1/audio/transcriptions`;
+      const upstream = await fetch(endpoint, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${config.ai.asrApiKey || config.ai.apiKey}` },
+        body: upstreamForm,
+        signal: AbortSignal.timeout(30_000),
+      });
+      if (!upstream.ok) {
+        const detail = (await upstream.text().catch(() => '')).slice(0, 200);
+        return fail(res, 502, 'ASR_HTTP', `识别服务返回 ${upstream.status}${detail ? `：${detail}` : ''}`);
+      }
+      const data = (await upstream.json()) as { text?: string };
+      const ms = Date.now() - started;
+      log('ai.transcribe', { ms, len: (data.text ?? '').length });
+      res.json({ text: String(data.text ?? '').trim(), ms });
+    } catch (err) {
+      const aborted = (err as Error)?.name === 'TimeoutError' || (err as Error)?.name === 'AbortError';
+      fail(res, aborted ? 504 : 502, aborted ? 'ASR_TIMEOUT' : 'ASR_NETWORK', aborted ? '识别超时，再试一次' : '连不上识别服务');
+    }
   });
 
   router.post('/ai/test', async (req: Request, res: Response) => {

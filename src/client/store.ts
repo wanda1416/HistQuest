@@ -107,6 +107,13 @@ export interface State {
   raceGuessError: string | null;
   /** 命令在途：按钮防连点 */
   roomBusy: boolean;
+
+  /* ---------------- 语音输入 ---------------- */
+
+  /** 🎤 状态：idle / listening（说话中，interim 显示在 placeholder）/ transcribing / error */
+  voiceState: 'idle' | 'listening' | 'transcribing' | 'error' | null;
+  /** 说话过程中的中间文字（Web Speech 档才有） */
+  voiceInterim: string;
 }
 
 const CONFIG_KEY = 'hq.aiConfig';
@@ -309,6 +316,8 @@ let state: State = {
   raceGuessOpen: false,
   raceGuessError: null,
   roomBusy: false,
+  voiceState: 'idle',
+  voiceInterim: '',
 };
 
 type Listener = (s: State) => void;
