@@ -256,7 +256,7 @@ function setupView(s: State): string {
 
         ${syncPanel(s)}
 
-        <p class="footnote">人物库 ${s.meta?.characterCount ?? 0} 位，均为已故历史人物。判定只依据索引里的人工资讯，模型不负责编事实。</p>
+        <p class="footnote">人物库 ${s.meta?.dataCount ?? 0} 位，均为已故历史人物。判定只依据索引里的人工资讯，模型不负责编事实。</p>
       </div>
 
       <aside class="aside-card">

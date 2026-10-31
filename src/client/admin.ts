@@ -447,14 +447,9 @@ root.addEventListener('click', async (event) => {
       }
       break;
     }
-    case 'list-pagesize': {
-      const size = Number((el as HTMLSelectElement).value);
-      if (Number.isFinite(size) && size > 0) {
-        setState({ listPageSize: size, listPage: 1 });
-        await loadList();
-      }
+    case 'list-pagesize':
+      // 换页大小走 change 事件（见 onField），click 在 select 上不表示换值
       break;
-    }
     case 'history-page': {
       const page = Number(el.dataset.page);
       if (Number.isFinite(page) && page >= 1) {
@@ -463,14 +458,15 @@ root.addEventListener('click', async (event) => {
       }
       break;
     }
-    case 'history-pagesize': {
-      const size = Number((el as HTMLSelectElement).value);
-      if (Number.isFinite(size) && size > 0) {
-        setState({ historyPageSize: size, historyPage: 1 });
-        await loadHistory();
-      }
+    case 'history-pagesize':
+      // 换页大小走 change 事件（见 onField），这里不处理
       break;
-    }
+    case 'list-jump-go':
+      gotoPage('list', root.querySelector<HTMLInputElement>('[data-role="list-jump"]'));
+      break;
+    case 'history-jump-go':
+      gotoPage('history', root.querySelector<HTMLInputElement>('[data-role="history-jump"]'));
+      break;
     case 'open-history':
       if (el.dataset.id) {
         try {
@@ -593,11 +589,52 @@ root.addEventListener('click', async (event) => {
 const onField = (event: Event): void => {
   const el = event.target as HTMLElement;
   if (!el || typeof el.getAttribute !== 'function') return;
+  // 每页条数选择框挂在 change 事件上（click 在 select 上不表示换值）
+  const action = el.getAttribute('data-action');
+  if (action === 'list-pagesize') {
+    const size = Number((el as HTMLSelectElement).value);
+    if (Number.isFinite(size) && size > 0) {
+      setState({ listPageSize: size, listPage: 1 });
+      void loadList();
+    }
+    return;
+  }
+  if (action === 'history-pagesize') {
+    const size = Number((el as HTMLSelectElement).value);
+    if (Number.isFinite(size) && size > 0) {
+      setState({ historyPageSize: size, historyPage: 1 });
+      void loadHistory();
+    }
+    return;
+  }
   handleField(el);
 };
 
 root.addEventListener('input', onField);
 root.addEventListener('change', onField);
+
+/** 跳页：输入框回车或点「跳」按钮 */
+function gotoPage(prefix: 'list' | 'history', input: HTMLInputElement | null): void {
+  const page = Number(input?.value);
+  if (!Number.isFinite(page) || page < 1) return;
+  if (prefix === 'list') {
+    setState({ listPage: Math.round(page) });
+    void loadList();
+  } else {
+    setState({ historyPage: Math.round(page) });
+    void loadHistory();
+  }
+}
+
+root.addEventListener('keydown', (event) => {
+  const el = event.target as HTMLElement;
+  if (el.getAttribute('data-role')?.endsWith('-jump') && el.tagName === 'INPUT') {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      gotoPage(el.getAttribute('data-role')!.replace('-jump', '') as 'list' | 'history', el as HTMLInputElement);
+    }
+  }
+});
 
 root.addEventListener('keydown', (event) => {
   const el = event.target as HTMLElement;
@@ -714,18 +751,17 @@ async function boot(reinitialized = false): Promise<void> {
 
   try {
     const meta = await request<AdminMeta>('/api/admin/meta');
-    const list = await request<{ total: number; items: Character[] }>('/api/admin/targets');
     setState({
       ready: true,
       error: null,
       meta,
-      list: list.items,
-      total: list.total,
       view: 'list',
       draft: null,
       originalId: null,
       issues: [],
     });
+    // 列表走分页加载（boot 里不放全量请求）
+    await loadList();
   } catch (err) {
     setState({ ready: true, error: (err as Error).message });
   }

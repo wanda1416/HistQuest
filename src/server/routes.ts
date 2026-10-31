@@ -88,7 +88,7 @@ export function createRoutes(deps: RouteDeps): express.Router {
       difficulties: DIFFICULTIES,
       maxTurns: config.soloTurns,
       serverModelReady: serverModelReady(),
-      characterCount: index.size,
+      dataCount: index.size,
       categories: index.categoryCounts(),
       regions: REGIONS.filter((value) => (counts.get(value) ?? 0) > 0).map((value) => ({
         value: value as Region,

@@ -127,7 +127,7 @@ if (!base) {
 
 const ok = await fetch(`${base}/api/meta`, { signal: AbortSignal.timeout(30_000) })
   .then((r) => r.json())
-  .then((j) => j?.characterCount > 0 && j?.serverModelReady !== undefined)
+  .then((j) => j?.dataCount > 0 && j?.serverModelReady !== undefined)
   .catch(() => false);
 
 if (!ok) {

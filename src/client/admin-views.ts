@@ -267,7 +267,70 @@ function listView(s: AdminState): string {
       <tr><th>名称</th><th>id</th><th>时期</th><th>身份/类型</th><th>难度</th><th>生卒·年份</th></tr>
     </thead>
     <tbody>${rows || '<tr><td colspan="6" class="a-muted">没有匹配的人物</td></tr>'}</tbody>
-  </table>`;
+  </table>
+  ${pagination(s, 'list', s.total, s.listPage, s.listPageSize)}
+  <p class="a-hint">进行中的局不显示目标人物，避免从后台反推答案。</p>`;
+}
+
+/**
+ * 通用分页控件：页码行 + 每页条数选择 + 快速跳页输入框。
+ * prefix 区分两个列表（list / history），对应 admin.ts 里的
+ * `${prefix}-page` / `${prefix}-pagesize` 动作。
+ */
+function pagination(
+  s: AdminState,
+  prefix: 'list' | 'history',
+  total: number,
+  page: number,
+  pageSize: number,
+): string {
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  const cur = Math.min(Math.max(1, page), pages);
+
+  const sizes = [100, 200, 500, 1000]
+    .map(
+      (n) =>
+        `<option value="${n}" ${pageSize === n ? 'selected' : ''}>${n} 条/页</option>`,
+    )
+    .join('');
+
+  /** 页码按钮生成：首末页永远可见，当前页 ±2 展开，其余用省略号 */
+  const pageBtn = (p: number, label = String(p)): string =>
+    `<button class="a-btn a-btn-sm ${p === cur ? 'is-active' : ''}"
+      data-action="${prefix}-page" data-page="${p}">${esc(label)}</button>`;
+
+  const nums: number[] = [];
+  for (let p = 1; p <= pages; p++) {
+    if (p === 1 || p === pages || Math.abs(p - cur) <= 2) nums.push(p);
+  }
+  const numButtons: string[] = [];
+  let prev = 0;
+  for (const p of nums) {
+    if (prev && p - prev > 1) numButtons.push('<span class="pg-ellipsis">…</span>');
+    numButtons.push(pageBtn(p));
+    prev = p;
+  }
+
+  return `
+  <div class="a-pagination">
+    <div class="pg-left">
+      <span class="a-muted">第 ${cur} / ${pages} 页 · 共 ${total} 条</span>
+      <select data-action="${prefix}-pagesize" aria-label="每页条数">${sizes}</select>
+    </div>
+    <div class="pg-right">
+      ${cur > 1 ? pageBtn(1, '«') : ''}
+      ${cur > 1 ? pageBtn(cur - 1, '‹ 上一页') : ''}
+      ${numButtons.join('')}
+      ${cur < pages ? pageBtn(cur + 1, '下一页 ›') : ''}
+      ${cur < pages ? pageBtn(pages, '»') : ''}
+      <span class="pg-jump">跳至
+        <input type="number" min="1" max="${pages}" value="${cur}"
+          data-role="${prefix}-jump" aria-label="跳到页码" /> 页
+        <button class="a-btn a-btn-sm" data-action="${prefix}-jump-go"
+          data-role="${prefix}-jump-go">跳</button>
+      </span>
+    </div>
+  </div>`;
 }
 
 /* ---------------- 编辑 ---------------- */
@@ -811,6 +874,7 @@ function historyView(s: AdminState): string {
       <thead><tr><th>开局时间</th><th>玩家</th><th>结局</th><th>目标</th><th>问数</th><th>难度</th><th>操作</th></tr></thead>
       <tbody>${rows || '<tr><td colspan="7" class="a-muted">还没有对局记录</td></tr>'}</tbody>
     </table>
+    ${pagination(s, 'history', s.historyTotal, s.historyPage, s.historyPageSize)}
     <p class="a-hint">进行中的局不显示目标人物，避免从后台反推答案；完整问答点「查看记录」。</p>
   </section>`;
 }

@@ -14,7 +14,7 @@ const meta = (user: MetaUser | null): MetaRes => ({
   difficulties: [],
   maxTurns: 20,
   serverModelReady: true,
-  characterCount: 184,
+  dataCount: 184,
   regions: [],
   authEnabled: true,
   user,

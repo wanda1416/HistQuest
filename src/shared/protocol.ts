@@ -20,7 +20,7 @@ export interface MetaRes {
   /** 服务端允许的最大轮次；每局可在 10 到该值之间自选 */
   maxTurns: number;
   serverModelReady: boolean;
-  characterCount: number;
+  dataCount: number;
   /** 各谜底类别的在库数量（人物/事件/物品），开局页据此展示与禁用空类别 */
   categories?: Record<TargetCategory, number>;
   /** 可选文明圈与各自人数 */

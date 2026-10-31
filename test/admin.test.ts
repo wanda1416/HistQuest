@@ -173,7 +173,7 @@ test('新增 → 查询 → 修改 → 导出 → 下线', async () => {
   assert.equal(retired.status, 200);
 
   const meta = await api('/api/meta', {}, false);
-  assert.equal(meta.body.characterCount, 184, '下线后不应计入可抽人物');
+  assert.equal(meta.body.dataCount, 184, '下线后不应计入可抽人物');
 });
 
 test('健康报告可访问且返回矩阵', async () => {

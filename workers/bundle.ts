@@ -226,7 +226,7 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
       difficulties: DIFFICULTIES,
       maxTurns: rt.maxTurns,
       serverModelReady: Boolean(serverCred),
-      characterCount: rt.index.size,
+      dataCount: rt.index.size,
       categories: rt.index.categoryCounts(),
       regions: REGIONS.filter((v) => (counts.get(v) ?? 0) > 0).map((v) => ({
         value: v as Region,
