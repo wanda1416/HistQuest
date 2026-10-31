@@ -24,7 +24,7 @@ interface D1CharacterStoreOptions {
 }
 
 const UPSERT_COLUMNS = [
-  'id', 'name', 'region', 'polity', 'polity_alt', 'world_era', 'gender',
+  'id', 'category', 'name', 'region', 'polity', 'polity_alt', 'world_era', 'gender',
   'birth', 'death', 'birthplace', 'country', 'birth_province', 'roles',
   'tags', 'emperor', 'notable', 'difficulty', 'external_id', 'retired', 'updated_at',
 ] as const;
@@ -32,6 +32,7 @@ const UPSERT_COLUMNS = [
 function toParams(c: Character, now: number): Array<string | number | null> {
   return [
     c.id,
+    c.category ?? 'character',
     c.name,
     c.region,
     c.polity,

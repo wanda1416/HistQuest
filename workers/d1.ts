@@ -140,6 +140,7 @@ function rowToSession(r: SessionRow): SoloSession {
 
 interface CharacterRow {
   id: string;
+  category?: string | null;
   name: string;
   region: string;
   polity: string;
@@ -168,8 +169,10 @@ function rowToCharacter(r: CharacterRow, aliases: string[]): Character {
       return fb;
     }
   };
+  const category = (r.category ?? 'character') as Character['category'];
   return {
     id: r.id,
+    ...(category !== 'character' ? { category } : {}),
     name: r.name,
     aliases,
     region: r.region as Character['region'],
