@@ -2807,5 +2807,412 @@
   ],
   "notable": "连接大西洋与太平洋的巴拿马运河建成通航，船程大幅缩短。",
   "difficulty": 2
+ },
+ {
+  "id": "ev-cn-201",
+  "category": "event",
+  "name": "永嘉之乱",
+  "aliases": [
+   "永嘉之祸"
+  ],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "西晋",
+  "gender": "male",
+  "emperor": false,
+  "birth": 311,
+  "death": null,
+  "birthplace": "洛阳（今河南洛阳）",
+  "country": null,
+  "birthProvince": "河南",
+  "roles": [
+   "战乱"
+  ],
+  "tags": [
+   "西晋",
+   "匈奴",
+   "五胡"
+  ],
+  "notable": "匈奴汉国攻破洛阳，俘虏晋怀帝，西晋由此走向灭亡。",
+  "difficulty": 1
+ },
+ {
+  "id": "ev-cn-202",
+  "category": "event",
+  "name": "西晋灭吴",
+  "aliases": [
+   "晋灭吴之战",
+   "三分归晋"
+  ],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "西晋",
+  "gender": "male",
+  "emperor": false,
+  "birth": 280,
+  "death": null,
+  "birthplace": "建业（今江苏南京）",
+  "country": null,
+  "birthProvince": "江苏",
+  "roles": [
+   "战役"
+  ],
+  "tags": [
+   "西晋",
+   "东吴",
+   "统一"
+  ],
+  "notable": "晋军六路伐吴，孙皓出降，三国分裂局面至此重归统一。",
+  "difficulty": 1
+ },
+ {
+  "id": "ev-cn-203",
+  "category": "event",
+  "name": "燕云十六州割让",
+  "aliases": [
+   "幽云十六州割让"
+  ],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "五代",
+  "gender": "male",
+  "emperor": false,
+  "birth": 938,
+  "death": null,
+  "birthplace": "开封（今河南开封）",
+  "country": null,
+  "birthProvince": "河南",
+  "roles": [
+   "条约"
+  ],
+  "tags": [
+   "后晋",
+   "石敬瑭",
+   "契丹",
+   "辽"
+  ],
+  "notable": "石敬瑭割燕云十六州予契丹并称儿皇帝，中原自此失去北疆屏障。",
+  "difficulty": 1
+ },
+ {
+  "id": "ev-cn-204",
+  "category": "event",
+  "name": "忽必烈建元",
+  "aliases": [
+   "建元中统"
+  ],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "蒙古",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1260,
+  "death": null,
+  "birthplace": "开平（今内蒙古正蓝旗）",
+  "country": null,
+  "birthProvince": "内蒙古",
+  "roles": [
+   "政治"
+  ],
+  "tags": [
+   "忽必烈",
+   "中统",
+   "蒙古帝国"
+  ],
+  "notable": "忽必烈即位后建年号中统，表明沿用中原王朝体制治理天下。",
+  "difficulty": 1
+ },
+ {
+  "id": "ev-cn-205",
+  "category": "event",
+  "name": "文天祥就义",
+  "aliases": [
+   "文天祥殉国"
+  ],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "元",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1283,
+  "death": null,
+  "birthplace": "大都柴市（今北京）",
+  "country": null,
+  "birthProvince": "北京",
+  "roles": [
+   "事件"
+  ],
+  "tags": [
+   "南宋",
+   "文天祥",
+   "元朝",
+   "正气歌"
+  ],
+  "notable": "文天祥兵败被俘后拒降三年，从容就义，留下《正气歌》传世。",
+  "difficulty": 1
+ },
+ {
+  "id": "ev-cn-206",
+  "category": "event",
+  "name": "漠北之战",
+  "aliases": [
+   "卫青霍去病漠北决战"
+  ],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "西汉",
+  "gender": "male",
+  "emperor": false,
+  "birth": -119,
+  "death": null,
+  "birthplace": "漠北（今蒙古高原）",
+  "country": null,
+  "birthProvince": null,
+  "roles": [
+   "战役"
+  ],
+  "tags": [
+   "西汉",
+   "卫青",
+   "霍去病",
+   "匈奴"
+  ],
+  "notable": "卫青、霍去病各率骑兵深入漠北，大破匈奴主力，奠定汉胜匈败之局。",
+  "difficulty": 1
+ },
+ {
+  "id": "ev-cn-207",
+  "category": "event",
+  "name": "班超经营西域",
+  "aliases": [
+   "投笔从戎",
+   "不入虎穴焉得虎子"
+  ],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "东汉",
+  "gender": "male",
+  "emperor": false,
+  "birth": 73,
+  "death": null,
+  "birthplace": "西域（今新疆一带）",
+  "country": null,
+  "birthProvince": "新疆",
+  "roles": [
+   "外交"
+  ],
+  "tags": [
+   "东汉",
+   "班超",
+   "西域都护",
+   "丝绸之路"
+  ],
+  "notable": "班超出使西域三十一年，收抚五十余国，重开丝路并任西域都护。",
+  "difficulty": 1
+ },
+ {
+  "id": "ev-cn-208",
+  "category": "event",
+  "name": "诸葛亮北伐",
+  "aliases": [
+   "六出祁山",
+   "北伐中原"
+  ],
+  "region": "cn",
+  "worldEra": null,
+  "polity": "三国",
+  "gender": "male",
+  "emperor": false,
+  "birth": 228,
+  "death": null,
+  "birthplace": "汉中（今陕西汉中）",
+  "country": null,
+  "birthProvince": "陕西",
+  "roles": [
+   "战役"
+  ],
+  "tags": [
+   "蜀汉",
+   "诸葛亮",
+   "曹魏",
+   "出师表"
+  ],
+  "notable": "诸葛亮先后五次率军攻魏，以攻代守，最终病逝五丈原军中。",
+  "difficulty": 1
+ },
+ {
+  "id": "ev-ww-201",
+  "category": "event",
+  "name": "汉谟拉比统一两河流域",
+  "aliases": [
+   "古巴比伦统一"
+  ],
+  "region": "west-asia",
+  "worldEra": "两河流域",
+  "polity": "巴比伦",
+  "gender": "male",
+  "emperor": false,
+  "birth": -1755,
+  "death": null,
+  "birthplace": "巴比伦（今伊拉克境内）",
+  "country": null,
+  "birthProvince": null,
+  "roles": [
+   "政治"
+  ],
+  "tags": [
+   "古巴比伦",
+   "汉谟拉比",
+   "美索不达米亚"
+  ],
+  "notable": "汉谟拉经过多年征战统一两河流域，建立古巴比伦王国强盛期。",
+  "difficulty": 1
+ },
+ {
+  "id": "ev-ww-202",
+  "category": "event",
+  "name": "大流士改革",
+  "aliases": [
+   "大流士一世改革"
+  ],
+  "region": "west-asia",
+  "worldEra": "古波斯",
+  "polity": "波斯帝国",
+  "gender": "male",
+  "emperor": false,
+  "birth": -518,
+  "death": null,
+  "birthplace": "波斯波利斯（今伊朗境内）",
+  "country": null,
+  "birthProvince": null,
+  "roles": [
+   "政治"
+  ],
+  "tags": [
+   "波斯帝国",
+   "大流士一世",
+   "行省",
+   "御道"
+  ],
+  "notable": "大流士一世分设行省、修筑御道、统一铸币税收，强化波斯帝国统治。",
+  "difficulty": 1
+ },
+ {
+  "id": "ev-ww-203",
+  "category": "event",
+  "name": "释迦牟尼创立佛教",
+  "aliases": [
+   "佛教创立",
+   "佛陀成道"
+  ],
+  "region": "south-asia",
+  "worldEra": "古印度",
+  "polity": "古印度",
+  "gender": "male",
+  "emperor": false,
+  "birth": -528,
+  "death": null,
+  "birthplace": "鹿野苑（今印度北方邦）",
+  "country": null,
+  "birthProvince": null,
+  "roles": [
+   "宗教"
+  ],
+  "tags": [
+   "佛教",
+   "释迦牟尼",
+   "孔雀王朝前",
+   "恒河流域"
+  ],
+  "notable": "悉达多在恒河流域悟道传法四十五年，创立佛教并形成僧团。",
+  "difficulty": 1
+ },
+ {
+  "id": "ev-ww-204",
+  "category": "event",
+  "name": "苏莱曼立法",
+  "aliases": [
+   "苏莱曼大帝改革",
+   "苏莱曼法典"
+  ],
+  "region": "west-asia",
+  "worldEra": "蒙古与奥斯曼",
+  "polity": "奥斯曼帝国",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1530,
+  "death": null,
+  "birthplace": "伊斯坦布尔（今土耳其伊斯坦布尔）",
+  "country": null,
+  "birthProvince": null,
+  "roles": [
+   "政治"
+  ],
+  "tags": [
+   "奥斯曼帝国",
+   "苏莱曼一世",
+   "法律"
+  ],
+  "notable": "苏莱曼一世系统编纂世俗与宗教法律，奥斯曼帝国步入极盛。",
+  "difficulty": 1
+ },
+ {
+  "id": "ev-ww-205",
+  "category": "event",
+  "name": "织田信长崛起",
+  "aliases": [
+   "桶狭间之战",
+   "天下布武"
+  ],
+  "region": "east-asia",
+  "worldEra": "日本战国",
+  "polity": "日本",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1560,
+  "death": null,
+  "birthplace": "桶狭间（今日本爱知县名古屋市）",
+  "country": null,
+  "birthProvince": null,
+  "roles": [
+   "战役"
+  ],
+  "tags": [
+   "日本战国",
+   "织田信长",
+   "今川义元"
+  ],
+  "notable": "织田信长在桶狭间突袭阵斩今川义元，此后以天下布武统一中部日本。",
+  "difficulty": 1
+ },
+ {
+  "id": "ev-ww-206",
+  "category": "event",
+  "name": "训民正音颁布",
+  "aliases": [
+   "韩文创制",
+   "谚文颁布"
+  ],
+  "region": "east-asia",
+  "worldEra": "朝鲜王朝",
+  "polity": "朝鲜",
+  "gender": "male",
+  "emperor": false,
+  "birth": 1446,
+  "death": null,
+  "birthplace": "汉阳（今韩国首尔）",
+  "country": null,
+  "birthProvince": null,
+  "roles": [
+   "文化"
+  ],
+  "tags": [
+   "朝鲜王朝",
+   "世宗大王",
+   "韩文",
+   "训民正音"
+  ],
+  "notable": "朝鲜世宗颁行训民正音，创制二十八字母的表音文字便于百姓学习。",
+  "difficulty": 1
  }
 ]
