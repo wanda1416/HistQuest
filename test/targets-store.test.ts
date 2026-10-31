@@ -16,6 +16,11 @@ function setup(backupKeep = 20) {
   return { file, backupDir, store, cleanup };
 }
 
+// 题库条目数（数据文件为准）
+const LIB = (
+  JSON.parse(fs.readFileSync(new URL('../data/characters.json', import.meta.url), 'utf8')) as unknown[]
+).length;
+
 const newPerson = {
   id: 'test_person',
   name: '测试君',

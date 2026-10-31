@@ -10,6 +10,9 @@ export interface Span {
 }
 
 const SPANS: Record<string, Span> = {
+  史前: { start: -3000, end: -2070 },
+  商: { start: -1600, end: -1046 },
+  西周: { start: -1046, end: -771 },
   春秋: { start: -770, end: -476 },
   战国: { start: -475, end: -221 },
   秦: { start: -221, end: -207 },
@@ -24,6 +27,10 @@ const SPANS: Record<string, Span> = {
   五代: { start: 907, end: 960 },
   北宋: { start: 960, end: 1127 },
   南宋: { start: 1127, end: 1279 },
+  辽: { start: 907, end: 1125 },
+  金: { start: 1115, end: 1234 },
+  西夏: { start: 1038, end: 1227 },
+  大理: { start: 937, end: 1253 },
   蒙古: { start: 1206, end: 1271 },
   元: { start: 1271, end: 1368 },
   明: { start: 1368, end: 1644 },
@@ -38,7 +45,7 @@ const GROUP_SPANS: Record<string, Span> = {
   宋: { start: 960, end: 1279 },
   周: { start: -1046, end: -221 },
   五代十国: { start: 907, end: 979 },
-  先秦: { start: -2070, end: -221 },
+  先秦: { start: -3000, end: -221 },
 };
 
 export function spanOf(input: string): Span | null {
@@ -49,8 +56,8 @@ export function spanOf(input: string): Span | null {
   return null;
 }
 
-const MULTI = ['南北朝', '北宋', '南宋', '西汉', '东汉', '西晋', '东晋', '春秋', '战国', '三国', '五代', '蒙古'];
-const SINGLE = ['唐', '宋', '元', '明', '清', '汉', '晋', '周', '秦', '隋'];
+const MULTI = ['南北朝', '北宋', '南宋', '西汉', '东汉', '西晋', '东晋', '春秋', '战国', '三国', '五代', '蒙古', '西夏', '大理', '史前'];
+const SINGLE = ['唐', '宋', '元', '明', '清', '汉', '晋', '周', '秦', '隋', '辽', '金'];
 
 /**
  * 从问句里取"玩家问的是哪个朝代"。
