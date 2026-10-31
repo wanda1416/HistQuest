@@ -140,9 +140,13 @@ export class CharacterIndex {
     const limited = Boolean(opts.polity || opts.region || opts.worldEra);
     if (pool.length === 0) pool = this.list;
 
-    // 3) 难度：先精确，池内无该难度时退回不区分难度
-    const exact = opts.difficulty ? pool.filter((c) => c.difficulty === opts.difficulty) : [];
-    const candidates = exact.length > 0 ? exact : pool;
+    // 3) 难度：**按难度配比加权抽样**，不是精确匹配——高难度不是"只抽高难度"，
+    //    而是混入低难度保持手感，且比例随难度上移偏向高难：
+    //    入门(1) → [1]；进阶(2) → 入门:进阶 = 4:6；考据(3) → 入门:进阶:考据 = 2:3:5。
+    //    某一档在当前筛选范围内缺失时，其配额按权重比例摊给其余档（不静默跳档）。
+    const candidates = opts.difficulty
+      ? pickByDifficulty(pool, opts.difficulty, rng)
+      : pool;
     // 5) 玩家已限定政权或文明圈时，中国占比不再生效
     if (limited) {
       return candidates[Math.floor(rng() * candidates.length)]!;

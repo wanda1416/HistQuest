@@ -92,6 +92,7 @@ export function normalizeCharacter(raw: unknown): Character {
   const region = str(o.region);
   const country = str(o.country);
   const worldEra = str(o.worldEra);
+  const regime = str(o.regime);
   const category = isTargetCategory(o.category) ? o.category : 'character';
 
   return {
@@ -105,6 +106,8 @@ export function normalizeCharacter(raw: unknown): Character {
     // 空数组不写入：否则序列化会把所有没有分期的人物行都改一遍
     ...(alt.length ? { polityAlt: alt } : {}),
     ...(worldEra ? { worldEra: worldEra as Character['worldEra'] } : {}),
+    // 世界条目原政权名（era 合并后从主字段降级至此）
+    ...(regime ? { regime } : {}),
     gender: str(o.gender) as Character['gender'],
     birth: year(o.birth),
     death: year(o.death),
@@ -403,7 +406,7 @@ export function targetEraFacts(c: Character): {
 } {
   const isCn = c.region === 'cn';
   const era = isCn ? c.polity : (c.worldEra ?? c.polity);
-  const regime = !isCn && c.worldEra && c.worldEra !== c.polity ? c.polity : null;
+  const regime = c.regime ?? (!isCn && c.worldEra && c.worldEra !== c.polity ? c.polity : null);
   const facts: Record<string, unknown> = {
     gender: c.gender ?? 'male',
     emperor: c.emperor ? true : undefined,

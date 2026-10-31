@@ -612,6 +612,11 @@ function editView(s: AdminState): string {
                    </select>
                    <p class="a-hint">单选「世界」开局时按这里筛选</p>
                    ${fieldIssues(s, 'worldEra')}
+                 </div>
+                 <div class="a-field">
+                   <label class="a-label" for="f-regime">政权 / 王朝（原属）</label>
+                   <input class="a-input" id="f-regime" data-field="regime" value="${esc(c.regime ?? '')}" />
+                   <p class="a-hint">条目当时的所属政权（如佛罗伦萨、英格兰王国）；时期合并后仅作资料展示</p>
                  </div>`
           }
           <div class="a-field">

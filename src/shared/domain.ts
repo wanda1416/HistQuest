@@ -127,6 +127,8 @@ export interface Character {
   polityAlt?: string[];
   /** 世界条目的时期划分；中国条目为 null */
   worldEra?: WorldEra | null;
+  /** 世界条目的原政权/王朝名（era 合并后从主字段降级至此，仅展示用） */
+  regime?: string;
   /** 人物专用；事件/物品填 'male' 占位（列 NOT NULL），判定层按类别忽略 */
   gender: Gender;
   birth: number | null;

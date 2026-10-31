@@ -425,6 +425,7 @@ function rowToCharacter(r: CharacterRow, aliases: string[]): Character {
     death: r.death,
     birthplace: (facts.birthplace ?? null) as string | null,
     birthProvince: (facts.province ?? null) as string | null,
+    ...(facts.regime ? { regime: facts.regime as string } : {}),
     ...(facts.country ? { country: facts.country as string } : {}),
     roles: safeJson<string[]>(r.roles, []),
     tags: safeJson<string[]>(r.tags, []),

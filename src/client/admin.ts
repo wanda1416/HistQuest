@@ -173,6 +173,9 @@ function syncDraftField(field: string, el: HTMLInputElement | HTMLSelectElement 
     case 'worldEra':
       d.worldEra = (el.value || undefined) as Character['worldEra'];
       break;
+    case 'regime':
+      d.regime = el.value.trim() || undefined;
+      break;
     case 'region':
       d.region = el.value as Character['region'];
       break;
