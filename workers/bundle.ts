@@ -412,6 +412,7 @@ async function handleAdmin(req: Request, url: URL, rt: Runtime): Promise<Respons
       polities: vocab.polities,
       regions: REGIONS.map((value) => ({ value, label: REGION_LABELS[value] })),
       total: rt.store.total,
+      categories: rt.store.categories,
       active: rt.store.activeCount,
       tokenRequired: true,
     });

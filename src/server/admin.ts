@@ -116,6 +116,7 @@ export function createAdminRoutes(deps: AdminDeps): express.Router {
       polities: vocab.polities,
       regions: REGIONS.map((value) => ({ value, label: REGION_LABELS[value] })),
       total: deps.store.total,
+      categories: deps.store.categories,
       active: deps.store.activeCount,
       tokenRequired: Boolean(deps.token),
     });

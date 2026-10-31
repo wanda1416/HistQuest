@@ -17,6 +17,7 @@ export interface AdminMeta {
   polities: string[];
   regions: Array<{ value: string; label: string }>;
   total: number;
+  categories?: { character: number; event: number; item: number };
   active: number;
   tokenRequired: boolean;
 }
@@ -101,7 +102,16 @@ const VERDICT_LABEL: Record<Verdict, string> = { yes: '是', no: '否', unknown:
 /** 各视图的标题与副标题：与当前标签保持一致 */
 function headerFor(s: AdminState): { title: string; sub: string } {
   const meta = s.meta;
-  const stats = meta ? `人物 ${meta.total} 位 · 在库 ${meta.active} 位` : '加载中';
+  // 类别拆分展示：264 条里并非全是「人物」
+  const stats = meta
+    ? (() => {
+        const cat = meta.categories;
+        const breakdown = cat
+          ? `（人物 ${cat.character} / 事件 ${cat.event} / 物品 ${cat.item}）`
+          : '';
+        return `条目 ${meta.total} · 在库 ${meta.active} ${breakdown}`;
+      })()
+    : '加载中';
   switch (s.view) {
     case 'users':
       return { title: '管理后台', sub: `用户 ${s.users.length} 位` };
@@ -249,7 +259,7 @@ function listView(s: AdminState): string {
   <p class="a-muted">共 ${s.total} 条${s.list.length !== s.total ? `，当前显示 ${s.list.length} 条` : ''}</p>
   <table class="a-table">
     <thead>
-      <tr><th>姓名</th><th>id</th><th>朝代</th><th>身份</th><th>难度</th><th>生卒</th></tr>
+      <tr><th>名称</th><th>id</th><th>时期</th><th>身份/类型</th><th>难度</th><th>生卒·年份</th></tr>
     </thead>
     <tbody>${rows || '<tr><td colspan="6" class="a-muted">没有匹配的人物</td></tr>'}</tbody>
   </table>`;

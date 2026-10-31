@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { DYNASTIES, REGIONS, type Character } from '../shared/domain.ts';
+import { DYNASTIES, REGIONS, type Character, type TargetCategory } from '../shared/domain.ts';
 import { CharacterIndex } from '../core/index.ts';
 import {
   collectVocab,
@@ -77,6 +77,12 @@ export class CharacterStore {
 
   get activeCount(): number {
     return this.idx.size;
+  }
+
+  get categories(): Record<TargetCategory, number> {
+    const out: Record<TargetCategory, number> = { character: 0, event: 0, item: 0 };
+    for (const c of this.all) out[c.category ?? 'character'] += 1;
+    return out;
   }
 
   /** 全量（含已下线）：编辑页要能看到 retired 记录 */

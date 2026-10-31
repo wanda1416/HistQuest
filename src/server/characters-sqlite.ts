@@ -1,5 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
-import { DYNASTIES, REGIONS, type Character } from '../shared/domain.ts';
+import { DYNASTIES, REGIONS, type Character, type TargetCategory } from '../shared/domain.ts';
 import { CharacterIndex } from '../core/index.ts';
 import {
   collectVocab,
@@ -23,6 +23,8 @@ export interface CharacterStoreLike {
   readonly index: CharacterIndex;
   readonly total: number;
   readonly activeCount: number;
+  /** 各类别在库数量（人物/事件/物品） */
+  readonly categories: Record<TargetCategory, number>;
   list(): Character[];
   find(id: string): Character | undefined;
   check(raw: unknown, idToUpdate?: string | null): { character: Character; issues: Issue[] };
@@ -136,6 +138,12 @@ export class SqliteCharacterStore implements CharacterStoreLike {
 
   get activeCount(): number {
     return this.idx.size;
+  }
+
+  get categories(): Record<TargetCategory, number> {
+    const out: Record<TargetCategory, number> = { character: 0, event: 0, item: 0 };
+    for (const c of this.all) out[c.category ?? 'character'] += 1;
+    return out;
   }
 
   list(): Character[] {

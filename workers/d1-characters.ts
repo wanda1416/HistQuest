@@ -1,4 +1,4 @@
-import { DYNASTIES, REGIONS, type Character } from '../src/shared/domain.ts';
+import { DYNASTIES, REGIONS, type Character, type TargetCategory } from '../src/shared/domain.ts';
 import { CharacterIndex } from '../src/core/index.ts';
 import {
   collectVocab,
@@ -87,6 +87,12 @@ export class D1CharacterStore {
 
   get activeCount(): number {
     return this.idx.size;
+  }
+
+  get categories(): Record<TargetCategory, number> {
+    const out: Record<TargetCategory, number> = { character: 0, event: 0, item: 0 };
+    for (const c of this.all) out[c.category ?? 'character'] += 1;
+    return out;
   }
 
   list(): Character[] {
