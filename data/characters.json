@@ -9904,7 +9904,10 @@
   ],
   "emperor": false,
   "notable": "赤壁之战献火攻策，诈降纵火烧曹军船阵。",
-  "difficulty": 1
+  "difficulty": 1,
+  "polityAlt": [
+   "东汉"
+  ]
  },
  {
   "id": "chengpu",
@@ -9930,7 +9933,10 @@
   ],
   "emperor": false,
   "notable": "历仕孙坚孙策孙权三朝，居江东诸将之首。",
-  "difficulty": 3
+  "difficulty": 3,
+  "polityAlt": [
+   "东汉"
+  ]
  },
  {
   "id": "handang",
@@ -10194,7 +10200,11 @@
   ],
   "emperor": false,
   "notable": "南中豪帅，史载诸葛亮南征时降蜀。",
-  "difficulty": 2
+  "difficulty": 2,
+  "polityAlt": [
+   "东汉",
+   "西晋"
+  ]
  },
  {
   "id": "zhenmi",
