@@ -21,6 +21,8 @@ export type Route =
   | { view: 'history'; id: string | null }
   | { view: 'mine' }
   | { view: 'invite' }
+  /** 随机出题（独立页，范围与开局一致） */
+  | { view: 'rc' }
   /** 挑战：出题人生成的链接 */
   | { view: 'challenge'; code: string }
   | { view: 'rooms' }
@@ -52,6 +54,7 @@ export function parseRoute(rawHash: string): Route | null {
   if (head === 'history' && parts.length === 1) return { view: 'history', id: null };
   if (head === 'mine' && parts.length === 1) return { view: 'mine' };
   if (head === 'invite' && parts.length === 1) return { view: 'invite' };
+  if (head === 'rc' && parts.length === 1) return { view: 'rc' };
   if (head === 'c' && parts.length === 2 && tail && CODE_RE.test(tail)) {
     return { view: 'challenge', code: tail.toUpperCase() };
   }
@@ -83,6 +86,8 @@ export function routeHash(route: Route): string {
       return '#/mine';
     case 'invite':
       return '#/invite';
+    case 'rc':
+      return '#/rc';
     case 'challenge':
       return `#/c/${route.code}`;
     case 'rooms':

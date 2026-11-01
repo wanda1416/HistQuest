@@ -247,7 +247,7 @@ export function createRoutes(deps: RouteDeps): express.Router {
         ? (body.region as (typeof REGIONS)[number])
         : null;
     const share = Number(body?.cnShare);
-    const cnShare = Number.isFinite(share) ? Math.min(1, Math.max(0, share)) : 0.5;
+    let cnShare = Number.isFinite(share) ? Math.min(1, Math.max(0, share)) : 0.5;
     const worldEra0 =
       typeof body?.worldEra === 'string' && body.worldEra ? body.worldEra : null;
     const mode = body?.mode === 'assist' ? 'assist' : body?.mode === 'guided' ? 'guided' : 'strict';
@@ -289,6 +289,7 @@ export function createRoutes(deps: RouteDeps): express.Router {
         if (typeof s.polity === 'string' && s.polity) polity = s.polity;
         if (typeof s.region === 'string' && s.region) region = s.region as typeof region;
         if (typeof s.worldEra === 'string' && s.worldEra) worldEra = s.worldEra;
+        if (Number.isFinite(Number(s.cnShare))) cnShare = Math.min(1, Math.max(0, Number(s.cnShare)));
       }
     }
 
@@ -611,6 +612,7 @@ export function createRoutes(deps: RouteDeps): express.Router {
     if (typeof b.polity === 'string' && b.polity) settings.polity = b.polity;
     if (typeof b.region === 'string' && b.region) settings.region = b.region;
     if (typeof b.worldEra === 'string' && b.worldEra) settings.worldEra = b.worldEra;
+    if (Number.isFinite(Number(b.cnShare))) settings.cnShare = Math.min(1, Math.max(0, Number(b.cnShare)));
     try {
       const code = deps.challenges.registerRandom(user.id, settings);
       log('challenge.random', { code, userId: user.id });

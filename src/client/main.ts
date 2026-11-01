@@ -398,6 +398,15 @@ async function openInvites(): Promise<void> {
   }
 }
 
+async function openMyChallenges(): Promise<void> {
+  try {
+    const res = await api.myChallenges();
+    setState({ myChallenges: res.items as never[] });
+  } catch (err) {
+    setState({ myChallenges: [], notice: { kind: 'error', text: msg(err) } });
+  }
+}
+
 /* ---------------- 路由：地址栏即事实 ---------------- */
 
 let routing = false;
@@ -557,6 +566,11 @@ async function applyRoute(force = false): Promise<void> {
       case 'invite':
         setState({ view: 'invite' });
         await openInvites();
+        return;
+
+      case 'rc':
+        setState({ view: 'rc' });
+        await openMyChallenges();
         return;
 
       default:
@@ -854,24 +868,35 @@ root.addEventListener('click', async (event) => {
       break;
     }
     case 'pick-rc-difficulty':
-      setState({ rcDifficulty: Math.min(3, Math.max(1, Number(el.dataset.value) || 2)) });
+    case 'pick-rc-category':
+      // 旧入口已迁移到「随机出题」页（复用开局设置 pick-difficulty / pick-category）
       break;
-    case 'pick-rc-category': {
-      const v = el.dataset.value;
-      if (v === 'character' || v === 'event' || v === 'item' || v === 'mixed') {
-        setState({ rcCategory: v });
-      }
+    case 'go-rc':
+      closeMenu();
+      go({ view: 'rc' });
       break;
-    }
-    case 'mine-random-challenge': {
+    case 'rc-reload':
+      await openMyChallenges();
+      break;
+    case 'rc-create': {
       const st = getState();
+      const settings: Record<string, unknown> = { difficulty: st.difficulty, category: st.category };
+      if (st.scope === 'cn') {
+        settings.region = 'cn';
+        if (st.polity) settings.polity = st.polity;
+      } else if (st.scope === 'world') {
+        settings.cnShare = 0;
+        if (st.worldEra) settings.worldEra = st.worldEra;
+      } else {
+        settings.cnShare = st.cnShare;
+      }
       setState({ mineBusy: true, mineError: null });
       try {
-        const res = await api.randomChallenge({ difficulty: st.rcDifficulty, category: st.rcCategory });
+        const res = await api.randomChallenge(settings as { difficulty: number; category: string });
         const link = `${location.origin}/#${res.url}`;
         await copyText(link);
-        await openMine();
-        setState({ view: 'mine', mineBusy: false, notice: { kind: 'info', text: `随机挑战链接已复制：${link}` } });
+        await openMyChallenges();
+        setState({ mineBusy: false, notice: { kind: 'info', text: `随机挑战链接已复制：${link}` } });
       } catch (err) {
         setState({ mineBusy: false, mineError: msg(err) });
       }

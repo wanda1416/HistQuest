@@ -21,6 +21,8 @@ export type ViewName =
   | 'mine'
   /** 邀请好友 */
   | 'invite'
+  /** 随机出题 */
+  | 'rc'
   /** 挑战：出题人的链接 */
   | 'challenge'
   /** 对战：大厅 */

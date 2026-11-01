@@ -76,6 +76,7 @@ function userMenu(s: State): string {
                </p>
                <button class="menu-item" role="menuitem" data-action="go-setup">我的设置</button>
                <button class="menu-item" role="menuitem" data-action="go-mine">我的题库</button>
+               <button class="menu-item" role="menuitem" data-action="go-rc">随机出题</button>
                <button class="menu-item" role="menuitem" data-action="go-invite">邀请好友</button>
                ${
                  admin
@@ -1119,53 +1120,6 @@ function mineView(s: State): string {
           .join('')
       : '<p class="muted">还没有自定义条目。新建一条，审核通过后就能在开局范围里选到它。</p>';
 
-  // 我的挑战（出题记录）
-  const rcDiffChips = [1, 2, 3]
-    .map((d) => `<button class="chip-select chip-sm ${s.rcDifficulty === d ? 'is-active' : ''}"
-      data-action="pick-rc-difficulty" data-value="${d}">${esc(DIFF_LABEL[d] ?? String(d))}</button>`)
-    .join('');
-  const rcCatChips = [
-    { v: 'character', t: '人物' },
-    { v: 'event', t: '事件' },
-    { v: 'item', t: '物品' },
-    { v: 'mixed', t: '混合' },
-  ]
-    .map((m) => `<button class="chip-select chip-sm ${s.rcCategory === m.v ? 'is-active' : ''}"
-      data-action="pick-rc-category" data-value="${m.v}">${m.t}</button>`)
-    .join('');
-  const challengeRows = (s.myChallenges ?? [])
-    .map((ch) => {
-      const open = s.challengePlaysCode === ch.code;
-      const plays = open
-        ? (s.challengePlays.length
-            ? s.challengePlays
-                .map((p) => {
-                  const who = p.userName ? esc(p.userName) : `游客（IP ${esc(p.playerIp ?? '未知')}）`;
-                  const result = p.result === 'won' ? '猜中' : p.result === 'lost' ? '没猜中' : p.result === 'abandoned' ? '放弃' : '进行中';
-                  return `<li>${who} · ${result} · ${p.asks} 问 · ${new Date(p.startedAt).toLocaleString('zh-CN')}</li>`;
-                })
-                .join('')
-            : '<li class="muted">还没有人玩过</li>')
-          : '';
-      return `
-      <div class="mine-row">
-        <div class="mine-main">
-          <div class="mine-head">
-            <span class="mine-pill">${ch.mode === 'custom' ? '指定题目' : '随机抽题'}</span>
-            <strong>${ch.mode === 'custom' ? esc(ch.name ?? '') : `随机 · ${esc(DIFF_LABEL[Number(ch.settings.difficulty)] ?? String(ch.settings.difficulty ?? ''))}`}</strong>
-            <span class="muted">${ch.plays} 局</span>
-          </div>
-          <p class="mine-summary"><code>${location.origin}/#/c/${esc(ch.code)}</code></p>
-          ${open ? `<ul class="mine-summary">${plays}</ul>` : ''}
-        </div>
-        <div class="actions">
-          <button class="btn btn-ghost" data-action="mine-copy-challenge" data-code="${esc(ch.code)}">复制链接</button>
-          <button class="btn btn-ghost" data-action="mine-plays" data-code="${esc(ch.code)}">${open ? '收起记录' : '玩家记录'}</button>
-        </div>
-      </div>`;
-    })
-    .join('');
-
   return shell(
     s,
     `<section class="history-view">
@@ -1181,38 +1135,7 @@ function mineView(s: State): string {
        </div>
        ${s.mineError ? `<p class="testline fail">${esc(s.mineError)}</p>` : ''}
        <div class="panel">${rows}</div>
-       <p class="footnote">草稿只有自己可见；提交后由管理员审核，通过即进入公共题库。「出题」不需要审核：生成挑战链接直接给别人玩。</p>
-
-       <div class="history-toolbar" style="margin-top:16px">
-         <div>
-           <p class="eyebrow">随机出题</p>
-           <h2>出一张随机挑战</h2>
-         </div>
-       </div>
-       <div class="panel">
-         <div class="group">
-           <span class="group-label">难度</span>
-           <div class="chips">${rcDiffChips}</div>
-         </div>
-         <div class="group">
-           <span class="group-label">类别</span>
-           <div class="chips">${rcCatChips}</div>
-         </div>
-         <div class="actions">
-           <button class="btn btn-primary" data-action="mine-random-challenge" ${s.mineBusy ? 'disabled' : ''}>
-             ${s.mineBusy ? '生成中…' : '生成随机挑战链接'}
-           </button>
-           <span class="field-hint">打开链接的人无需注册；提问额度记在你的账号上，当天用完自动截止。</span>
-         </div>
-       </div>
-
-       <div class="history-toolbar" style="margin-top:16px">
-         <div>
-           <p class="eyebrow">我的挑战</p>
-           <h2>出题记录与玩家</h2>
-         </div>
-       </div>
-       <div class="panel">${challengeRows || '<p class="muted">还没有出过题。上面出一道，链接发给朋友就能玩。</p>'}</div>
+       <p class="footnote">草稿只有自己可见；提交后由管理员审核，通过即进入公共题库。「出题」不需要审核：生成挑战链接直接给别人玩。随机抽题在「随机出题」页（用户菜单）。</p>
      </section>`,
   );
 }
@@ -1294,6 +1217,174 @@ function inviteView(s: State): string {
   );
 }
 
+/* ---------------- 随机出题（独立页，范围与开局一致） ---------------- */
+
+function randomChallengeView(s: State): string {
+  if (!s.meta?.user) {
+    return shell(s, `<section class="panel"><p class="muted">登录后才能出题。</p>
+      <div class="actions"><button class="btn btn-primary" data-action="go-auth">去登录</button></div></section>`);
+  }
+  const meta = s.meta;
+
+  const diffChips = [1, 2, 3]
+    .map((d) => `<button class="chip-select ${s.difficulty === d ? 'is-active' : ''}"
+      data-action="pick-difficulty" data-value="${d}"><b>${esc(DIFF_LABEL[d])}</b><span>${
+        d === 1 ? '家喻户晓' : d === 2 ? '要一点功底' : '冷门，靠推理'
+      }</span></button>`)
+    .join('');
+
+  const catCounts = meta.categories ?? { character: 0, event: 0, item: 0 };
+  const categoryChips = [
+    { value: 'character', title: '人物', desc: `${catCounts.character ?? 0} 位` },
+    { value: 'event', title: '事件', desc: `${catCounts.event ?? 0} 件` },
+    { value: 'item', title: '物品', desc: `${catCounts.item ?? 0} 件` },
+    { value: 'mixed', title: '混合', desc: '三类都抽' },
+  ]
+    .map((m) => `<button class="chip-select ${s.category === m.value ? 'is-active' : ''}"
+      data-action="pick-category" data-value="${m.value}">
+      <b>${esc(m.title)}</b><span>${esc(m.desc)}</span></button>`)
+    .join('');
+
+  const scopeChips = [
+    { value: 'cn', title: '中国', desc: '只抽中国条目' },
+    { value: 'world', title: '世界', desc: '只抽外国条目' },
+    { value: 'mixed', title: '混合', desc: '中外按比例' },
+  ]
+    .map(
+      (m) => `<button class="chip-select ${s.scope === m.value ? 'is-active' : ''}"
+      data-action="pick-scope" data-value="${m.value}">
+      <b>${esc(m.title)}</b><span>${esc(m.desc)}</span></button>`,
+    )
+    .join('');
+
+  const polityChips = ['不限', ...(meta.dynasties ?? [])]
+    .map((d) => {
+      const value = d === '不限' ? '' : d;
+      const active = d === '不限' ? s.polity === null : s.polity === d;
+      return `<button class="chip-select chip-sm ${active ? 'is-active' : ''}"
+        data-action="pick-polity" data-value="${esc(value)}">${esc(d)}</button>`;
+    })
+    .join('');
+
+  const eraChips = ['不限', ...WORLD_ERAS]
+    .map((era) => {
+      const value = era === '不限' ? '' : era;
+      const active = era === '不限' ? s.worldEra === null : s.worldEra === era;
+      return `<button class="chip-select chip-sm ${active ? 'is-active' : ''}"
+        data-action="pick-era" data-value="${esc(value)}">${esc(era)}</button>`;
+    })
+    .join('');
+
+  const challengeRows = (s.myChallenges ?? [])
+    .filter((ch) => ch.mode === 'random')
+    .map((ch) => {
+      const open = s.challengePlaysCode === ch.code;
+      const plays = open
+        ? (s.challengePlays.length
+            ? s.challengePlays
+                .map((p) => {
+                  const who = p.userName ? esc(p.userName) : `游客（IP ${esc(p.playerIp ?? '未知')}）`;
+                  const result = p.result === 'won' ? '猜中' : p.result === 'lost' ? '没猜中' : p.result === 'abandoned' ? '放弃' : '进行中';
+                  return `<li>${who} · ${result} · ${p.asks} 问 · ${new Date(p.startedAt).toLocaleString('zh-CN')}</li>`;
+                })
+                .join('')
+            : '<li class="muted">还没有人玩过</li>')
+          : '';
+      const scopeText = ch.settings.region === 'cn'
+        ? `中国${ch.settings.polity ? ` · ${esc(String(ch.settings.polity))}` : ''}`
+        : Number(ch.settings.cnShare) === 0
+          ? '世界'
+          : '中外混合';
+      return `
+      <div class="mine-row">
+        <div class="mine-main">
+          <div class="mine-head">
+            <strong>${esc(DIFF_LABEL[Number(ch.settings.difficulty)] ?? String(ch.settings.difficulty ?? ''))} · ${scopeText}</strong>
+            <span class="mine-pill">${ch.plays} 局</span>
+          </div>
+          <p class="mine-summary"><code>${location.origin}/#/c/${esc(ch.code)}</code></p>
+          ${open ? `<ul class="mine-summary">${plays}</ul>` : ''}
+        </div>
+        <div class="actions">
+          <button class="btn btn-ghost" data-action="mine-copy-challenge" data-code="${esc(ch.code)}">复制链接</button>
+          <button class="btn btn-ghost" data-action="mine-plays" data-code="${esc(ch.code)}">${open ? '收起记录' : '玩家记录'}</button>
+        </div>
+      </div>`;
+    })
+    .join('');
+
+  return shell(
+    s,
+    `<section class="history-view">
+       <div class="history-toolbar">
+         <div>
+           <p class="eyebrow">随机出题</p>
+           <h2>出一张随机挑战</h2>
+         </div>
+         <div class="actions">
+           <button class="btn btn-ghost" data-action="rc-reload">刷新</button>
+         </div>
+       </div>
+
+       <div class="panel">
+         <div class="group">
+           <span class="group-label">难度</span>
+           <div class="chips">${diffChips}</div>
+         </div>
+
+         <div class="group">
+           <span class="group-label">类别</span>
+           <div class="chips">${categoryChips}</div>
+         </div>
+
+         <div class="group">
+           <span class="group-label">范围</span>
+           <div class="chips">${scopeChips}</div>
+         </div>
+
+         ${
+           s.scope === 'mixed'
+             ? `<div class="group">
+                  <span class="group-label">中国占比 <b data-role="cn-share-label">${Math.round(s.cnShare * 100)}%</b></span>
+                  <input class="share-range" type="range" min="0" max="100" step="10"
+                    value="${Math.round(s.cnShare * 100)}" data-field="cn-share" />
+                </div>`
+             : ''
+         }
+
+         ${
+           s.scope === 'cn'
+             ? `<div class="group">
+                  <span class="group-label">朝代</span>
+                  <div class="chips">${polityChips}</div>
+                </div>`
+             : s.scope === 'world'
+               ? `<div class="group">
+                    <span class="group-label">世界时期</span>
+                    <div class="chips">${eraChips}</div>
+                  </div>`
+               : ''
+         }
+
+         <div class="actions">
+           <button class="btn btn-primary" data-action="rc-create" ${s.mineBusy ? 'disabled' : ''}>
+             ${s.mineBusy ? '生成中…' : '生成随机挑战链接'}
+           </button>
+           <span class="field-hint">打开链接的人无需注册；每人每次打开随机抽一个谜底，提问额度记在你的账号上，当天用完自动截止。</span>
+         </div>
+       </div>
+
+       <div class="history-toolbar" style="margin-top:16px">
+         <div>
+           <p class="eyebrow">出题记录</p>
+           <h2>我的随机挑战</h2>
+         </div>
+       </div>
+       <div class="panel">${challengeRows || '<p class="muted">还没有出过随机挑战。设置好范围，点上面的按钮生成链接。</p>'}</div>
+     </section>`,
+  );
+}
+
 export function renderApp(s: State): string {
   if (!s.ready) {
     return `<div class="boot"><div class="boot-seal">猜</div><p>正在载入…</p></div>`;
@@ -1315,6 +1406,8 @@ export function renderApp(s: State): string {
       return challengeView(s);
     case 'invite':
       return inviteView(s);
+    case 'rc':
+      return randomChallengeView(s);
     default:
       return gameView(s);
   }

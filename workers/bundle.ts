@@ -576,6 +576,7 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
     if (typeof body.polity === 'string' && body.polity) settings.polity = body.polity;
     if (typeof body.region === 'string' && body.region) settings.region = body.region;
     if (typeof body.worldEra === 'string' && body.worldEra) settings.worldEra = body.worldEra;
+    if (Number.isFinite(Number(body.cnShare))) settings.cnShare = Math.min(1, Math.max(0, Number(body.cnShare)));
     const code = newChallengeCode();
     await rt.env.DB.prepare(
       'INSERT INTO challenges (code, creator_id, custom_id, global_id, settings, created_at) VALUES (?, ?, NULL, NULL, ?, ?)',
@@ -728,7 +729,7 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
     const region0 = typeof body.region === 'string' && body.region ? (body.region as Region) : null;
     const worldEra0 = typeof body.worldEra === 'string' && body.worldEra ? body.worldEra : null;
     const share = Number(body.cnShare);
-    const cnShare = Number.isFinite(share) ? Math.min(1, Math.max(0, share)) : 0.5;
+    let cnShare = Number.isFinite(share) ? Math.min(1, Math.max(0, share)) : 0.5;
     const mode = body.mode === 'assist' ? 'assist' : body.mode === 'guided' ? 'guided' : 'strict';
     const pronoun = body.pronoun === 'neutral' ? 'neutral' : 'normal';
     const turnsRaw = Number(body.turns);
@@ -808,6 +809,7 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
         if (typeof s.polity === 'string' && s.polity) polity = s.polity;
         if (typeof s.region === 'string' && s.region) region = s.region as typeof region;
         if (typeof s.worldEra === 'string' && s.worldEra) worldEra = s.worldEra;
+        if (Number.isFinite(Number(s.cnShare))) cnShare = Math.min(1, Math.max(0, Number(s.cnShare)));
       }
     }
     // 「我的题库」：从自己已通过审核的自定义条目里挑谜底
