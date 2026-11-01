@@ -65,6 +65,8 @@ export interface State {
   worldEra: string | null;
   /** 混合模式下中国人物占比 0–1 */
   cnShare: number;
+  /** 谜底来源：公共题库 / 我的题库（自己审核通过的自定义条目） */
+  targetScope: 'global' | 'mine';
   mode: AnswerMode;
   pronoun: PronounStyle;
   /** 本局提问轮次；null = 跟随服务端默认 */
@@ -344,6 +346,7 @@ let state: State = {
   scope: 'mixed',
   worldEra: null,
   cnShare: 0.5,
+  targetScope: 'global',
   mode: 'strict',
   pronoun: 'neutral',
   turns: null,

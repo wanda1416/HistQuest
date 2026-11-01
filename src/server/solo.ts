@@ -61,6 +61,8 @@ export interface CreateInput {
   userId?: string | null;
   /** 用户名快照（改名不断联） */
   userName?: string | null;
+  /** 「我的题库」开局：全局库里属于该用户的自定义条目 id 列表；非空时只从这个池子里挑谜底 */
+  customPoolIds?: string[] | null;
   rng?: () => number;
 }
 
@@ -94,15 +96,26 @@ export class SoloStore {
 
   async create(input: CreateInput): Promise<SoloSession> {
     const cnShare = Math.min(1, Math.max(0, input.cnShare ?? 0.5));
-    const target = this.index.pick({
-      difficulty: input.difficulty,
-      category: input.category ?? 'character',
-      polity: input.polity ?? null,
-      region: input.region ?? null,
-      worldEra: input.worldEra ?? null,
-      cnShare,
-      rng: input.rng,
-    });
+    const pool = (input.customPoolIds ?? [])
+      .map((id) => this.index.get(id))
+      .filter((c): c is NonNullable<typeof c> => Boolean(c));
+    const target = pool.length
+      ? // 「我的题库」：难度精确匹配优先，没有就整池随机
+        (() => {
+          const preferred = pool.filter((c) => c.difficulty === input.difficulty);
+          const candidates = preferred.length ? preferred : pool;
+          const rng = input.rng ?? Math.random;
+          return candidates[Math.floor(rng() * candidates.length)]!;
+        })()
+      : this.index.pick({
+          difficulty: input.difficulty,
+          category: input.category ?? 'character',
+          polity: input.polity ?? null,
+          region: input.region ?? null,
+          worldEra: input.worldEra ?? null,
+          cnShare,
+          rng: input.rng,
+        });
 
     const turns = Math.min(this.opts.turns, Math.max(10, Math.round(input.turns ?? this.opts.turns)));
     const now = Date.now();

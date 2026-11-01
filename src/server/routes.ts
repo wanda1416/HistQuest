@@ -181,6 +181,7 @@ export function createRoutes(deps: RouteDeps): express.Router {
       mode?: unknown;
       pronoun?: unknown;
       turns?: unknown;
+      targetScope?: unknown;
     };
     const difficulty = Math.min(3, Math.max(1, Number(body?.difficulty) || 1));
     // 类别：character / event / item / mixed；缺省人物（向后兼容老客户端）
@@ -201,6 +202,19 @@ export function createRoutes(deps: RouteDeps): express.Router {
     const turnsRaw = Number(body?.turns);
     const turns = Number.isFinite(turnsRaw) && turnsRaw > 0 ? Math.round(turnsRaw) : undefined;
 
+    // 「我的题库」：从自己已通过审核的自定义条目里挑谜底（须登录且题库可用）
+    let customPoolIds: string[] | null = null;
+    if (body?.targetScope === 'mine') {
+      const user = await currentUser(req);
+      if (!user) return fail(res, 401, 'LOGIN_REQUIRED', '使用自己的题库需要先登录');
+      const store = deps.customTargets;
+      if (!store) return fail(res, 503, 'CUSTOM_DISABLED', '当前是 JSON 存储模式，自定义题库不可用');
+      customPoolIds = store.listGlobalIds(user.id);
+      if (!customPoolIds.length) {
+        return fail(res, 409, 'CUSTOM_EMPTY', '你的题库里还没有已通过审核的条目');
+      }
+    }
+
     // 归属玩家：未启用账号系统时（JSON 存储模式）可能为空
     const session = await deps.solo.create({
       difficulty,
@@ -212,6 +226,7 @@ export function createRoutes(deps: RouteDeps): express.Router {
       mode,
       pronoun,
       turns,
+      customPoolIds,
       userId: user?.id ?? null,
       userName: user?.username ?? null,
     });

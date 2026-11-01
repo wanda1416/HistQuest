@@ -49,6 +49,8 @@ export interface StartSoloReq {
   pronoun: PronounStyle;
   /** 本局提问轮次（10–maxTurns），缺省 = maxTurns */
   turns?: number;
+  /** 谜底来源：mine = 只从该用户已通过审核的自定义条目里抽（需登录） */
+  targetScope?: 'global' | 'mine';
   aiConfig?: AiConfig | null;
 }
 

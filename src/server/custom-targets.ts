@@ -78,6 +78,17 @@ export function createCustomTargetStore(db: DatabaseSync) {
     setStatus(id: string, userId: string, status: CustomStatus): void {
       db.prepare('UPDATE custom_targets SET status = ?, updated_at = ? WHERE id = ? AND user_id = ?').run(status, Date.now(), id, userId);
     },
+    /** 审核通过后记录复制出的全局条目 id（单人「我的题库」开局取谜底用） */
+    setGlobalId(id: string, globalId: string): void {
+      db.prepare('UPDATE custom_targets SET global_id = ? WHERE id = ?').run(globalId, id);
+    },
+    /** 用户已通过审核且已复制入全局的条目 id 列表（全局库里的 custom-* id） */
+    listGlobalIds(userId: string): string[] {
+      const rows = db.prepare(
+        "SELECT global_id FROM custom_targets WHERE user_id = ? AND status = 'approved' AND global_id IS NOT NULL",
+      ).all(userId) as unknown as { global_id: string }[];
+      return rows.map((r) => r.global_id);
+    },
     /** 管理员审核：approved/rejected；仅 submitted 状态可审 */
     review(id: string, status: 'approved' | 'rejected', note: string | null): CustomTarget | null {
       const r = db.prepare('SELECT * FROM custom_targets WHERE id = ? AND status = ?').get(id, 'submitted') as unknown as Row | undefined;

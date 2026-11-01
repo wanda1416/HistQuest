@@ -337,8 +337,20 @@ function lobbyView(s: State): string {
     })
     .join('');
 
-  const eraChips = ['不限', ...WORLD_ERAS]
-    .map((era) => {
+  const sourceChips = [
+    { value: 'global', title: '公共题库', desc: '全库随机' },
+    { value: 'mine', title: '我的题库', desc: '自己审核通过的条目' },
+  ]
+    .map(
+      (m) => `
+      <button class="chip-select ${s.targetScope === m.value ? 'is-active' : ''}"
+        data-action="pick-target-scope" data-value="${m.value}">
+        <b>${esc(m.title)}</b><span>${esc(m.desc)}</span>
+      </button>`,
+    )
+    .join('');
+
+  const eraChips = ['不限', ...WORLD_ERAS]    .map((era) => {
       const value = era === '不限' ? '' : era;
       const active = era === '不限' ? s.worldEra === null : s.worldEra === era;
       return `<button class="chip-select chip-sm ${active ? 'is-active' : ''}"
@@ -385,6 +397,12 @@ function lobbyView(s: State): string {
         <div class="group">
           <span class="group-label">猜什么</span>
           <div class="chips">${categoryChips}</div>
+        </div>
+
+        <div class="group">
+          <span class="group-label">谜底来源</span>
+          <div class="chips">${sourceChips}</div>
+          <p class="field-hint">「我的题库」= 只从你创建、且已通过审核的自定义条目里抽谜底。</p>
         </div>
 
         <div class="group">

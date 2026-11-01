@@ -144,6 +144,7 @@ async function startGame(): Promise<void> {
       region: null,
       worldEra: s.scope === 'world' ? s.worldEra : null,
       cnShare: s.scope === 'cn' ? 1 : s.scope === 'world' ? 0 : s.cnShare,
+      targetScope: s.targetScope,
       mode: s.mode,
       pronoun: s.pronoun,
       ...(s.turns ? { turns: s.turns } : {}),
@@ -812,6 +813,9 @@ root.addEventListener('click', async (event) => {
       });
       break;
     }
+    case 'pick-target-scope':
+      setState({ targetScope: el.dataset.value === 'mine' ? 'mine' : 'global' });
+      break;
     case 'start-game':
       void startGame();
       break;

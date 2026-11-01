@@ -488,8 +488,23 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
     if (rt.env.SESSION_SECRET && !creator) {
       return fail(401, 'LOGIN_REQUIRED', '登录后才能开局');
     }
+    // 「我的题库」：从自己已通过审核的自定义条目里挑谜底
+    let customPoolIds: string[] | null = null;
+    if (body.targetScope === 'mine') {
+      if (!creator) return fail(401, 'LOGIN_REQUIRED', '使用自己的题库需要先登录');
+      const rows = await rt.env.DB.prepare(
+        "SELECT global_id FROM custom_targets WHERE user_id = ? AND status = 'approved' AND global_id IS NOT NULL",
+      )
+        .bind(creator.id)
+        .all<{ global_id: string }>();
+      customPoolIds = (rows.results ?? []).map((r) => r.global_id);
+      if (!customPoolIds.length) {
+        return fail(409, 'CUSTOM_EMPTY', '你的题库里还没有已通过审核的条目');
+      }
+    }
     const session = await rt.solo.create({
       difficulty, category, polity, region, worldEra, cnShare, mode, pronoun, turns,
+      customPoolIds,
       userId: creator?.id ?? null,
       userName: creator?.username ?? null,
     });
@@ -723,6 +738,7 @@ async function handleAdmin(req: Request, url: URL, rt: Runtime): Promise<Respons
     await rt.env.DB.prepare("UPDATE custom_targets SET status = 'approved', review_note = ?, updated_at = ? WHERE id = ?")
       .bind(note, Date.now(), id)
       .run();
+    await rt.env.DB.prepare('UPDATE custom_targets SET global_id = ? WHERE id = ?').bind(character.id, id).run();
     rt.solo.reloadIndex(result.index ?? rt.store.index);
     return json(200, { target: { ...customRowToTarget(existing), status: 'approved' as const }, character: result.character });
   }

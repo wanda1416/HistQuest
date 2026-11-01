@@ -70,7 +70,7 @@ export interface AdminState {
   allTargets?: Character[];
   total: number;
   filters: { q: string; category: string; polity: string; region: string; worldEra: string; difficulty: string; retired: string };
-  view: 'list' | 'edit' | 'health' | 'users' | 'invites' | 'settings' | 'history';
+  view: 'list' | 'edit' | 'health' | 'users' | 'invites' | 'settings' | 'history' | 'custom';
   draft: Character | null;
   /** 正在编辑的原始 id；新建时为 null */
   originalId: string | null;
@@ -93,6 +93,29 @@ export interface AdminState {
   listPageSize: number;
   historyPage: number;
   historyPageSize: number;
+  /** 自定义题库审核队列（status = submitted） */
+  customItems: CustomTargetRow[];
+}
+
+export interface CustomTargetRow {
+  id: string;
+  userId: string;
+  category: string;
+  name: string;
+  aliases: string[];
+  summary: string;
+  region: string;
+  polity: string;
+  worldEra: string | null;
+  gender: string;
+  birth: number | null;
+  death: number | null;
+  birthplace: string | null;
+  difficulty: number;
+  status: string;
+  reviewNote: string | null;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface AdminUserRow {
@@ -184,6 +207,7 @@ function shell(s: AdminState, body: string): string {
     <nav class="a-tabs">
       <button class="a-tab ${s.view === 'list' || s.view === 'edit' ? 'is-active' : ''}" data-action="go-list">数据管理</button>
       <button class="a-tab ${s.view === 'health' ? 'is-active' : ''}" data-action="go-health">数据健康</button>
+      <button class="a-tab ${s.view === 'custom' ? 'is-active' : ''}" data-action="go-custom">题库审核</button>
       <button class="a-tab ${s.view === 'users' ? 'is-active' : ''}" data-action="go-users">用户管理</button>
       <button class="a-tab ${s.view === 'history' ? 'is-active' : ''}" data-action="go-history">对局历史</button>
       <button class="a-tab ${s.view === 'invites' ? 'is-active' : ''}" data-action="go-invites">邀请码</button>
@@ -1059,7 +1083,9 @@ export function renderAdmin(s: AdminState): string {
       ? editView(s)
       : s.view === 'health'
         ? healthView(s)
-        : s.view === 'users'
+        : s.view === 'custom'
+          ? customView(s)
+          : s.view === 'users'
           ? usersView(s)
           : s.view === 'invites'
             ? invitesView(s)
@@ -1164,6 +1190,62 @@ function invitesView(s: AdminState): string {
     <table class="a-table">
       <thead><tr><th>邀请码</th><th>状态</th><th>创建时间</th></tr></thead>
       <tbody>${rows || '<tr><td colspan="3" class="a-muted">还没有邀请码</td></tr>'}</tbody>
+    </table>
+  </section>`;
+}
+
+/* ---------------- 题库审核（自定义条目） ---------------- */
+
+const CUSTOM_CAT_LABEL: Record<string, string> = { character: '人物', event: '事件', item: '物品' };
+
+function customView(s: AdminState): string {
+  if (!s.customItems.length) {
+    return `
+    <section class="a-panel">
+      <h2 class="a-h2">题库审核</h2>
+      <p class="a-muted">暂无待审的用户自定义条目。</p>
+    </section>`;
+  }
+
+  const rows = s.customItems
+    .map((t) => {
+      const years = t.birth !== null || t.death !== null
+        ? `${t.birth ?? '?'} – ${t.death ?? '?'}`
+        : '—';
+      const facts = [
+        t.region === 'cn' ? esc(t.polity) : `${esc(t.polity)}${t.worldEra ? `（${esc(t.worldEra)}）` : ''}`,
+        years,
+        t.gender === 'female' ? '女' : t.gender === 'male' ? '男' : '',
+        t.birthplace ? esc(t.birthplace) : '',
+        `难度 ${t.difficulty}`,
+      ]
+        .filter(Boolean)
+        .join(' · ');
+      return `
+    <tr>
+      <td>
+        <div class="a-user-main">
+          <span class="a-user-name">${esc(t.name)} <span class="a-pill">${CUSTOM_CAT_LABEL[t.category] ?? t.category}</span></span>
+          <span class="a-user-sub">${t.aliases.length ? `别名：${t.aliases.map(esc).join('、')}` : '&nbsp;'}</span>
+        </div>
+      </td>
+      <td>${facts}</td>
+      <td style="max-width:28em">${esc(t.summary)}</td>
+      <td>
+        <button class="a-btn a-btn-sm" data-action="custom-approve" data-id="${esc(t.id)}" data-name="${esc(t.name)}">通过</button>
+        <button class="a-btn a-btn-sm is-danger" data-action="custom-reject" data-id="${esc(t.id)}" data-name="${esc(t.name)}">驳回</button>
+      </td>
+    </tr>`;
+    })
+    .join('');
+
+  return `
+  <section class="a-panel">
+    <h2 class="a-h2">题库审核 <span class="a-pill">${s.customItems.length} 条待审</span></h2>
+    <p class="a-muted">通过后条目会复制入全局题库（id 以 custom- 开头）；驳回时请填写驳回理由，作者可见。</p>
+    <table class="a-table">
+      <thead><tr><th>条目</th><th>归属</th><th>描述</th><th>操作</th></tr></thead>
+      <tbody>${rows}</tbody>
     </table>
   </section>`;
 }

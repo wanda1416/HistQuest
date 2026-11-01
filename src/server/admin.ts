@@ -247,6 +247,7 @@ export function createAdminRoutes(deps: AdminDeps): express.Router {
       return fail(res, 400, 'VALIDATION_FAILED', '复制入全局题库未通过校验，条目保留在待审队列', result.issues);
     }
     deps.customTargets.review(id, 'approved', note);
+    deps.customTargets.setGlobalId(id, character.id);
     deps.solo.reloadIndex(result.index!);
     log('admin.custom.approve', { id, globalId: character.id });
     res.json({ target: deps.customTargets.getById(id), character: result.character });

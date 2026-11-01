@@ -210,6 +210,7 @@ CREATE TABLE IF NOT EXISTS custom_targets (
   difficulty  INTEGER NOT NULL DEFAULT 2,
   status      TEXT NOT NULL DEFAULT 'draft',
   review_note TEXT,
+  global_id   TEXT,
   created_at  INTEGER NOT NULL,
   updated_at  INTEGER NOT NULL
 );

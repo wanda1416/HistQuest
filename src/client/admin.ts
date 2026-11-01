@@ -2,7 +2,7 @@ import type { Character } from '../shared/domain.ts';
 import type { Issue } from '../core/schema.ts';
 import type { HistoryDetail, HistorySummary } from '../shared/protocol.ts';
 import { renderAdmin } from './admin-views.ts';
-import type { AdminMeta, AdminState, AdminUserRow, AdminInviteRow, HealthReport } from './admin-views.ts';
+import type { AdminMeta, AdminState, AdminUserRow, AdminInviteRow, HealthReport, CustomTargetRow } from './admin-views.ts';
 
 const root = document.getElementById('admin')!;
 const TOKEN_KEY = 'hq.adminToken';
@@ -37,6 +37,7 @@ let state: AdminState = {
   listPageSize: 100,
   historyPage: 1,
   historyPageSize: 100,
+  customItems: [],
 };
 
 function render(): void {
@@ -94,6 +95,11 @@ async function loadUsers(): Promise<void> {
 async function loadInvites(): Promise<void> {
   const res = await request<{ total: number; invites: AdminInviteRow[] }>('/api/admin/invites');
   setState({ invites: res.invites });
+}
+
+async function loadCustom(): Promise<void> {
+  const res = await request<{ items: CustomTargetRow[] }>('/api/admin/custom-targets');
+  setState({ customItems: res.items });
 }
 
 async function loadLlm(): Promise<void> {
@@ -451,6 +457,31 @@ root.addEventListener('click', async (event) => {
       setState({ view: 'history' });
       syncHash('history');
       break;
+    case 'go-custom':
+      await loadCustom();
+      setState({ view: 'custom' });
+      syncHash('custom');
+      break;
+    case 'custom-approve':
+    case 'custom-reject': {
+      const id = String(el.dataset.id);
+      const name = String(el.dataset.name ?? '');
+      const reject = action === 'custom-reject';
+      const note = reject ? window.prompt(`驳回「${name}」的理由（作者可见，可留空）：`) ?? '' : '';
+      if (reject && note.trim() === '' && !window.confirm('不留理由直接驳回？')) break;
+      try {
+        await request(`/api/admin/custom-targets/${encodeURIComponent(id)}/review`, {
+          method: 'POST',
+          body: JSON.stringify({ action: reject ? 'reject' : 'approve', note }),
+        });
+        await loadCustom();
+        setState({ view: 'custom', notice: { kind: 'ok', text: reject ? `已驳回「${name}」` : `已通过「${name}」并复制入全局题库` } });
+        await loadList();
+      } catch (err) {
+        setState({ view: 'custom', notice: { kind: 'err', text: (err as Error).message } });
+      }
+      break;
+    }
     case 'reload-history':
       await loadHistory();
       break;
@@ -759,6 +790,7 @@ const VIEW_HASH: Record<AdminState['view'], string> = {
   list: 'data',
   edit: 'data',
   health: 'health',
+  custom: 'reviews',
   users: 'users',
   invites: 'invites',
   settings: 'settings',
@@ -768,6 +800,7 @@ const VIEW_HASH: Record<AdminState['view'], string> = {
 const HASH_VIEW: Record<string, AdminState['view']> = {
   data: 'list',
   health: 'health',
+  reviews: 'custom',
   users: 'users',
   invites: 'invites',
   settings: 'settings',
@@ -786,6 +819,7 @@ async function viewFromHash(): Promise<void> {
   if (view === 'invites') await loadInvites();
   if (view === 'settings') await loadLlm();
   if (view === 'history') await loadHistory();
+  if (view === 'custom') await loadCustom();
   setState({ view, notice: null });
 }
 

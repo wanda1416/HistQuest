@@ -273,6 +273,12 @@ export function migrate(db: DatabaseSync): void {
     `);
     db.exec(`INSERT INTO schema_migrations (version, applied_at) VALUES (9, ${Date.now()})`);
   }
+
+  if (current < 10) {
+    // v10：记录审核通过后复制出的全局条目 id（自定义题库在单人开局按此取谜底）
+    db.exec('ALTER TABLE custom_targets ADD COLUMN global_id TEXT');
+    db.exec(`INSERT INTO schema_migrations (version, applied_at) VALUES (10, ${Date.now()})`);
+  }
   }
 
 function tableExists(db: DatabaseSync, name: string): boolean {
