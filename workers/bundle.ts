@@ -14,6 +14,13 @@ import { takeUserQuota } from './quota.ts';
 import { handleRooms } from './rooms-api.ts';
 import { RoomDo } from './room-do.ts';
 import { handleTranscribe } from './asr.ts';
+import {
+  customToCharacter,
+  newGlobalCustomId,
+  validateCustomTarget,
+  type CustomTarget,
+  type CustomTargetInput,
+} from '../src/shared/custom-targets.ts';
 
 /** Durable Object 必须在模块层导出，wrangler 才认得这个 class */
 export { RoomDo };
@@ -189,6 +196,78 @@ async function readBody(req: Request): Promise<Record<string, unknown>> {
   }
 }
 
+/* ---------------- 自定义题库（D1 直查；类型/校验与 Node 端共用） ---------------- */
+
+interface CustomRow {
+  id: string; user_id: string; category: string; name: string;
+  aliases: string; summary: string;
+  region: string; polity: string; world_era: string | null;
+  gender: string; birth: number | null; death: number | null; birthplace: string | null;
+  difficulty: number;
+  status: string; review_note: string | null;
+  created_at: number; updated_at: number;
+}
+
+function customRowToTarget(r: CustomRow): CustomTarget {
+  let aliases: string[] = [];
+  try {
+    aliases = JSON.parse(r.aliases) as string[];
+  } catch {
+    aliases = [];
+  }
+  return {
+    id: r.id,
+    userId: r.user_id,
+    category: (r.category === 'event' || r.category === 'item' ? r.category : 'character') as CustomTarget['category'],
+    name: r.name,
+    aliases,
+    summary: r.summary,
+    region: r.region as CustomTarget['region'],
+    polity: r.polity,
+    worldEra: r.world_era,
+    gender: r.gender,
+    birth: r.birth,
+    death: r.death,
+    birthplace: r.birthplace,
+    difficulty: r.difficulty,
+    status: r.status as CustomTarget['status'],
+    reviewNote: r.review_note,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  };
+}
+
+function readCustomInput(body: Record<string, unknown>): CustomTargetInput {
+  const str = (k: string) => String(body[k] ?? '').trim();
+  const num = (k: string): number | null => {
+    const v = body[k];
+    if (v === null || v === undefined || v === '') return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.round(n) : null;
+  };
+  const aliases = Array.isArray(body.aliases)
+    ? [...new Set((body.aliases as unknown[]).map((a) => String(a).trim()).filter(Boolean))]
+    : [];
+  return {
+    category: (body.category === 'event' || body.category === 'item' ? body.category : 'character') as CustomTargetInput['category'],
+    name: str('name'),
+    aliases,
+    summary: str('summary'),
+    region: (str('region') || 'cn') as CustomTargetInput['region'],
+    polity: str('polity'),
+    worldEra: str('worldEra') || null,
+    gender: str('gender'),
+    birth: num('birth'),
+    death: num('death'),
+    birthplace: str('birthplace') || null,
+    difficulty: Math.min(3, Math.max(1, Number(body.difficulty) || 2)),
+  };
+}
+
+const CUSTOM_INSERT = `INSERT INTO custom_targets
+  (id, user_id, category, name, aliases, summary, region, polity, world_era, gender, birth, death, birthplace, difficulty, status, review_note, created_at, updated_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
 function errorResponse(err: unknown): Response {
   if (err instanceof SoloError) {
     return fail(err.code === 'NOT_FOUND' ? 404 : 409, err.code, err.message);
@@ -270,6 +349,105 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
       return fail(403, 'FORBIDDEN', '这局不属于当前账号');
     }
     return json(200, detail);
+  }
+
+  // ---------- 我的题库（自定义条目） ----------
+  if (path === '/custom-targets' && req.method === 'GET') {
+    if (!rt.env.SESSION_SECRET) return fail(503, 'CUSTOM_DISABLED', '用户系统未启用');
+    const user = await currentUser(rt.env.DB, req, rt.env.SESSION_SECRET);
+    if (!user) return fail(401, 'LOGIN_REQUIRED', '登录后才能使用自定义题库');
+    const rows = await rt.env.DB.prepare('SELECT * FROM custom_targets WHERE user_id = ? ORDER BY updated_at DESC')
+      .bind(user.id)
+      .all<CustomRow>();
+    return json(200, { items: (rows.results ?? []).map(customRowToTarget) });
+  }
+
+  if (path === '/custom-targets' && req.method === 'POST') {
+    if (!rt.env.SESSION_SECRET) return fail(503, 'CUSTOM_DISABLED', '用户系统未启用');
+    const user = await currentUser(rt.env.DB, req, rt.env.SESSION_SECRET);
+    if (!user) return fail(401, 'LOGIN_REQUIRED', '登录后才能使用自定义题库');
+    const input = readCustomInput(body);
+    const errs = validateCustomTarget(input);
+    if (errs.length) return fail(400, 'VALIDATION_FAILED', errs.join('；'));
+    const now = Date.now();
+    const t: CustomTarget = {
+      id: `c-${now.toString(36)}-${crypto.randomUUID().slice(0, 4)}`,
+      userId: user.id,
+      ...input,
+      status: 'draft',
+      reviewNote: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    await rt.env.DB.prepare(CUSTOM_INSERT).bind(
+      t.id, t.userId, t.category, t.name, JSON.stringify(t.aliases), t.summary,
+      t.region, t.polity, t.worldEra, t.gender, t.birth, t.death, t.birthplace,
+      t.difficulty, t.status, t.reviewNote, t.createdAt, t.updatedAt,
+    ).run();
+    return json(201, { target: t });
+  }
+
+  const customUpdate = path.match(/^\/custom-targets\/([A-Za-z0-9-]+)$/);
+  if (customUpdate && req.method === 'PUT') {
+    if (!rt.env.SESSION_SECRET) return fail(503, 'CUSTOM_DISABLED', '用户系统未启用');
+    const user = await currentUser(rt.env.DB, req, rt.env.SESSION_SECRET);
+    if (!user) return fail(401, 'LOGIN_REQUIRED', '登录后才能使用自定义题库');
+    const rows = await rt.env.DB.prepare('SELECT * FROM custom_targets WHERE id = ? AND user_id = ?')
+      .bind(customUpdate[1]!, user.id)
+      .all<CustomRow>();
+    const existing = (rows.results ?? [])[0];
+    if (!existing) return fail(404, 'NOT_FOUND', '找不到这条自定义条目');
+    if (existing.status !== 'draft') return fail(409, 'NOT_EDITABLE', '只有草稿状态可以编辑；被驳回的条目请删除后重建');
+    const input = readCustomInput(body);
+    const errs = validateCustomTarget(input);
+    if (errs.length) return fail(400, 'VALIDATION_FAILED', errs.join('；'));
+    await rt.env.DB.prepare(
+      `UPDATE custom_targets SET category = ?, name = ?, aliases = ?, summary = ?, region = ?, polity = ?, world_era = ?, gender = ?, birth = ?, death = ?, birthplace = ?, difficulty = ?, updated_at = ?
+       WHERE id = ? AND user_id = ? AND status = 'draft'`,
+    ).bind(
+      input.category, input.name, JSON.stringify(input.aliases), input.summary, input.region, input.polity,
+      input.worldEra, input.gender, input.birth, input.death, input.birthplace, input.difficulty,
+      Date.now(), customUpdate[1]!, user.id,
+    ).run();
+    const updated = await rt.env.DB.prepare('SELECT * FROM custom_targets WHERE id = ?').bind(customUpdate[1]!).all<CustomRow>();
+    return json(200, { target: customRowToTarget((updated.results ?? [])[0]!) });
+  }
+
+  const customSubmit = path.match(/^\/custom-targets\/([A-Za-z0-9-]+)\/submit$/);
+  if (customSubmit && req.method === 'POST') {
+    if (!rt.env.SESSION_SECRET) return fail(503, 'CUSTOM_DISABLED', '用户系统未启用');
+    const user = await currentUser(rt.env.DB, req, rt.env.SESSION_SECRET);
+    if (!user) return fail(401, 'LOGIN_REQUIRED', '登录后才能使用自定义题库');
+    const rows = await rt.env.DB.prepare('SELECT * FROM custom_targets WHERE id = ? AND user_id = ?')
+      .bind(customSubmit[1]!, user.id)
+      .all<CustomRow>();
+    const existing = (rows.results ?? [])[0];
+    if (!existing) return fail(404, 'NOT_FOUND', '找不到这条自定义条目');
+    if (existing.status !== 'draft') return fail(409, 'NOT_DRAFT', '只有草稿可以提交审核');
+    const t = customRowToTarget(existing);
+    const errs = validateCustomTarget(t);
+    if (errs.length) return fail(400, 'VALIDATION_FAILED', errs.join('；'));
+    await rt.env.DB.prepare("UPDATE custom_targets SET status = 'submitted', updated_at = ? WHERE id = ?")
+      .bind(Date.now(), existing.id)
+      .run();
+    return json(200, { target: { ...t, status: 'submitted' as const } });
+  }
+
+  const customDelete = path.match(/^\/custom-targets\/([A-Za-z0-9-]+)$/);
+  if (customDelete && req.method === 'DELETE') {
+    if (!rt.env.SESSION_SECRET) return fail(503, 'CUSTOM_DISABLED', '用户系统未启用');
+    const user = await currentUser(rt.env.DB, req, rt.env.SESSION_SECRET);
+    if (!user) return fail(401, 'LOGIN_REQUIRED', '登录后才能使用自定义题库');
+    const rows = await rt.env.DB.prepare('SELECT * FROM custom_targets WHERE id = ? AND user_id = ?')
+      .bind(customDelete[1]!, user.id)
+      .all<CustomRow>();
+    const existing = (rows.results ?? [])[0];
+    if (!existing) return fail(404, 'NOT_FOUND', '找不到这条自定义条目');
+    if (existing.status !== 'draft' && existing.status !== 'rejected') {
+      return fail(409, 'NOT_DELETABLE', '待审/已通过的条目不能删除');
+    }
+    await rt.env.DB.prepare('DELETE FROM custom_targets WHERE id = ?').bind(existing.id).run();
+    return json(200, { ok: true });
   }
 
   // ---------- 模型连通测试（BYOK 时代用；服务器持 key 时也保留） ----------
@@ -506,6 +684,47 @@ async function handleAdmin(req: Request, url: URL, rt: Runtime): Promise<Respons
     const idToUpdate = typeof body.id === 'string' && body.id ? body.id : null;
     const { character, issues } = rt.store.check(body.character ?? body, idToUpdate);
     return json(200, { ok: !issues.some((i) => i.level === 'error'), character, issues });
+  }
+
+  /* ---------------- 自定义题库审核 ---------------- */
+
+  if (path === '/custom-targets' && req.method === 'GET') {
+    const rows = await rt.env.DB.prepare("SELECT * FROM custom_targets WHERE status = 'submitted' ORDER BY updated_at ASC")
+      .bind()
+      .all<CustomRow>();
+    return json(200, { items: (rows.results ?? []).map(customRowToTarget) });
+  }
+
+  const customReview = path.match(/^\/custom-targets\/([A-Za-z0-9-]+)\/review$/);
+  if (customReview && req.method === 'POST') {
+    const id = customReview[1]!;
+    const action = body.action === 'reject' ? 'reject' : body.action === 'approve' ? 'approve' : null;
+    if (!action) return fail(400, 'BAD_ACTION', 'action 须为 approve / reject');
+    const note = String(body.note ?? '').trim() || null;
+    const rows = await rt.env.DB.prepare("SELECT * FROM custom_targets WHERE id = ? AND status = 'submitted'")
+      .bind(id)
+      .all<CustomRow>();
+    const existing = (rows.results ?? [])[0];
+    if (!existing) return fail(404, 'NOT_FOUND', '找不到待审的自定义条目');
+
+    if (action === 'reject') {
+      await rt.env.DB.prepare("UPDATE custom_targets SET status = 'rejected', review_note = ?, updated_at = ? WHERE id = ?")
+        .bind(note, Date.now(), id)
+        .run();
+      return json(200, { target: { ...customRowToTarget(existing), status: 'rejected' as const, reviewNote: note } });
+    }
+
+    // 通过：复制为全局条目（校验不过则留在待审队列并返回问题清单）
+    const character = customToCharacter(customRowToTarget(existing), newGlobalCustomId());
+    const result = await rt.store.create(character);
+    if (!result.ok) {
+      return json(400, { error: 'VALIDATION_FAILED', message: '复制入全局题库未通过校验，条目保留在待审队列', issues: result.issues });
+    }
+    await rt.env.DB.prepare("UPDATE custom_targets SET status = 'approved', review_note = ?, updated_at = ? WHERE id = ?")
+      .bind(note, Date.now(), id)
+      .run();
+    rt.solo.reloadIndex(result.index ?? rt.store.index);
+    return json(200, { target: { ...customRowToTarget(existing), status: 'approved' as const }, character: result.character });
   }
 
   if (path === '/health' && req.method === 'GET') {

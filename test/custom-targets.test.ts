@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { openDatabase } from '../src/server/db.ts';
-import { createCustomTargetStore, newGlobalId, toCharacter } from '../src/server/custom-targets.ts';
+import { createCustomTargetStore } from '../src/server/custom-targets.ts';
+import { newGlobalCustomId as newGlobalId, customToCharacter as toCharacter } from '../src/shared/custom-targets.ts';
 import { validateCharacter } from '../src/core/schema.ts';
 import type { CustomTarget } from '../src/server/custom-targets.ts';
 

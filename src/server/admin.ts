@@ -19,7 +19,7 @@ import {
 } from './auth.ts';
 import type { HistoryStore } from './history.ts';
 import type { SoloStore } from './solo.ts';
-import { newGlobalId, toCharacter, type CustomTargetStore } from './custom-targets.ts';
+import { toCharacter, newGlobalId, type CustomTargetStore } from './custom-targets.ts';
 import { log } from './util.ts';
 
 /**
