@@ -118,20 +118,25 @@ test('严格分期 + 解说：曹操问"三国人物吗"答否，并解释分期
   assert.equal(record.hint?.includes('曹操'), false, '说明里不能出现人物名');
 });
 
-test('选择问句：给出改法、不调模型、不算作有效提问', async () => {
+test('选择问句：严格模式由模型按提示词拒答，不消耗轮次', async () => {
   const { record } = await ask('他是唐朝前的人物还是唐朝后的人物');
   assert.equal(record.verdict, 'unknown');
   assert.equal(record.invalid, 'format');
-  assert.equal(record.calls, 0, '问法问题不该消耗模型调用');
+  assert.ok(record.calls >= 1, '拒答走模型，但不算有效提问');
   assert.ok(record.text.includes('只能回答'), record.text);
 });
 
-test('开放问句：同样给改法而不是"无法判断"', async () => {
+test('开放问句：严格模式由模型拒答，不消耗轮次', async () => {
   for (const q of ['他是哪个朝代的人', '他叫什么名字', '他活了多少岁']) {
     const { record } = await ask(q);
     assert.equal(record.invalid, 'format', q);
-    assert.equal(record.calls, 0, q);
   }
+});
+
+test('二选一问法：严格模式允许回答（男的还是女的）', async () => {
+  const { record } = await ask('他是男的还是女的', { mode: 'strict' });
+  assert.equal(record.invalid, undefined);
+  assert.ok(['yes', 'no'].includes(record.verdict));
 });
 
 test('改问法后可以正常判定：刘邦问"唐朝之前吗"→ 是', async () => {

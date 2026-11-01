@@ -84,6 +84,26 @@ function decide(messages: Array<{ role: string; content: string }>): { content: 
     // 用固定脚本模拟"模型作答"，便于断言引擎的覆盖逻辑
     if (question.includes('坏JSON')) return { content: '这个我不好说', delayMs: 0 };
     if (question.includes('超时')) return { content: '', delayMs: 12000 };
+    // 严格模式：开放问法 / 过多选项由模型按提示词拒答（refuse=true）
+    if (allText.includes('「精确」模式') && /(哪个|哪些|什么|怎么|为什么|还是|多少)/.test(question) && !/是不是/.test(question)) {
+      if (/男的还是女的/.test(question)) {
+        const gender = /女/.test(question) ? 'female' : 'male';
+        return {
+          content: JSON.stringify({ attr: 'gender', value: gender, verdict: 'yes', text: `是${gender === 'female' ? '女' : '男'}的。` }),
+          delayMs: 0,
+        };
+      }
+      return {
+        content: JSON.stringify({
+          attr: 'other',
+          value: null,
+          verdict: 'unknown',
+          text: '这个提问方式不对，我只能回答是或否，请换成是 / 否的问法。',
+          refuse: true,
+        }),
+        delayMs: 0,
+      };
+    }
     // "提到名字但不是猜测"：guessed 必须为 null
     if (question.includes('同时代') || question.includes('康熙字典')) {
       return {

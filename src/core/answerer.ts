@@ -18,6 +18,8 @@ export interface ModelAnswer {
   text: string;
   /** 模型判定玩家在点名猜测时，玩家点出的名号原文；否则为 null */
   guessed: string | null;
+  /** 模型按模式规则拒答（问法不对 / 问得太直接）：不消耗轮次 */
+  refuse: boolean;
   calls: number;
 }
 
@@ -65,6 +67,7 @@ function normalize(raw: unknown, c: Character): Omit<ModelAnswer, 'calls'> | nul
     verdict: verdictRaw as Verdict,
     text: readable(safe) ? safe : '',
     guessed: typeof obj.guessed === 'string' && obj.guessed.trim() ? obj.guessed.trim().slice(0, 30) : null,
+    refuse: obj.refuse === true,
   };
 }
 
@@ -106,7 +109,7 @@ export async function modelAnswer(
           {
             role: 'user',
             content:
-              '只输出一个 JSON 对象，不要解释：{"attr":"属性名","value":值,"verdict":"yes|no|unknown","text":"一句话回答"}',
+              '只输出一个 JSON 对象，不要解释：{"attr":"属性名","value":值,"verdict":"yes|no|unknown","text":"一句话回答","guessed":null,"refuse":false}',
           },
         ],
         callOpts,

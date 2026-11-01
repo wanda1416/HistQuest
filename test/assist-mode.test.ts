@@ -28,8 +28,11 @@ test('提示词：辅助模式带方向性提示规则与曹操例句，精确�
   assert.doesNotMatch(strict, /辅助|方向性提示/);
   assert.match(assistEvent, /猜一个历史事件/, '辅助规则与类别参数化正交');
   // 条款编号在两种模式下都连续
-  assert.match(strict, /4\. 不得主动透露/);
-  assert.match(assist, /5\. 不得主动透露/);
+  assert.match(strict, /5\. 不得主动透露/);
+  assert.match(assist, /6\. 不得主动透露/);
+  // 严格模式带「只能做是/否判定」的拒答规则
+  assert.match(strict, /只能做是 \/ 否判定/);
+  assert.match(strict, /refuse=true/);
 });
 
 test('buildAnswerMessages 透传模式', () => {

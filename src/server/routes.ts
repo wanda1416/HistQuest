@@ -292,7 +292,7 @@ export function createRoutes(deps: RouteDeps): express.Router {
         if (typeof s.region === 'string' && s.region) region = s.region as typeof region;
         if (typeof s.worldEra === 'string' && s.worldEra) worldEra = s.worldEra;
         if (Number.isFinite(Number(s.cnShare))) cnShare = Math.min(1, Math.max(0, Number(s.cnShare)));
-        if (s.mode === 'guided' || s.mode === 'strict') mode = s.mode;
+        if (s.mode === 'guided' || s.mode === 'assist' || s.mode === 'strict') mode = s.mode;
         if (Number.isFinite(Number(s.turns)) && Number(s.turns) >= 10) turns = Math.min(50, Math.max(10, Math.round(Number(s.turns))));
       }
     }
@@ -612,7 +612,7 @@ export function createRoutes(deps: RouteDeps): express.Router {
     const settings: Record<string, unknown> = {
       difficulty: Math.min(3, Math.max(1, Number(b.difficulty) || 2)),
       category: b.category === 'event' || b.category === 'item' || b.category === 'mixed' ? b.category : 'character',
-      mode: b.mode === 'guided' ? 'guided' : 'strict',
+      mode: b.mode === 'guided' || b.mode === 'assist' ? b.mode : 'strict',
       turns: Math.min(50, Math.max(10, Math.round(Number(b.turns) || 20))),
     };
     if (typeof b.polity === 'string' && b.polity) settings.polity = b.polity;

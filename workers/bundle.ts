@@ -572,7 +572,7 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
     const settings: Record<string, unknown> = {
       difficulty: Math.min(3, Math.max(1, Number(body.difficulty) || 2)),
       category: body.category === 'event' || body.category === 'item' || body.category === 'mixed' ? body.category : 'character',
-      mode: body.mode === 'guided' ? 'guided' : 'strict',
+      mode: body.mode === 'guided' || body.mode === 'assist' ? body.mode : 'strict',
       turns: Math.min(50, Math.max(10, Math.round(Number(body.turns) || 20))),
     };
     if (typeof body.polity === 'string' && body.polity) settings.polity = body.polity;
@@ -796,7 +796,7 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
     let polity = polity0;
     let region = region0;
     let worldEra = worldEra0;
-    let mode: 'strict' | 'guided' = mode0 === 'guided' ? 'guided' : 'strict';
+    let mode: 'strict' | 'guided' | 'assist' = mode0 === 'guided' ? 'guided' : mode0 === 'assist' ? 'assist' : 'strict';
     let challengePool: string[] | null = null;
     if (challenge) {
       if (challenge.globalId) {
@@ -813,7 +813,7 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
         if (typeof s.region === 'string' && s.region) region = s.region as typeof region;
         if (typeof s.worldEra === 'string' && s.worldEra) worldEra = s.worldEra;
         if (Number.isFinite(Number(s.cnShare))) cnShare = Math.min(1, Math.max(0, Number(s.cnShare)));
-        if (s.mode === 'guided' || s.mode === 'strict') mode = s.mode;
+        if (s.mode === 'guided' || s.mode === 'assist' || s.mode === 'strict') mode = s.mode;
         if (Number.isFinite(Number(s.turns)) && Number(s.turns) >= 10) turns = Math.min(50, Math.max(10, Math.round(Number(s.turns))));
       }
     }

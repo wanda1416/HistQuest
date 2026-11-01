@@ -19,7 +19,7 @@ export interface ChallengeSettings {
   region?: string | null;
   worldEra?: string | null;
   cnShare?: number;
-  mode?: 'strict' | 'guided';
+  mode?: 'strict' | 'guided' | 'assist';
   turns?: number;
 }
 

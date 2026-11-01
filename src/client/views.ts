@@ -1277,7 +1277,8 @@ function randomChallengeView(s: State): string {
 
   const modeChips = [
     { v: 'strict', t: '精确', d: '是/否判定' },
-    { v: 'guided', t: '解说', d: '判定+解说' },
+    { v: 'guided', t: '解说', d: '判定+口径' },
+    { v: 'assist', t: '辅助', d: '判定+提示' },
   ]
     .map((m) => `<button class="chip-select ${s.mode === m.v ? 'is-active' : ''}"
       data-action="pick-mode" data-value="${m.v}"><b>${m.t}</b><span>${m.d}</span></button>`)

@@ -9,7 +9,7 @@ import type {
   Verdict,
 } from '../shared/domain.ts';
 import type { CharacterIndex } from './index.ts';
-import { precheck, detectNonBinary } from './precheck.ts';
+import { precheck } from './precheck.ts';
 import { judgeByIndex, guessMatches } from './judge.ts';
 import { clarify, phrase, PARSE_FAILED_TEXT } from './phraser.ts';
 import { extractDynasty } from './dynasty.ts';
@@ -110,21 +110,7 @@ export async function runAsk(params: AskParams): Promise<AskOutcome> {
 
   const asked = pre.cleaned || question;
 
-  // ---------- 问法检查：不是是/否问题就给出改法，不进模型、不扣次数 ----------
-  const nonBinary = detectNonBinary(asked);
-  if (nonBinary) {
-    return {
-      record: make({
-        verdict: 'unknown',
-        text: nonBinary.text,
-        basis: 'fallback',
-        calls,
-        invalid: 'format',
-      }),
-    };
-  }
-
-  // ---------- 主观评价：本地短路 ----------
+  // ---------- 主观评价：本地短路（保证话术稳定且不花调用） ----------
   if (SUBJECTIVE_RE.test(asked)) {
     return {
       record: make({
@@ -158,6 +144,20 @@ export async function runAsk(params: AskParams): Promise<AskOutcome> {
     query = toQuery(answer);
     verdict = answer.verdict;
     basis = 'knowledge';
+
+    // 模式规则拒答（严格：开放问法；解说/辅助：问得太直接）：不消耗轮次
+    if (answer.refuse) {
+      return {
+        record: make({
+          verdict: 'unknown',
+          text: answer.text || '这个提问方式不对，我只能回答是或否。',
+          basis: 'knowledge',
+          query,
+          calls,
+          invalid: 'format',
+        }),
+      };
+    }
 
     // 点名猜测：模型判定 + 服务端复核，猜中直接结算，不扣次数。
     // 复核必须有：模型可能把"提到名字"误报成猜中，直接结算就是错杀。
