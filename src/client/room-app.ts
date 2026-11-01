@@ -214,6 +214,7 @@ const ROOM_ACTIONS = new Set([
   'pick-room-difficulty',
   'pick-room-mode',
   'pick-room-scope',
+  'pick-room-target-scope',
   'toggle-room-listed',
   'create-room',
   'enter-room',
@@ -246,7 +247,8 @@ async function handleClick(action: string, el: HTMLElement): Promise<void> {
     case 'pick-room-turns':
     case 'pick-room-difficulty':
     case 'pick-room-mode':
-    case 'pick-room-scope': {
+    case 'pick-room-scope':
+    case 'pick-room-target-scope': {
       const raw = el.dataset.value ?? '';
       const patch = settingsPatch(action, raw);
       if (!patch) return;
@@ -277,6 +279,7 @@ async function handleClick(action: string, el: HTMLElement): Promise<void> {
             worldEra: null,
             polity: null,
             cnShare: st.roomScope === 'mixed' ? 0.5 : st.roomScope === 'cn' ? 1 : 0,
+            targetScope: st.roomTargetScope,
           },
         });
         saveRoomCode(snapshot.code);
@@ -397,6 +400,8 @@ function settingsPatch(action: string, raw: string): Partial<RoomSettings> | nul
         : raw === 'world'
           ? { region: null, cnShare: 0 }
           : { region: null, cnShare: 0.5 };
+    case 'pick-room-target-scope':
+      return raw === 'host' ? { targetScope: 'host' } : { targetScope: 'global' };
     default:
       return null;
   }
@@ -410,6 +415,7 @@ function applyLocalSettings(patch: Partial<RoomSettings>): void {
   if (patch.cnShare !== undefined) {
     next.roomScope = patch.cnShare === 1 ? 'cn' : patch.cnShare === 0 ? 'world' : 'mixed';
   }
+  if (patch.targetScope !== undefined) next.roomTargetScope = patch.targetScope;
   setState(next);
 }
 

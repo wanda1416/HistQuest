@@ -78,6 +78,8 @@ interface StoredRoom {
   lastActivityAt: number;
   archived: boolean;
   listed: boolean;
+  /** 谜底范围 = host 时开局的谜底（全局索引里没有，必须持久化供揭晓/复盘） */
+  customTarget?: Character | null;
 }
 
 /* ---------------- 房间 DO ---------------- */
@@ -482,13 +484,17 @@ export class RoomDo {
 
   private target() {
     const id = this.data?.room.targetId;
-    if (!id || !this.index) return undefined;
+    if (!id) return undefined;
+    // 房主题库的谜底不在全局索引里，先查持久化的自定义谜底
+    if (this.data?.customTarget?.id === id) return this.data.customTarget;
+    if (!this.index) return undefined;
     return this.index.get(id);
   }
 
   private async pickTarget() {
-    const index = await this.ensureIndex();
     const s = this.data!.room.settings;
+    if (s.targetScope === 'host') return this.pickHostTarget();
+    const index = await this.ensureIndex();
     return index.pick({
       difficulty: s.difficulty,
       polity: s.polity,
@@ -496,6 +502,24 @@ export class RoomDo {
       worldEra: s.worldEra,
       cnShare: s.cnShare,
     });
+  }
+
+  /** 房主的自定义题库（仅审核通过）：随机一条，难度精确匹配优先 */
+  private async pickHostTarget(): Promise<Character | undefined> {
+    const hostId = this.data!.room.hostId;
+    const rows = await this.env.DB.prepare(
+      "SELECT * FROM custom_targets WHERE user_id = ? AND status = 'approved'",
+    )
+      .bind(hostId)
+      .all<CustomTargetRow>();
+    const list = (rows.results ?? []).map(customRowToCharacter);
+    if (!list.length) return undefined;
+    const preferred = list.filter((t) => t.difficulty === this.data!.room.settings.difficulty);
+    const pool = preferred.length ? preferred : list;
+    const chosen = pool[Math.floor(Math.random() * pool.length)]!;
+    this.data!.customTarget = chosen;
+    await this.save();
+    return chosen;
   }
 
   /** 服务端模型凭据：默认取 env；后台改过 LLM 设置时以 D1 为准 */
@@ -761,4 +785,53 @@ function joinMessage(code: string | undefined): string {
     default:
       return '操作失败';
   }
+}
+
+/* ---------------- 房主自定义谜底 ---------------- */
+
+interface CustomTargetRow {
+  id: string;
+  category: string;
+  name: string;
+  aliases: string;
+  summary: string;
+  region: string;
+  polity: string;
+  world_era: string | null;
+  gender: string;
+  birth: number | null;
+  death: number | null;
+  birthplace: string | null;
+  difficulty: number;
+}
+
+/** custom_targets 行 → Character（与 Node 侧 toCharacter 同一语义；Workers 侧独立实现避免引入 node:crypto） */
+function customRowToCharacter(r: CustomTargetRow): Character {
+  let aliases: string[] = [];
+  try {
+    aliases = JSON.parse(r.aliases) as string[];
+  } catch {
+    aliases = [];
+  }
+  const category = r.category === 'event' || r.category === 'item' ? r.category : 'character';
+  return {
+    id: `custom-${r.id.replace(/[^a-z0-9-]/gi, '').slice(0, 26)}`,
+    category,
+    name: r.name,
+    aliases,
+    region: (r.region || 'cn') as Character['region'],
+    polity: r.polity,
+    worldEra: r.region === 'cn' ? null : ((r.world_era ?? null) as Character['worldEra']),
+    gender: category === 'character' ? (r.gender === 'female' ? 'female' : 'male') : 'male',
+    birth: r.birth,
+    death: r.death,
+    birthplace: r.birthplace,
+    birthProvince: null,
+    country: r.region === 'cn' ? null : r.polity,
+    roles: [category === 'character' ? '自定义' : category === 'event' ? '历史事件' : '历史物品'],
+    tags: [],
+    emperor: false,
+    notable: r.summary,
+    difficulty: r.difficulty,
+  };
 }

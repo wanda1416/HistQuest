@@ -112,6 +112,8 @@ export interface State {
   roomDifficulty: number;
   roomMode: AnswerMode;
   roomScope: 'cn' | 'world' | 'mixed';
+  /** 建房谜底范围：公共题库 / 房主的自定义题库 */
+  roomTargetScope: 'global' | 'host';
   roomListed: boolean;
   /** 猜答案弹窗（对战版，与单人的 guessOpen 分开） */
   raceGuessOpen: boolean;
@@ -365,6 +367,7 @@ let state: State = {
   roomDifficulty: 2,
   roomMode: 'strict',
   roomScope: 'mixed',
+  roomTargetScope: 'global',
   roomListed: true,
   raceGuessOpen: false,
   raceGuessError: null,

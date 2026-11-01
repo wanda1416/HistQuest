@@ -80,6 +80,8 @@ export interface RoomSettings {
   turnLimit: number;
   /** 参赛人数上限 2–8 */
   maxPlayers: number;
+  /** 谜底范围：global=公共题库；host=房主的自定义题库（仅审核通过的条目） */
+  targetScope: 'global' | 'host';
 }
 
 export function defaultRoomSettings(): RoomSettings {
@@ -93,6 +95,7 @@ export function defaultRoomSettings(): RoomSettings {
     pronoun: 'neutral',
     turnLimit: 20,
     maxPlayers: 8,
+    targetScope: 'global',
   };
 }
 
@@ -117,6 +120,7 @@ export function normalizeSettings(patch: Partial<RoomSettings>, prev: RoomSettin
     pronoun: pick(patch.pronoun, prev.pronoun) === 'normal' ? 'normal' : 'neutral',
     turnLimit: clampInt(patch.turnLimit, ROOM.turnMin, ROOM.turnMax, prev.turnLimit),
     maxPlayers: clampInt(patch.maxPlayers, ROOM.playersMin, ROOM.playersMax, prev.maxPlayers),
+    targetScope: pick(patch.targetScope, prev.targetScope) === 'host' ? 'host' : 'global',
   };
 }
 

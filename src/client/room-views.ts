@@ -98,6 +98,16 @@ function createForm(s: State): string {
     )
     .join('');
 
+  const targetScopeChips = [
+    { value: 'global', label: '公共题库' },
+    { value: 'host', label: '我的题库' },
+  ]
+    .map(
+      (v) => `<button class="chip-select chip-sm ${s.roomTargetScope === v.value ? 'is-active' : ''}"
+        data-action="pick-room-target-scope" data-value="${v.value}">${esc(v.label)}</button>`,
+    )
+    .join('');
+
   return `
   <div class="panel room-create">
     <div class="group">
@@ -116,6 +126,11 @@ function createForm(s: State): string {
     <div class="group">
       <span class="group-label">人物范围</span>
       <div class="chips">${scopeChips}</div>
+    </div>
+    <div class="group">
+      <span class="group-label">谜底范围</span>
+      <div class="chips">${targetScopeChips}</div>
+      <p class="field-hint">「我的题库」= 从你自定义题库里已通过审核的条目中随机选谜底。</p>
     </div>
     <div class="group">
       <span class="group-label">公开</span>
