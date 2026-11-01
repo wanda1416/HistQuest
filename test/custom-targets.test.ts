@@ -171,6 +171,13 @@ test('挑战服务：登记 / 解析 / 出题人额度扣减', () => {
   assert.equal(challenges.quotaOk(code), true);
   assert.deepEqual(challenges.chargeAsk(code), { ok: true });
 
+  // 管理员放出的链接同样扣管理员额度（自己开玩才豁免）
+  db.prepare("UPDATE users SET role = 'admin' WHERE id = 'u9'").run();
+  assert.equal(challenges.quotaOk(code), true);
+  assert.deepEqual(challenges.chargeAsk(code), { ok: true });
+  const after = db.prepare('SELECT asks_today FROM users WHERE id = ?').get('u9') as unknown as { asks_today: number };
+  assert.equal(after.asks_today, 2, '管理员的挑战链接也要扣管理员额度');
+
   // mine：带出被玩局数
   const mine = challenges.mine('u9');
   assert.equal(mine.length, 1);

@@ -1146,7 +1146,7 @@ function usersView(s: AdminState): string {
           </span>
         </span>
       </td>
-      <td>${u.asksToday}</td>
+      <td>${u.role === 'admin' ? `${u.asksToday}（不扣自身额度）` : `${u.asksToday} / ${quotaLimit(u)}`}</td>
       <td>${quotaCell}</td>
       <td>${isAdmin ? '—' : u.allowServerKey ? '允许' : '禁止'}</td>
       <td>${actions}</td>
@@ -1159,7 +1159,7 @@ function usersView(s: AdminState): string {
     <h2 class="a-h2">用户（${s.users.length}）</h2>
     <p class="a-muted">配额：-1 = 跟随默认（500/天），0 = 禁用站方模型，&gt;0 = 每日上限。只对站方 Key 计数，BYOK 不限。</p>
     <table class="a-table">
-      <thead><tr><th>用户名</th><th>今日已问</th><th>每日配额</th><th>站方模型</th><th>操作</th></tr></thead>
+      <thead><tr><th>用户名</th><th>今日已用 / 上限</th><th>每日配额</th><th>站方模型</th><th>操作</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
     <p class="a-hint">「删除」不可恢复：账号立即失效、进行中的对局被清掉、邀请码释放；历史账本保留（历史里的人物名是快照）。管理员账号受保护，不可删除。</p>
@@ -1195,6 +1195,12 @@ function invitesView(s: AdminState): string {
 }
 
 /* ---------------- 题库审核（自定义条目） ---------------- */
+
+/** 当日上限：-1/null = 全局默认 500 */
+function quotaLimit(u: { dailyQuota?: number | null }): number {
+  const q = Number(u.dailyQuota);
+  return Number.isFinite(q) && q >= 0 ? Math.floor(q) : 500;
+}
 
 const CUSTOM_CAT_LABEL: Record<string, string> = { character: '人物', event: '事件', item: '物品' };
 

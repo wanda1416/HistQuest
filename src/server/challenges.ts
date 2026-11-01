@@ -1,5 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
-import { takeQuota, DEFAULT_DAILY_QUOTA } from './auth.ts';
+import { DEFAULT_DAILY_QUOTA } from './auth.ts';
 
 /**
  * 挑战（出题）服务：挑战码登记 / 解析 / 出题人额度扣减 / 玩家记录审计。
@@ -189,7 +189,7 @@ export function createChallengeService(db: DatabaseSync): ChallengeService {
       if (!r) return false;
       const c = creatorRow(r.creatorId);
       if (!c) return false;
-      if (c.role === 'admin') return true;
+      // 管理员放出的链接同样受额度约束（自己开玩才豁免）
       if (c.banned || !c.allow_server_key) return false;
       return remainingOf(c) > 0;
     },
@@ -200,19 +200,24 @@ export function createChallengeService(db: DatabaseSync): ChallengeService {
       const c = creatorRow(r.creatorId);
       if (!c) return { ok: false, message: '出题人账号不存在，挑战已失效' };
       if (c.banned) return { ok: false, message: '出题人账号被封禁，挑战已截止' };
-      if (c.role !== 'admin' && !c.allow_server_key) {
+      if (!c.allow_server_key) {
         return { ok: false, message: '出题人未开放站方模型，挑战暂时截止' };
       }
-      const result = takeQuota(db, {
-        id: c.id,
-        username: c.username,
-        role: c.role === 'admin' ? 'admin' : 'user',
-        allowServerKey: Boolean(c.allow_server_key),
-        dailyQuota: Number(c.daily_quota),
-      }, DEFAULT_DAILY_QUOTA);
-      if (!result.ok) {
+      // 挑战扣费对管理员同样生效（放出去的链接不是无限链接）；
+      // 管理员自己开玩的额度走 takeQuota 的管理员豁免，两者互不影响。
+      const day = new Date();
+      const today = day.getFullYear() * 10000 + (day.getMonth() + 1) * 100 + day.getDate();
+      const used = Number(c.quota_day) === today ? Number(c.asks_today) : 0;
+      const limit = Number(c.daily_quota) < 0 ? DEFAULT_DAILY_QUOTA : Number(c.daily_quota);
+      if (used >= limit) {
         return { ok: false, message: '出题人今日额度已用完，挑战今日截止，明天再来' };
       }
+      db.prepare('UPDATE users SET asks_today = ?, quota_day = ?, updated_at = ? WHERE id = ?').run(
+        used + 1,
+        today,
+        Date.now(),
+        c.id,
+      );
       return { ok: true };
     },
   };
