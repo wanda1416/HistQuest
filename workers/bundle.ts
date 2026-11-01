@@ -1063,16 +1063,13 @@ async function handleAdmin(req: Request, url: URL, rt: Runtime): Promise<Respons
     const what = userToggle[2]!;
     const on = Boolean(body.on);
 
-    // 保护管理员：不允许对 admin 角色做封禁/关停/配额清零（防自锁）
+    // 保护管理员：不允许对 admin 角色做封禁/关停（防自锁）；配额可以设置——管理员的挑战链接要扣这份额度
     const target = await rt.env.DB
       .prepare('SELECT role FROM users WHERE id = ?')
       .bind(id)
       .first<{ role: string }>();
     if (target?.role === 'admin' && what !== 'quota') {
       return fail(403, 'ADMIN_PROTECTED', '不能对管理员执行封禁或关闭站方模型');
-    }
-    if (target?.role === 'admin' && what === 'quota') {
-      return fail(403, 'ADMIN_PROTECTED', '管理员配额不受限制（无限）');
     }
 
     if (what === 'server-key') {

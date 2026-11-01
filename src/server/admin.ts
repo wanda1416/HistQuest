@@ -310,9 +310,9 @@ export function createAdminRoutes(deps: AdminDeps): express.Router {
     const kind = String(req.params.kind) as 'server-key' | 'ban' | 'quota';
     const body = req.body as { on?: unknown; quota?: unknown };
 
-    // 防自锁：管理员的封禁 / 关停 / 配额都不许改
-    if (findUserRole(deps.db, id) === 'admin') {
-      return fail(res, 403, 'ADMIN_PROTECTED', kind === 'quota' ? '管理员配额不受限制（无限）' : '不能对管理员执行封禁或关闭站方模型');
+    // 防自锁：管理员的封禁 / 关停不许改；配额可以设置——管理员的挑战链接要扣这份额度
+    if (findUserRole(deps.db, id) === 'admin' && kind !== 'quota') {
+      return fail(res, 403, 'ADMIN_PROTECTED', '不能对管理员执行封禁或关闭站方模型');
     }
 
     if (kind === 'quota') {

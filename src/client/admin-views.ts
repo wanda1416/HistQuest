@@ -1123,10 +1123,10 @@ function usersView(s: AdminState): string {
         <button class="a-btn a-btn-sm is-danger" data-action="user-delete" data-id="${esc(u.id)}" data-name="${esc(u.username)}">
           删除
         </button>`;
-      const quotaCell = isAdmin ? '∞' : `
+      const quotaCell = `
         <input class="a-input a-input-sm" type="number" min="-1" max="10000"
           value="${u.dailyQuota ?? -1}" data-field="user-quota" data-id="${esc(u.id)}"
-          title="-1=默认500，0=禁用，>0=自定义" />`;
+          title="${isAdmin ? '管理员的挑战链接消耗这份额度（自玩豁免）' : '-1=默认500，0=禁用，>0=自定义'}" />`;
       const stateBadges = [
         u.banned ? '<span class="a-pill is-bad">已封禁</span>' : '',
         !u.allowServerKey && !isAdmin ? '<span class="a-pill">站方模型已关</span>' : '',
@@ -1146,7 +1146,7 @@ function usersView(s: AdminState): string {
           </span>
         </span>
       </td>
-      <td>${u.role === 'admin' ? `${u.asksToday}（不扣自身额度）` : `${u.asksToday} / ${quotaLimit(u)}`}</td>
+      <td>${u.role === 'admin' ? `${u.asksToday} / ${quotaLimit(u)}（自玩不扣）` : `${u.asksToday} / ${quotaLimit(u)}`}</td>
       <td>${quotaCell}</td>
       <td>${isAdmin ? '—' : u.allowServerKey ? '允许' : '禁止'}</td>
       <td>${actions}</td>
