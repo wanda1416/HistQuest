@@ -231,3 +231,7 @@ ALTER TABLE sessions ADD COLUMN challenge_code TEXT;
 ALTER TABLE games ADD COLUMN challenge_code TEXT;
 ALTER TABLE games ADD COLUMN player_ip TEXT;
 CREATE INDEX IF NOT EXISTS idx_games_challenge ON games(challenge_code, started_at DESC);
+
+-- v16：游客身份（挑战链接免注册游玩）；老库执行 migrations/v16-guest-id.sql
+ALTER TABLE sessions ADD COLUMN guest_id TEXT;
+CREATE INDEX IF NOT EXISTS idx_sessions_guest ON sessions(guest_id, status);

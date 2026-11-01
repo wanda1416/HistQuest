@@ -31,6 +31,16 @@ function fail(res: Response, status: number, error: string, message: string): vo
   res.status(status).json({ error, message });
 }
 
+function getCookie(req: Request, name: string): string | null {
+  const raw = req.headers.cookie;
+  if (!raw) return null;
+  for (const part of raw.split(';')) {
+    const [k, ...rest] = part.trim().split('=');
+    if (k === name) return decodeURIComponent(rest.join('='));
+  }
+  return null;
+}
+
 function readAiConfig(body: unknown): AiConfig | null {
   const raw = (body as { aiConfig?: unknown })?.aiConfig ?? body;
   if (!raw || typeof raw !== 'object') return null;
@@ -200,6 +210,27 @@ export function createRoutes(deps: RouteDeps): express.Router {
       return fail(res, 401, 'LOGIN_REQUIRED', '登录后才能开局');
     }
 
+    // 游客身份：同一游客同一挑战复用进行中的局（免注册刷新/重开不丢进度）
+    let guestId: string | null = null;
+    let guestCookie: string | null = null;
+    if (challenge && deps.challenges) {
+      guestId = getCookie(req, 'hq_guest') ?? crypto.randomUUID().replace(/-/g, '');
+      if (!getCookie(req, 'hq_guest')) {
+        guestCookie = `hq_guest=${guestId}; Path=/; Max-Age=31536000; HttpOnly; SameSite=Lax`;
+      }
+      const playingId = deps.challenges.findPlayingGuestSession(guestId, challengeCode);
+      if (playingId) {
+        try {
+          const session = deps.solo.require(playingId);
+          if (guestCookie) res.setHeader('Set-Cookie', guestCookie);
+          res.status(200).json(projectSession(session));
+          return;
+        } catch {
+          /* 会话已被清理：正常开新局 */
+        }
+      }
+    }
+
     const cfg = readAiConfig(req.body);
     if (!cfg && !serverModelReady()) {
       return fail(res, 400, 'MODEL_NOT_CONFIGURED', '没有模型配置就无法开局');
@@ -274,10 +305,12 @@ export function createRoutes(deps: RouteDeps): express.Router {
       turns,
       customPoolIds: challengePool ?? customPoolIds,
       challengeCode: challenge ? challengeCode : null,
+      guestId: challenge ? guestId : null,
       playerIp: req.ip ?? req.socket.remoteAddress ?? null,
       userId: user?.id ?? null,
       userName: user?.username ?? null,
     });
+    if (guestCookie) res.setHeader('Set-Cookie', guestCookie);
     res.status(201).json(projectSession(session));
   });
 

@@ -65,6 +65,8 @@ export interface CreateInput {
   customPoolIds?: string[] | null;
   /** 挑战局：出题人的挑战码（记账审计 + 提问额度归属出题人） */
   challengeCode?: string | null;
+  /** 挑战局游客身份（cookie；同一游客同一挑战复用进行中的局） */
+  guestId?: string | null;
   /** 玩家 IP（审计：写进 games 账本，游客局也能追责） */
   playerIp?: string | null;
   rng?: () => number;
@@ -142,6 +144,7 @@ export class SoloStore {
       updatedAt: now,
       ...(input.userId ? { userId: input.userId, userName: input.userName ?? null } : {}),
       ...(input.challengeCode ? { challengeCode: input.challengeCode } : {}),
+      ...(input.guestId ? { guestId: input.guestId } : {}),
       ...(input.playerIp ? { playerIp: input.playerIp } : {}),
     };
 

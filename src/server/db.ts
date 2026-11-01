@@ -305,6 +305,13 @@ export function migrate(db: DatabaseSync): void {
     `);
     db.exec(`INSERT INTO schema_migrations (version, applied_at) VALUES (12, ${Date.now()})`);
   }
+
+  if (current < 13) {
+    // v13：游客身份（挑战链接免注册游玩）：同一游客同一挑战只保留进行中的一局
+    db.exec('ALTER TABLE sessions ADD COLUMN guest_id TEXT');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_sessions_guest ON sessions(guest_id, status)');
+    db.exec(`INSERT INTO schema_migrations (version, applied_at) VALUES (13, ${Date.now()})`);
+  }
   }
 
 function tableExists(db: DatabaseSync, name: string): boolean {

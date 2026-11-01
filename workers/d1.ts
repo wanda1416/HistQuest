@@ -54,8 +54,8 @@ export class D1SessionPersistence implements SessionPersistence {
         `INSERT INTO sessions (
            id, target_id, difficulty, polity, region, world_era, cn_share,
            turns_left, total_turns, mode, pronoun, status, history, created_at, updated_at,
-           user_id, user_name, category, challenge_code
-         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+           user_id, user_name, category, challenge_code, guest_id
+         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
          ON CONFLICT(id) DO UPDATE SET
            turns_left = excluded.turns_left,
            mode = excluded.mode,
@@ -83,6 +83,7 @@ export class D1SessionPersistence implements SessionPersistence {
         session.userName ?? null,
         session.category ?? 'character',
         session.challengeCode ?? null,
+        session.guestId ?? null,
       )
       .run();
   }
@@ -139,6 +140,9 @@ function rowToSession(r: SessionRow): SoloSession {
     ...(r.user_id ? { userId: r.user_id, userName: r.user_name ?? null } : {}),
     ...((r as unknown as { challenge_code?: string | null }).challenge_code
       ? { challengeCode: (r as unknown as { challenge_code: string }).challenge_code }
+      : {}),
+    ...((r as unknown as { guest_id?: string | null }).guest_id
+      ? { guestId: (r as unknown as { guest_id: string }).guest_id }
       : {}),
   };
 }

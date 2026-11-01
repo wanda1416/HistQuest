@@ -755,6 +755,34 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
       challenge = { creatorId: row.creator_id, globalId: row.global_id, settings };
     }
 
+    // 游客身份：同一游客同一挑战复用进行中的局（免注册刷新/重开不丢进度）
+    let guestId: string | null = null;
+    let guestCookie: string | null = null;
+    if (challenge) {
+      const cookies = req.headers.get('cookie') ?? '';
+      const mCookie = /(?:^|;\s*)hq_guest=([^;]+)/.exec(cookies);
+      guestId = mCookie?.[1] ?? crypto.randomUUID().replace(/-/g, '');
+      if (!mCookie) guestCookie = `hq_guest=${guestId}; Path=/; Max-Age=31536000; HttpOnly; SameSite=Lax`;
+      const playing = await rt.env.DB.prepare(
+        "SELECT id FROM sessions WHERE guest_id = ? AND challenge_code = ? AND status = 'playing' ORDER BY updated_at DESC LIMIT 1",
+      )
+        .bind(guestId, challengeCode)
+        .first<{ id: string }>();
+      if (playing) {
+        try {
+          const session = rt.solo.require(playing.id);
+          const headers: Record<string, string> = {};
+          if (guestCookie) headers['set-cookie'] = guestCookie;
+          return new Response(JSON.stringify(projectSession(session)), {
+            status: 200,
+            headers: { 'content-type': 'application/json; charset=utf-8', ...headers },
+          });
+        } catch {
+          /* 会话已被清理：正常开新局 */
+        }
+      }
+    }
+
     // 开局即要求登录：否则会留下无主对局（挑战局例外，游客可玩，审计记 IP）
     if (rt.env.SESSION_SECRET && !creator && !challenge) {
       return fail(401, 'LOGIN_REQUIRED', '登录后才能开局');
@@ -800,11 +828,17 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
       difficulty, category, polity, region, worldEra, cnShare, mode, pronoun, turns,
       customPoolIds: challengePool ?? customPoolIds,
       challengeCode: challenge ? challengeCode : null,
+      guestId: challenge ? guestId : null,
       playerIp: req.headers.get('cf-connecting-ip') ?? req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null,
       userId: creator?.id ?? null,
       userName: creator?.username ?? null,
     });
-    return json(201, projectSession(session));
+    const headers: Record<string, string> = {};
+    if (guestCookie) headers['set-cookie'] = guestCookie;
+    return new Response(JSON.stringify(projectSession(session)), {
+      status: 201,
+      headers: { 'content-type': 'application/json; charset=utf-8', ...headers },
+    });
   }
 
   // ---------- 会话 ----------

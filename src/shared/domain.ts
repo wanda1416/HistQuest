@@ -260,6 +260,8 @@ export interface SoloSession {
   userName?: string | null;
   /** 挑战局：出题人的挑战码（提问额度记在出题人头上） */
   challengeCode?: string | null;
+  /** 挑战局游客身份（cookie 对应的随机 id；同一游客同一挑战复用进行中的局） */
+  guestId?: string | null;
   /** 玩家 IP（审计用；只在开局时写入 games 账本，不随会话持久化） */
   playerIp?: string | null;
 }

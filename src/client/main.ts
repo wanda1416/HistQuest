@@ -1220,11 +1220,12 @@ async function boot(): Promise<void> {
   const route = currentRoute();
 
   // 0) 没登录：先去登录页，地址栏原样保留，登录后再回到原来那一屏。
-  //    例外：挑战链接（#/c/<码>）免注册可玩，直接进挑战页。
+  //    例外：挑战链接（#/c/<码>）与对局页（#/game/<id>，游客局）免注册，直接进。
   if (m?.authEnabled && !m.user) {
-    if (route?.view === 'challenge') {
+    if (route?.view === 'challenge' || route?.view === 'game') {
       await applyRoute(true);
-      if (getState().view === 'challenge') return;
+      const view = getState().view;
+      if (view === 'challenge' || view === 'game' || view === 'reveal') return;
     }
     setState({ view: 'auth' });
     return;

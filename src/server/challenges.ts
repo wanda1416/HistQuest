@@ -55,6 +55,8 @@ export interface ChallengeService {
   register(input: { code: string; creatorId: string; customId?: string | null; globalId?: string | null; settings?: ChallengeSettings }): void;
   /** 随机出题：生成并登记挑战码，返回 code */
   registerRandom(creatorId: string, settings: ChallengeSettings): string;
+  /** 游客在该挑战下进行中的对局 id（同一游客同一挑战只保留一局） */
+  findPlayingGuestSession(guestId: string, code: string): string | null;
   resolve(code: string): ChallengeResolved | null;
   mine(creatorId: string): ChallengeMineRow[];
   plays(code: string): ChallengePlayRow[];
@@ -112,6 +114,13 @@ export function createChallengeService(db: DatabaseSync): ChallengeService {
       const code = newCode(db);
       this.register({ code, creatorId, settings });
       return code;
+    },
+
+    findPlayingGuestSession(guestId, code) {
+      const r = db.prepare(
+        "SELECT id FROM sessions WHERE guest_id = ? AND challenge_code = ? AND status = 'playing' ORDER BY updated_at DESC LIMIT 1",
+      ).get(guestId, code) as unknown as { id: string } | undefined;
+      return r?.id ?? null;
     },
 
     resolve(code) {
