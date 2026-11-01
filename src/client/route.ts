@@ -20,6 +20,8 @@ export type Route =
   | { view: 'reveal'; id: string }
   | { view: 'history'; id: string | null }
   | { view: 'mine' }
+  /** 挑战：出题人生成的链接 */
+  | { view: 'challenge'; code: string }
   | { view: 'rooms' }
   | { view: 'room'; code: string }
   | { view: 'race'; code: string }
@@ -45,6 +47,9 @@ export function parseRoute(rawHash: string): Route | null {
   if (head === 'rooms' && parts.length === 1) return { view: 'rooms' };
   if (head === 'history' && parts.length === 1) return { view: 'history', id: null };
   if (head === 'mine' && parts.length === 1) return { view: 'mine' };
+  if (head === 'c' && parts.length === 2 && tail && CODE_RE.test(tail)) {
+    return { view: 'challenge', code: tail.toUpperCase() };
+  }
   if (head === 'history' && parts.length === 2 && tail && ID_RE.test(tail)) {
     return { view: 'history', id: tail };
   }
@@ -71,6 +76,8 @@ export function routeHash(route: Route): string {
       return route.id ? `#/history/${route.id}` : '#/history';
     case 'mine':
       return '#/mine';
+    case 'challenge':
+      return `#/c/${route.code}`;
     case 'rooms':
       return '#/rooms';
     case 'room':
@@ -108,13 +115,16 @@ export function isShowing(
     case 'room':
     case 'race':
     case 'review':
-      return current.view === route.view && current.roomCode === route.code;
+    case 'challenge':
+      return current.view === route.view && (current.roomCode === route.code || current.view === route.view);
     default:
       return current.view === route.view;
   }
 }
 
 /** 这个路由是不是"在对战里"（需要保持实时通道） */
-export function isRoomRoute(route: Route | null): route is Extract<Route, { code: string }> {
+export function isRoomRoute(
+  route: Route | null,
+): route is Extract<Route, { view: 'room' | 'race' | 'review' }> {
   return Boolean(route && (route.view === 'room' || route.view === 'race' || route.view === 'review'));
 }

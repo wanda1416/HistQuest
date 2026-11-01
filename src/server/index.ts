@@ -169,7 +169,21 @@ export function createApp(options: AppOptions = {}): CreatedApp {
   });
   app.use('/api/admin', createAdminRoutes({ store, solo, token: config.admin.token, db, history, getUser, customTargets }));
   app.use('/api/settings', createSettingsRoutes({ db }));
-  app.use('/api', createRoutes({ getIndex: () => store.index, solo, history, getUser, quota, customTargets }));
+  app.use('/api', createRoutes({
+    getIndex: () => store.index,
+    solo,
+    history,
+    getUser,
+    quota,
+    customTargets,
+    createChallengeTarget: async (c) => {
+      // 出题副本：retired = 不进公共抽取池，但 index.get 仍可解析（刷新/重启不丢）
+      const result = store.create(c);
+      if (!result.ok) throw new Error(result.issues[0]?.message ?? '出题副本写入失败');
+      await store.setRetired(c.id, true);
+      if (result.index) solo.reloadIndex(result.index);
+    },
+  }));
 
   app.get('/admin', (_req: Request, res: Response) => {
     res.redirect('/admin.html');

@@ -22,6 +22,7 @@ interface Row {
   gender: string; birth: number | null; death: number | null; birthplace: string | null;
   difficulty: number;
   status: string; review_note: string | null;
+  global_id: string | null; share_code: string | null;
   created_at: number; updated_at: number;
 }
 
@@ -35,6 +36,7 @@ function rowToTarget(r: Row): CustomTarget {
     gender: r.gender, birth: r.birth, death: r.death, birthplace: r.birthplace,
     difficulty: r.difficulty,
     status: r.status as CustomStatus, reviewNote: r.review_note,
+    globalId: r.global_id, shareCode: r.share_code,
     createdAt: r.created_at, updatedAt: r.updated_at,
   };
 }
@@ -58,11 +60,11 @@ export function createCustomTargetStore(db: DatabaseSync) {
     },
     insert(t: CustomTarget): void {
       db.prepare(
-        `INSERT INTO custom_targets (id, user_id, category, name, aliases, summary, region, polity, world_era, gender, birth, death, birthplace, difficulty, status, review_note, created_at, updated_at)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        `INSERT INTO custom_targets (id, user_id, category, name, aliases, summary, region, polity, world_era, gender, birth, death, birthplace, difficulty, status, review_note, global_id, share_code, created_at, updated_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       ).run(t.id, t.userId, t.category, t.name, JSON.stringify(t.aliases), t.summary,
         t.region, t.polity, t.worldEra, t.gender, t.birth, t.death, t.birthplace,
-        t.difficulty, t.status, t.reviewNote, t.createdAt, t.updatedAt);
+        t.difficulty, t.status, t.reviewNote, t.globalId, t.shareCode, t.createdAt, t.updatedAt);
     },
     updateDraft(id: string, userId: string, t: CustomTargetInput): void {
       const now = Date.now();
@@ -88,6 +90,39 @@ export function createCustomTargetStore(db: DatabaseSync) {
         "SELECT global_id FROM custom_targets WHERE user_id = ? AND status = 'approved' AND global_id IS NOT NULL",
       ).all(userId) as unknown as { global_id: string }[];
       return rows.map((r) => r.global_id);
+    },
+    /** 出题：给草稿生成挑战码（幂等：已出题返回原码） */
+    createChallengeCode(id: string, userId: string): string | null {
+      const existing = this.get(id, userId);
+      if (!existing) return null;
+      if (existing.shareCode) return existing.shareCode;
+      if (existing.status !== 'draft') return null;
+      const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+      for (let i = 0; i < 20; i++) {
+        let code = '';
+        const bytes = new Uint8Array(6);
+        crypto.getRandomValues(bytes);
+        for (const b of bytes) code += alphabet[b % alphabet.length];
+        try {
+          db.prepare("UPDATE custom_targets SET share_code = ?, status = 'shared', updated_at = ? WHERE id = ? AND user_id = ? AND status = 'draft'")
+            .run(code, Date.now(), id, userId);
+          return code;
+        } catch {
+          /* 唯一索引冲突：换一个码重试 */
+        }
+      }
+      return null;
+    },
+    /** 挑战码 → 已出题的条目（含 global_id；供开局锁定谜底） */
+    getByCode(code: string): CustomTarget | null {
+      const r = db.prepare('SELECT * FROM custom_targets WHERE share_code = ?').get(code) as unknown as Row | undefined;
+      if (!r || r.status !== 'shared' || !r.global_id) return null;
+      return rowToTarget(r);
+    },
+    /** 出题人用户名（挑战页展示用） */
+    creatorName(userId: string): string | null {
+      const r = db.prepare('SELECT username FROM users WHERE id = ?').get(userId) as unknown as { username?: string } | undefined;
+      return r?.username ?? null;
     },
     /** 管理员审核：approved/rejected；仅 submitted 状态可审 */
     review(id: string, status: 'approved' | 'rejected', note: string | null): CustomTarget | null {

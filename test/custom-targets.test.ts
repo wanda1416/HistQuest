@@ -35,6 +35,8 @@ function makeTarget(userId: string, overrides: Partial<CustomTarget> = {}): Cust
     ...base,
     status: 'draft',
     reviewNote: null,
+    globalId: null,
+    shareCode: null,
     createdAt: now,
     updatedAt: now,
     ...overrides,
@@ -110,7 +112,45 @@ test('自定义题库：校验规则', () => {
   assert.ok(store.validate({ ...base, birth: 926, death: 885 }).some((e) => e.includes('卒年')));
 });
 
+test('自定义题库：出题（挑战链接）', () => {
+  const { store } = makeStore();
+  const t = makeTarget('u1');
+  store.insert(t);
+
+  // 草稿生成挑战码 → 状态变为 shared
+  const code = store.createChallengeCode(t.id, 'u1');
+  assert.ok(code, '应生成挑战码');
+  assert.equal(code!.length, 6);
+  const shared = store.get(t.id, 'u1')!;
+  assert.equal(shared.status, 'shared');
+  assert.equal(shared.shareCode, code);
+
+  // 幂等：重复出题返回原码
+  assert.equal(store.createChallengeCode(t.id, 'u1'), code);
+
+  // shared 不可编辑、不可删除、不可再提交
+  store.updateDraft(t.id, 'u1', { ...base, name: '改名' });
+  assert.equal(store.get(t.id, 'u1')!.name, '岳飞');
+  store.remove(t.id, 'u1');
+  assert.notEqual(store.get(t.id, 'u1'), null);
+
+  // 按 code 查询：复制入全局前（global_id 未写）不可开局；不存在的码查不到
+  assert.equal(store.getByCode(code!), null);
+  assert.equal(store.getByCode('ZZZZZZ'), null);
+
+  // 模拟审核通过写 global_id 后，getByCode 才能给出开局用的全局 id
+  store.setGlobalId(t.id, 'custom-abc12345');
+  const resolved = store.getByCode(code!);
+  assert.equal(resolved!.globalId, 'custom-abc12345');
+
+  // 其他用户的草稿出不了题
+  const other = makeTarget('u2');
+  store.insert(other);
+  assert.equal(store.createChallengeCode(other.id, 'u1'), null);
+});
+
 test('自定义题库：审核通过后可复制为合法全局条目', () => {
+
   const { store } = makeStore();
   const t = makeTarget('u1');
   store.insert(t);

@@ -6,7 +6,7 @@ import { DYNASTIES, REGIONS, WORLD_ERAS, type Character, type Region, type World
  * Workers 端（workers/bundle.ts 的 D1 直查）共用，禁止引入 Node 专属模块。
  */
 
-export type CustomStatus = 'draft' | 'submitted' | 'approved' | 'rejected';
+export type CustomStatus = 'draft' | 'shared' | 'submitted' | 'approved' | 'rejected';
 
 export interface CustomTarget {
   id: string;
@@ -27,6 +27,10 @@ export interface CustomTarget {
   difficulty: number;
   status: CustomStatus;
   reviewNote: string | null;
+  /** 审核通过后复制出的全局条目 id；出题副本（retired）也记这个 */
+  globalId: string | null;
+  /** 出题（挑战链接）码；非空 = 已出题，别人可用 #/c/<code> 玩 */
+  shareCode: string | null;
   createdAt: number;
   updatedAt: number;
 }

@@ -51,6 +51,8 @@ export interface StartSoloReq {
   turns?: number;
   /** 谜底来源：mine = 只从该用户已通过审核的自定义条目里抽（需登录） */
   targetScope?: 'global' | 'mine';
+  /** 挑战开局：出题人生成的挑战码，锁定固定谜底 */
+  challengeCode?: string;
   aiConfig?: AiConfig | null;
 }
 

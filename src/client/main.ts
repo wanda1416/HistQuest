@@ -128,7 +128,7 @@ async function testAi(): Promise<void> {
   }
 }
 
-async function startGame(): Promise<void> {
+async function startGame(challengeCode?: string): Promise<void> {
   const s = getState();
   // 服务器已配模型（CF 部署）：无需本地 BYOK 即可开局
   if (!s.config && !s.meta?.serverModelReady) {
@@ -145,6 +145,7 @@ async function startGame(): Promise<void> {
       worldEra: s.scope === 'world' ? s.worldEra : null,
       cnShare: s.scope === 'cn' ? 1 : s.scope === 'world' ? 0 : s.cnShare,
       targetScope: s.targetScope,
+      ...(challengeCode ? { challengeCode } : {}),
       mode: s.mode,
       pronoun: s.pronoun,
       ...(s.turns ? { turns: s.turns } : {}),
@@ -503,6 +504,17 @@ async function applyRoute(force = false): Promise<void> {
         await openMine();
         return;
 
+      case 'challenge': {
+        setState({ view: 'challenge', challenge: null, notice: null });
+        try {
+          const info = await api.challengeInfo(route.code);
+          setState({ challenge: info });
+        } catch (err) {
+          setState({ notice: { kind: 'error', text: msg(err) } });
+        }
+        return;
+      }
+
       case 'auth':
         setState({ view: 'auth' });
         return;
@@ -763,6 +775,27 @@ root.addEventListener('click', async (event) => {
       }
       break;
     }
+    case 'mine-challenge': {
+      const id = String(el.dataset.id ?? '');
+      try {
+        const res = await api.mineChallenge(id);
+        const link = `${location.origin}/#${res.url}`;
+        await copyText(link);
+        await openMine();
+        setState({ view: 'mine', notice: { kind: 'info', text: `挑战链接已复制：${link}` } });
+      } catch (err) {
+        setState({ mineError: msg(err) });
+      }
+      break;
+    }
+    case 'challenge-start': {
+      const code = getState().challenge?.code;
+      if (code) await startGame(code);
+      break;
+    }
+    case 'challenge-login':
+      go({ view: 'auth' });
+      break;
     case 'open-history':
       if (el.dataset.id) go({ view: 'history', id: el.dataset.id });
       break;

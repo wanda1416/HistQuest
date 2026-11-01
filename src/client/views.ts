@@ -948,6 +948,7 @@ function authView(s: State): string {
 
 const MINE_STATUS: Record<string, string> = {
   draft: '草稿',
+  shared: '已出题',
   submitted: '待审核',
   approved: '已入库',
   rejected: '已驳回',
@@ -1081,11 +1082,14 @@ function mineView(s: State): string {
             const actions =
               t.status === 'draft'
                 ? `<button class="btn btn-ghost" data-action="mine-edit" data-id="${esc(t.id)}">编辑</button>
+                   <button class="btn btn-ghost" data-action="mine-challenge" data-id="${esc(t.id)}" data-name="${esc(t.name)}">出题</button>
                    <button class="btn btn-ghost" data-action="mine-submit" data-id="${esc(t.id)}" data-name="${esc(t.name)}">提交审核</button>
                    <button class="btn btn-ghost" data-action="mine-delete" data-id="${esc(t.id)}" data-name="${esc(t.name)}">删除</button>`
                 : t.status === 'rejected'
                   ? `<button class="btn btn-ghost" data-action="mine-delete" data-id="${esc(t.id)}" data-name="${esc(t.name)}">删除</button>`
-                  : '';
+                  : t.status === 'shared'
+                    ? `<button class="btn btn-ghost" data-action="mine-challenge" data-id="${esc(t.id)}" data-name="${esc(t.name)}">复制挑战链接</button>`
+                    : '';
             const pillClass =
               t.status === 'submitted'
                 ? 'is-submitted'
@@ -1103,6 +1107,7 @@ function mineView(s: State): string {
               <span class="muted">${fact} · 难度 ${t.difficulty}</span>
             </div>
             ${t.reviewNote ? `<p class="mine-summary">审核意见：${esc(t.reviewNote)}</p>` : ''}
+            ${t.shareCode ? `<p class="mine-summary">挑战链接：<code>${location.origin}/#/c/${esc(t.shareCode)}</code></p>` : ''}
             <p class="mine-summary">${esc(t.summary)}</p>
           </div>
           <div class="actions">${actions}</div>
@@ -1131,6 +1136,38 @@ function mineView(s: State): string {
   );
 }
 
+/* ---------------- 挑战（出题人的链接） ---------------- */
+
+const CHALLENGE_CAT: Record<string, string> = { character: '人物', event: '事件', item: '物品' };
+
+function challengeView(s: State): string {
+  const c = s.challenge;
+  if (!c) {
+    return shell(s, `<section class="panel"><p class="muted">正在载入挑战…</p></section>`);
+  }
+  const start = s.meta?.user
+    ? `<button class="btn btn-primary" data-action="challenge-start" ${s.pending ? 'disabled' : ''}>
+         ${s.pending ? '正在开局…' : '接受挑战'}</button>
+       <p class="field-hint">登录账号后开始；登录后可在「历史」里找回这一局。</p>`
+    : `<button class="btn btn-primary" data-action="challenge-login">先登录，再来挑战</button>
+       <p class="field-hint">挑战需要登录账号（出题人看不到你的作答过程，只看得到结果）。</p>`;
+  return shell(
+    s,
+    `<section class="setup">
+       <div class="setup-intro">
+         <p class="eyebrow">挑战</p>
+         <h2>${esc(c.creator)} 给你出了一题</h2>
+         <p class="lede">类别：${CHALLENGE_CAT[c.category] ?? esc(c.category)} · 难度 ${c.difficulty} · 挑战码 <code>${esc(c.code)}</code></p>
+         <p class="lede">像普通单人局一样提问推理，猜中谜底即胜利。</p>
+       </div>
+       <div class="panel">
+         <div class="actions">${start}</div>
+         ${s.notice ? `<p class="testline fail">${esc(s.notice.text)}</p>` : ''}
+       </div>
+     </section>`,
+  );
+}
+
 export function renderApp(s: State): string {
   if (!s.ready) {
     return `<div class="boot"><div class="boot-seal">猜</div><p>正在载入…</p></div>`;
@@ -1148,6 +1185,8 @@ export function renderApp(s: State): string {
       return historyView(s);
     case 'mine':
       return mineView(s);
+    case 'challenge':
+      return challengeView(s);
     default:
       return gameView(s);
   }

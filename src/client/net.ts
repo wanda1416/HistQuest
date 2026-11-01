@@ -134,6 +134,14 @@ export const api = {
   mineDelete: (id: string) =>
     request<{ ok: boolean }>(`/api/custom-targets/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 
+  /** 出题：生成挑战链接（幂等） */
+  mineChallenge: (id: string) =>
+    request<{ code: string; url: string }>(`/api/custom-targets/${encodeURIComponent(id)}/challenge`, jsonInit({})),
+
+  /** 挑战页信息（不含谜底） */
+  challengeInfo: (code: string) =>
+    request<{ code: string; category: string; difficulty: number; creator: string }>(`/api/challenge/${encodeURIComponent(code)}`),
+
   /* ---------------- 对战（房间） ---------------- */
 
   rooms: () => request<RoomListRes>('/api/rooms'),

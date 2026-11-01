@@ -279,6 +279,13 @@ export function migrate(db: DatabaseSync): void {
     db.exec('ALTER TABLE custom_targets ADD COLUMN global_id TEXT');
     db.exec(`INSERT INTO schema_migrations (version, applied_at) VALUES (10, ${Date.now()})`);
   }
+
+  if (current < 11) {
+    // v11：出题（挑战链接）：share_code 非空 = 已生成挑战；global_id 指向全局库里 retired 的副本
+    db.exec('ALTER TABLE custom_targets ADD COLUMN share_code TEXT');
+    db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_custom_share ON custom_targets(share_code)');
+    db.exec(`INSERT INTO schema_migrations (version, applied_at) VALUES (11, ${Date.now()})`);
+  }
   }
 
 function tableExists(db: DatabaseSync, name: string): boolean {

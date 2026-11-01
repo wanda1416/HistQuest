@@ -211,7 +211,9 @@ CREATE TABLE IF NOT EXISTS custom_targets (
   status      TEXT NOT NULL DEFAULT 'draft',
   review_note TEXT,
   global_id   TEXT,
+  share_code  TEXT,
   created_at  INTEGER NOT NULL,
   updated_at  INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_custom_user ON custom_targets(user_id, status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_custom_share ON custom_targets(share_code);

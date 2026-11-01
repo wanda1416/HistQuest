@@ -19,6 +19,8 @@ export type ViewName =
   | 'history'
   /** 我的题库（自定义条目） */
   | 'mine'
+  /** 挑战：出题人的链接 */
+  | 'challenge'
   /** 对战：大厅 */
   | 'rooms'
   /** 对战：房间（未开局） */
@@ -94,6 +96,8 @@ export interface State {
   /** 非 null = 表单态（新建时 id 为空） */
   mineDraft: MineDraft | null;
   mineBusy: boolean;
+  /** 挑战页信息（不含谜底） */
+  challenge: ChallengeInfo | null;
 
   /* ---------------- 对战（房间） ---------------- */
 
@@ -147,14 +151,21 @@ export interface MineTarget {
   death: number | null;
   birthplace: string | null;
   difficulty: number;
-  status: 'draft' | 'submitted' | 'approved' | 'rejected';
+  status: 'draft' | 'shared' | 'submitted' | 'approved' | 'rejected';
   reviewNote: string | null;
+  shareCode: string | null;
   updatedAt: number;
 }
 
+export interface ChallengeInfo {
+  code: string;
+  category: string;
+  difficulty: number;
+  creator: string;
+}
+
 /** 表单态：id 为空 = 新建 */
-export interface MineDraft {
-  id: string;
+export interface MineDraft {  id: string;
   category: 'character' | 'event' | 'item';
   name: string;
   aliases: string;
@@ -359,6 +370,7 @@ let state: State = {
   mineError: null,
   mineDraft: null,
   mineBusy: false,
+  challenge: null,
   roomCode: loadRoomCode(),
   room: null,
   roomError: null,

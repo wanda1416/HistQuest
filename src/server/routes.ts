@@ -5,12 +5,14 @@ import type { AiCredential } from '../shared/domain.ts';
 import { DYNASTIES, REGIONS, REGION_LABELS, isTargetCategory, type Region } from '../shared/domain.ts';
 import type { AiConfig, HistoryDetail, MetaRes } from '../shared/protocol.ts';
 import type { CharacterIndex } from '../core/index.ts';
+import type { Character } from '../shared/domain.ts';
 import { config, serverModelReady } from '../config.ts';
 import type { AuthUser } from './auth.ts';
 import { projectSession } from './dto.ts';
 import type { HistoryStore } from './history.ts';
 import { SoloError, type SoloStore } from './solo.ts';
 import { createCustomTargetStore, type CustomTarget, type CustomTargetStore } from './custom-targets.ts';
+import { customToCharacter, newGlobalCustomId } from '../shared/custom-targets.ts';
 
 /** 语音识别是否可用：模型名配置了就开（端点/密钥留空则复用 LLM 的） */
 function asrReady(): boolean {
@@ -70,6 +72,8 @@ export interface RouteDeps {
   quota?: (user: AuthUser) => { ok: boolean; message?: string };
   /** 自定义题库（SQLite 模式）；JSON 模式为 null（接口返回 503） */
   customTargets?: CustomTargetStore | null;
+  /** 出题：把条目复制为全局 retired 副本（不进公共抽取池）；JSON 模式为 null */
+  createChallengeTarget?: (c: Character) => Promise<void>;
 }
 
 export function createRoutes(deps: RouteDeps): express.Router {
@@ -182,6 +186,7 @@ export function createRoutes(deps: RouteDeps): express.Router {
       pronoun?: unknown;
       turns?: unknown;
       targetScope?: unknown;
+      challengeCode?: unknown;
     };
     const difficulty = Math.min(3, Math.max(1, Number(body?.difficulty) || 1));
     // 类别：character / event / item / mixed；缺省人物（向后兼容老客户端）
@@ -215,6 +220,17 @@ export function createRoutes(deps: RouteDeps): express.Router {
       }
     }
 
+    // 挑战开局：挑战码锁定固定谜底（出题人出题给别人玩）
+    let challengePool: string[] | null = null;
+    const challengeCode = typeof body?.challengeCode === 'string' ? body.challengeCode.trim() : '';
+    if (challengeCode) {
+      const store = deps.customTargets;
+      if (!store) return fail(res, 503, 'CUSTOM_DISABLED', '当前是 JSON 存储模式，挑战不可用');
+      const t = store.getByCode(challengeCode);
+      if (!t?.globalId) return fail(res, 404, 'NOT_FOUND', '挑战不存在或已被删除');
+      challengePool = [t.globalId];
+    }
+
     // 归属玩家：未启用账号系统时（JSON 存储模式）可能为空
     const session = await deps.solo.create({
       difficulty,
@@ -226,7 +242,7 @@ export function createRoutes(deps: RouteDeps): express.Router {
       mode,
       pronoun,
       turns,
-      customPoolIds,
+      customPoolIds: challengePool ?? customPoolIds,
       userId: user?.id ?? null,
       userName: user?.username ?? null,
     });
@@ -407,6 +423,8 @@ export function createRoutes(deps: RouteDeps): express.Router {
       ...input,
       status: 'draft',
       reviewNote: null,
+      globalId: null,
+      shareCode: null,
       createdAt: now,
       updatedAt: now,
     };
@@ -459,6 +477,53 @@ export function createRoutes(deps: RouteDeps): express.Router {
     }
     store.remove(existing.id, user.id);
     res.json({ ok: true });
+  });
+
+  router.post('/custom-targets/:id/challenge', async (req: Request, res: Response) => {
+    const store = requireCustom(res);
+    if (!store) return;
+    if (!deps.createChallengeTarget) return fail(res, 503, 'CUSTOM_DISABLED', '当前是 JSON 存储模式，出题不可用');
+    const user = await currentUser(req);
+    if (!user) return fail(res, 401, 'LOGIN_REQUIRED', '登录后才能出题');
+    const existing = store.get(String(req.params.id), user.id);
+    if (!existing) return fail(res, 404, 'NOT_FOUND', '找不到这条自定义条目');
+
+    // 幂等：已出过题直接返回原码
+    if (existing.shareCode) {
+      return res.json({ code: existing.shareCode, url: `/c/${existing.shareCode}` });
+    }
+    if (existing.status !== 'draft') {
+      return fail(res, 409, 'NOT_DRAFT', '只有草稿可以出题；待审/已入库的条目走审核流程');
+    }
+    const errs = store.validate(existing);
+    if (errs.length) return fail(res, 400, 'VALIDATION_FAILED', errs.join('；'));
+
+    const code = store.createChallengeCode(existing.id, user.id);
+    if (!code) return fail(res, 409, 'CHALLENGE_FAILED', '出题失败，请重试');
+    // 复制为全局 retired 副本：不进公共抽取池，但服务端永远可解析（刷新/重启不丢）
+    try {
+      const character = customToCharacter(existing, newGlobalCustomId());
+      await deps.createChallengeTarget(character);
+      store.setGlobalId(existing.id, character.id);
+    } catch (err) {
+      return fail(res, 500, 'WRITE_FAILED', (err as Error).message);
+    }
+    log('custom.challenge', { id: existing.id, code, userId: user.id });
+    res.status(201).json({ code, url: `/c/${code}` });
+  });
+
+  // 挑战信息（不含谜底）：挑战页展示用
+  router.get('/challenge/:code', async (req: Request, res: Response) => {
+    const store = requireCustom(res);
+    if (!store) return;
+    const t = store.getByCode(String(req.params.code));
+    if (!t) return fail(res, 404, 'NOT_FOUND', '挑战不存在或已被删除');
+    res.json({
+      code: t.shareCode,
+      category: t.category,
+      difficulty: t.difficulty,
+      creator: store.creatorName(t.userId) ?? '出题人',
+    });
   });
 
   return router;

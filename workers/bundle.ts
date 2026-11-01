@@ -205,6 +205,7 @@ interface CustomRow {
   gender: string; birth: number | null; death: number | null; birthplace: string | null;
   difficulty: number;
   status: string; review_note: string | null;
+  global_id: string | null; share_code: string | null;
   created_at: number; updated_at: number;
 }
 
@@ -232,6 +233,8 @@ function customRowToTarget(r: CustomRow): CustomTarget {
     difficulty: r.difficulty,
     status: r.status as CustomTarget['status'],
     reviewNote: r.review_note,
+    globalId: r.global_id,
+    shareCode: r.share_code,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
@@ -264,9 +267,6 @@ function readCustomInput(body: Record<string, unknown>): CustomTargetInput {
   };
 }
 
-const CUSTOM_INSERT = `INSERT INTO custom_targets
-  (id, user_id, category, name, aliases, summary, region, polity, world_era, gender, birth, death, birthplace, difficulty, status, review_note, created_at, updated_at)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
 function errorResponse(err: unknown): Response {
   if (err instanceof SoloError) {
@@ -376,13 +376,16 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
       ...input,
       status: 'draft',
       reviewNote: null,
+      globalId: null,
+      shareCode: null,
       createdAt: now,
       updatedAt: now,
     };
-    await rt.env.DB.prepare(CUSTOM_INSERT).bind(
+    const CUSTOM_COLS = 'id, user_id, category, name, aliases, summary, region, polity, world_era, gender, birth, death, birthplace, difficulty, status, review_note, global_id, share_code, created_at, updated_at';
+    await rt.env.DB.prepare(`INSERT INTO custom_targets (${CUSTOM_COLS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(
       t.id, t.userId, t.category, t.name, JSON.stringify(t.aliases), t.summary,
       t.region, t.polity, t.worldEra, t.gender, t.birth, t.death, t.birthplace,
-      t.difficulty, t.status, t.reviewNote, t.createdAt, t.updatedAt,
+      t.difficulty, t.status, t.reviewNote, null, null, t.createdAt, t.updatedAt,
     ).run();
     return json(201, { target: t });
   }
@@ -450,6 +453,77 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
     return json(200, { ok: true });
   }
 
+  const customChallenge = path.match(/^\/custom-targets\/([A-Za-z0-9-]+)\/challenge$/);
+  if (customChallenge && req.method === 'POST') {
+    if (!rt.env.SESSION_SECRET) return fail(503, 'CUSTOM_DISABLED', '用户系统未启用');
+    const user = await currentUser(rt.env.DB, req, rt.env.SESSION_SECRET);
+    if (!user) return fail(401, 'LOGIN_REQUIRED', '登录后才能出题');
+    const id = customChallenge[1]!;
+    const rows = await rt.env.DB.prepare('SELECT * FROM custom_targets WHERE id = ? AND user_id = ?')
+      .bind(id, user.id)
+      .all<CustomRow>();
+    const existing = (rows.results ?? [])[0];
+    if (!existing) return fail(404, 'NOT_FOUND', '找不到这条自定义条目');
+    if (existing.share_code) {
+      return json(200, { code: existing.share_code, url: `/c/${existing.share_code}` });
+    }
+    if (existing.status !== 'draft') {
+      return fail(409, 'NOT_DRAFT', '只有草稿可以出题；待审/已入库的条目走审核流程');
+    }
+    const errs = validateCustomTarget(customRowToTarget(existing));
+    if (errs.length) return fail(400, 'VALIDATION_FAILED', errs.join('；'));
+
+    // 复制为全局 retired 副本：不进公共抽取池，但服务端永远可解析
+    const character = customToCharacter(customRowToTarget(existing), newGlobalCustomId());
+    const result = await rt.store.create(character);
+    if (!result.ok) {
+      return json(400, { error: 'VALIDATION_FAILED', message: '出题副本未通过校验', issues: result.issues });
+    }
+    await rt.store.setRetired(character.id, true);
+    rt.solo.reloadIndex(result.index ?? rt.store.index);
+
+    const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 20; i++) {
+      code = '';
+      const bytes = new Uint8Array(6);
+      crypto.getRandomValues(bytes);
+      for (const b of bytes) code += alphabet[b % alphabet.length];
+      try {
+        await rt.env.DB.prepare(
+          "UPDATE custom_targets SET share_code = ?, status = 'shared', global_id = ?, updated_at = ? WHERE id = ? AND user_id = ? AND status = 'draft'",
+        )
+          .bind(code, character.id, Date.now(), id, user.id)
+          .run();
+        break;
+      } catch {
+        /* 唯一索引冲突：换码重试 */
+      }
+    }
+    if (!code) return fail(409, 'CHALLENGE_FAILED', '出题失败，请重试');
+    return json(201, { code, url: `/c/${code}` });
+  }
+
+  // 挑战信息（不含谜底）：挑战页展示用
+  const challengeInfo = path.match(/^\/challenge\/([A-Z0-9]{4,12})$/);
+  if (challengeInfo && req.method === 'GET') {
+    const rows = await rt.env.DB.prepare(
+      `SELECT c.category, c.difficulty, c.user_id, u.username
+       FROM custom_targets c LEFT JOIN users u ON u.id = c.user_id
+       WHERE c.share_code = ? AND c.status = 'shared'`,
+    )
+      .bind(challengeInfo[1]!)
+      .all<{ category: string; difficulty: number; username: string | null }>();
+    const row = (rows.results ?? [])[0];
+    if (!row) return fail(404, 'NOT_FOUND', '挑战不存在或已被删除');
+    return json(200, {
+      code: challengeInfo[1],
+      category: row.category,
+      difficulty: row.difficulty,
+      creator: row.username ?? '出题人',
+    });
+  }
+
   // ---------- 模型连通测试（BYOK 时代用；服务器持 key 时也保留） ----------
   if (path === '/ai/test' && req.method === 'POST') {
     const cred = readAiConfig(body) ?? serverCred;
@@ -488,6 +562,19 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
     if (rt.env.SESSION_SECRET && !creator) {
       return fail(401, 'LOGIN_REQUIRED', '登录后才能开局');
     }
+    // 挑战开局：挑战码锁定固定谜底（出题人出题给别人玩）
+    let challengePool: string[] | null = null;
+    const challengeCode = typeof body.challengeCode === 'string' ? body.challengeCode.trim() : '';
+    if (challengeCode) {
+      const rows = await rt.env.DB.prepare(
+        "SELECT global_id FROM custom_targets WHERE share_code = ? AND status = 'shared' AND global_id IS NOT NULL",
+      )
+        .bind(challengeCode)
+        .all<{ global_id: string }>();
+      const globalId = (rows.results ?? [])[0]?.global_id;
+      if (!globalId) return fail(404, 'NOT_FOUND', '挑战不存在或已被删除');
+      challengePool = [globalId];
+    }
     // 「我的题库」：从自己已通过审核的自定义条目里挑谜底
     let customPoolIds: string[] | null = null;
     if (body.targetScope === 'mine') {
@@ -504,7 +591,7 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
     }
     const session = await rt.solo.create({
       difficulty, category, polity, region, worldEra, cnShare, mode, pronoun, turns,
-      customPoolIds,
+      customPoolIds: challengePool ?? customPoolIds,
       userId: creator?.id ?? null,
       userName: creator?.username ?? null,
     });
