@@ -2,6 +2,7 @@ import type { AiConfig, RecordView } from '../shared/protocol.ts';
 import { ApiError, api } from './net.ts';
 import {
   getState,
+  loadChallengeGameId,
   loadConfig,
   loadGameId,
   loadPrefs,
@@ -9,6 +10,7 @@ import {
   loadDataKey,
   loadVaultSecret,
   normalizeQuestion,
+  saveChallengeGameId,
   saveConfig,
   saveGameId,
   saveDataKey,
@@ -156,6 +158,7 @@ async function startGame(challengeCode?: string): Promise<void> {
       aiConfig: challengeCode ? null : s.config,
     });
     saveGameId(session.gameId);
+    if (challengeCode) saveChallengeGameId(challengeCode, session.gameId);
     setState({ session, view: 'game', pending: false, reveal: null, testResult: null });
     syncUrl({ view: 'game', id: session.gameId });
   } catch (err) {
@@ -522,6 +525,21 @@ async function applyRoute(force = false): Promise<void> {
         return;
 
       case 'challenge': {
+        // 同一浏览器里已有进行中的这一局：直接回去，不重复开局
+        const savedId = loadChallengeGameId(route.code);
+        if (savedId) {
+          try {
+            const session = await api.getSolo(savedId);
+            if (session.status === 'playing') {
+              saveGameId(session.gameId);
+              syncUrl({ view: 'game', id: session.gameId }, { replace: true });
+              setState({ session, view: 'game', reveal: null, pending: false });
+              return;
+            }
+          } catch {
+            /* 上一局已过期/不存在：正常走挑战页 */
+          }
+        }
         setState({ view: 'challenge', challenge: null, notice: null });
         try {
           const info = await api.challengeInfo(route.code);

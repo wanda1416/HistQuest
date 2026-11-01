@@ -226,6 +226,30 @@ const ROOM_KEY = 'hq.roomCode';
 const SYNC_KEY = 'hq.sync';
 const SECRET_KEY = 'hq.vaultSecret';
 const DEK_KEY = 'hq.dataKey';
+const CHALLENGE_GAMES_KEY = 'hq.challengeGames';
+
+/**
+ * 游客的挑战局绑定（按浏览器）：同一个浏览器里刷新/重开挑战链接，
+ * 回到自己进行中的那一局，而不是又开新局。不同浏览器视为不同的人。
+ */
+export function loadChallengeGameId(code: string): string | null {
+  try {
+    const map = JSON.parse(localStorage.getItem(CHALLENGE_GAMES_KEY) ?? '{}') as Record<string, string>;
+    return map[code] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveChallengeGameId(code: string, gameId: string): void {
+  try {
+    const map = JSON.parse(localStorage.getItem(CHALLENGE_GAMES_KEY) ?? '{}') as Record<string, string>;
+    map[code] = gameId;
+    localStorage.setItem(CHALLENGE_GAMES_KEY, JSON.stringify(map));
+  } catch {
+    /* 隐私模式等存不了就算了：退化成每次新开局 */
+  }
+}
 
 export interface SyncPrefs {
   mode: 'local' | 'online';
