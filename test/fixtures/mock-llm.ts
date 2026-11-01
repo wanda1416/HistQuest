@@ -84,6 +84,13 @@ function decide(messages: Array<{ role: string; content: string }>): { content: 
     // 用固定脚本模拟"模型作答"，便于断言引擎的覆盖逻辑
     if (question.includes('坏JSON')) return { content: '这个我不好说', delayMs: 0 };
     if (question.includes('超时')) return { content: '', delayMs: 12000 };
+    // 主观评价：按提示词规则回 unknown（引擎不再本地短路）
+    if (/(伟大|厉害|了不起|优秀|聪明|有趣|好人|坏人|最强|最牛)/.test(question)) {
+      return {
+        content: JSON.stringify({ attr: 'other', value: null, verdict: 'unknown', text: '主观评价我答不了，问点史实吧。' }),
+        delayMs: 0,
+      };
+    }
     // 严格模式：开放问法 / 过多选项由模型按提示词拒答（refuse=true）
     if (allText.includes('「精确」模式') && /(哪个|哪些|什么|怎么|为什么|还是|多少)/.test(question) && !/是不是/.test(question)) {
       if (/男的还是女的/.test(question)) {

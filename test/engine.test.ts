@@ -5,7 +5,7 @@ import { before, after } from 'node:test';
 import type { AiCredential, Character } from '../src/shared/domain.ts';
 import { CharacterIndex } from '../src/core/index.ts';
 import { runAsk } from '../src/core/engine.ts';
-import { SUBJECTIVE_TEXT, PARSE_FAILED_TEXT } from '../src/core/phraser.ts';
+import { PARSE_FAILED_TEXT } from '../src/core/phraser.ts';
 import { startMockLlm, type MockLlm } from './fixtures/mock-llm.ts';
 
 const list = JSON.parse(
@@ -45,12 +45,12 @@ test('受控属性走确定性判定：问唐朝 → 是', async () => {
   assert.ok(['是。', '是的。', '没错。', '对，是这样。', '正是。'].includes(record.text), record.text);
 });
 
-test('验收4：主观问题回固定话术，且不消耗模型调用', async () => {
+test('验收4：主观问题交给模型按提示词回 unknown', async () => {
   const { record } = await ask('他很伟大吗');
   assert.equal(record.verdict, 'unknown');
-  assert.equal(record.basis, 'subjective');
-  assert.equal(record.text, SUBJECTIVE_TEXT);
-  assert.equal(record.calls, 0);
+  assert.equal(record.basis, 'knowledge', '不再本地短路，走模型判定');
+  assert.ok(record.calls >= 1);
+  assert.ok(record.text.length > 0);
 });
 
 test('验收6：模型输出非法 JSON 时不崩溃，降级为"没听明白"', async () => {

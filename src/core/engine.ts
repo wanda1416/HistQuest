@@ -39,9 +39,6 @@ export interface AskOutcome {
 
 const TRANSIENT_TEXT = '模型这次没能及时回应，这问不计次数，请再问一次。';
 
-/** 主观评价类：本地短路，保证话术稳定且不花调用 */
-const SUBJECTIVE_RE = /(伟大|厉害|了不起|优秀|聪明|有趣|好人|坏人|最强|最牛|很牛|牛逼|牛不牛)/;
-
 /**
  * 一次提问的完整流程。
  *
@@ -110,20 +107,10 @@ export async function runAsk(params: AskParams): Promise<AskOutcome> {
 
   const asked = pre.cleaned || question;
 
-  // ---------- 主观评价：本地短路（保证话术稳定且不花调用） ----------
-  if (SUBJECTIVE_RE.test(asked)) {
-    return {
-      record: make({
-        verdict: 'unknown',
-        text: phrase('unknown', 'subjective', rng),
-        basis: 'subjective',
-        calls: 0,
-        query: { attr: 'other', value: null, subjective: true },
-      }),
-    };
-  }
-
   // ---------- 模型作答（一次调用，知识优先） ----------
+  // 问法是否成立、是否主观、是否过于直接：全部交给模型按模式规则判断（refuse / unknown）。
+  // 本地只保留两类不可让渡的确定性环节：朝代归属的严格分期裁定（judgeByIndex）
+  // 与猜中复核（guessMatches），以及泄密清洗（scrub）。
   let verdict: Verdict = 'unknown';
   let basis: Basis = 'fallback';
   let query: ParsedQuery | null = null;

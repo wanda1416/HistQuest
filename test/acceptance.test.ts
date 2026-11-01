@@ -5,7 +5,7 @@ import { before, after } from 'node:test';
 import { createApp } from '../src/server/index.ts';
 import { config } from '../src/config.ts';
 import { findForbiddenKeys } from '../src/server/dto.ts';
-import { SUBJECTIVE_TEXT } from '../src/core/phraser.ts';
+import { PARSE_FAILED_TEXT } from '../src/core/phraser.ts';
 import { startMockLlm, type MockLlm } from './fixtures/mock-llm.ts';
 
 let mock: MockLlm;
@@ -79,12 +79,12 @@ test('验收3：唐朝开局后问"他是唐朝人吗"必答是，且与揭晓�
   assert.ok(character.name.length >= 2);
 });
 
-test('验收4：主观问题走固定话术', async () => {
+test('验收4：主观问题交给模型按提示词回 unknown，正常计次', async () => {
   const start = await post('/api/solo', { difficulty: 1, polity: null, aiConfig: aiConfig() });
   const id = start.body.gameId as string;
   const ask = await post(`/api/solo/${id}/ask`, { question: '他是个伟大的人吗', aiConfig: aiConfig() });
   assert.equal(ask.body.verdict, 'unknown');
-  assert.equal(ask.body.text, SUBJECTIVE_TEXT);
+  assert.ok(String(ask.body.text).length > 0, '模型有回应');
   assert.equal(ask.body.turnsLeft, config.soloTurns - 1, '主观问题也是有效提问，正常计次');
 });
 
