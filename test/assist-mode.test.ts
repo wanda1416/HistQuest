@@ -36,6 +36,10 @@ test('提示词：辅助模式带方向性提示规则与曹操例句，精确�
   // 三国的魏/蜀/吴归属按正史势力口径（黄盖属吴），不受严格分期误伤
   assert.match(strict, /黄盖、程普属吴/);
   assert.match(assist, /黄盖、程普属吴/);
+  // 相对时序：提示词给推算规则（生卒年 vs 朝代起止），不做本地拦截
+  assert.match(strict, /相对时序问题/);
+  assert.match(strict, /卒年早于该朝起始/);
+  assert.match(strict, /北宋 960–1127/);
 });
 
 test('buildAnswerMessages 透传模式', () => {

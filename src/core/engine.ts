@@ -171,9 +171,10 @@ export async function runAsk(params: AskParams): Promise<AskOutcome> {
       return { record: make({ verdict: 'yes', text, basis, query, hint, calls }), won };
     }
 
-    // 朝代由索引裁定：严格史学分期（曹操=东汉）不能被模型的民间印象覆盖。
+    // 朝代归属由索引裁定：严格分期（曹操=东汉）不能被模型的民间印象覆盖。
     // 注意：必须用"问句里提到的朝代"去比对——模型返回的 dynasty.value 指的是
     // 人物所属朝代，直接拿来比对会把"他是唐朝人吗"这类问题的答案反过来。
+    // （「之前/之后」类相对时序问题已在上面硬算，不会走到这里。）
     const askedDynasty = extractDynasty(asked);
     if (answer.attr === 'dynasty' && askedDynasty) {
       const dynastyQuery: ParsedQuery = { attr: 'dynasty', value: askedDynasty };

@@ -60,6 +60,7 @@ export function answerInstructions(category: TargetCategory, mode: AnswerMode = 
       : '涉及朝代/时期判断时，以资料里写明的时期为准。'
   }
 3. 本局是${modeLabel}模式：${modeRules}
+3.5. 相对时序问题（"在 X 朝之前 / 之后吗"）：用资料里的生卒年与 X 朝的起止年份推算——卒年早于该朝起始 → 在之前（verdict=yes）；生年晚于该朝灭亡 → 在之后（verdict=yes）；生卒与该朝有重叠 → 两者都答否（经历过该朝）。朝代起止年份按你掌握的史学知识确定（如唐 618–907、北宋 960–1127）。资料缺生卒年时才允许 unknown。
 4. 只输出一个 JSON 对象：
     {"attr":"属性名","value":值,"verdict":"yes|no|unknown","text":"${textLimit}的中文回答","guessed":null,"refuse":false}
    attr 取自：dynasty / other（归不进去就用 other）

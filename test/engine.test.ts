@@ -139,6 +139,13 @@ test('二选一问法：严格模式允许回答（男的还是女的）', async
   assert.ok(['yes', 'no'].includes(record.verdict));
 });
 
+test('相对时序：交给模型按生卒年推算（mock 对在宋朝之后吗答 yes）', async () => {
+  // 不做本地拦截：模型按提示词里的时序推算规则作答
+  const { record } = await ask('在宋朝之后吗');
+  assert.equal(record.verdict, 'yes');
+  assert.equal(record.invalid, undefined);
+});
+
 test('改问法后可以正常判定：刘邦问"唐朝之前吗"→ 是', async () => {
   const liubang = list.find((c) => c.name === '刘邦')!;
   const { record } = await ask('他生活在唐朝之前吗', { target: liubang });
