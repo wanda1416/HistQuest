@@ -1084,7 +1084,7 @@ root.addEventListener('submit', async (event) => {
       setState({ meta, authBusy: false });
       // 登录前地址栏里可能就写着某一局/历史：登录后直接回去，而不是丢掉
       const after = currentRoute();
-      if (after && (after.view === 'game' || after.view === 'reveal' || after.view === 'history')) {
+      if (after && (after.view === 'game' || after.view === 'reveal' || after.view === 'history' || after.view === 'challenge')) {
         await applyRoute(true);
       } else {
         go({ view: 'lobby' });
@@ -1201,8 +1201,13 @@ async function boot(): Promise<void> {
   const m = getState().meta;
   const route = currentRoute();
 
-  // 0) 没登录：先去登录页，地址栏原样保留，登录后再回到原来那一屏
+  // 0) 没登录：先去登录页，地址栏原样保留，登录后再回到原来那一屏。
+  //    例外：挑战链接（#/c/<码>）免注册可玩，直接进挑战页。
   if (m?.authEnabled && !m.user) {
+    if (route?.view === 'challenge') {
+      await applyRoute(true);
+      if (getState().view === 'challenge') return;
+    }
     setState({ view: 'auth' });
     return;
   }
