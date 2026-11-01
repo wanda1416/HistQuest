@@ -127,7 +127,7 @@ test('选择问句：提示改法且不扣次数', async () => {
   assert.equal(ask.status, 200);
   assert.equal(ask.body.invalid, 'format');
   assert.equal(ask.body.turnsLeft, config.soloTurns, '问法问题不消耗次数');
-  assert.match(String(ask.body.text), /是或否/);
+  assert.match(String(ask.body.text), /只能回答/);
 });
 
 test('恢复会话：刷新后目标人物与进度不变', async () => {

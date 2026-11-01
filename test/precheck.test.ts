@@ -38,6 +38,11 @@ test('问法识别：选择句', () => {
 test('问法识别：开放句', () => {
   assert.equal(detectNonBinary('他是哪个朝代的人')?.kind, 'open');
   assert.equal(detectNonBinary('他叫什么名字')?.kind, 'open');
+  assert.equal(detectNonBinary('哪个阵营的')?.kind, 'open');
+  assert.equal(detectNonBinary('哪个国的')?.kind, 'open');
+  assert.equal(detectNonBinary('他是哪国人')?.kind, 'open');
+  assert.equal(detectNonBinary('他是什么样的将领')?.kind, 'open');
+  assert.match(detectNonBinary('哪个阵营的')!.text, /只能回答/);
 });
 
 test('问法识别：年龄类', () => {
@@ -45,7 +50,7 @@ test('问法识别：年龄类', () => {
 });
 
 test('正常是/否问法不误判', () => {
-  for (const q of ['他是唐朝人吗', '他活过六十岁吗', '他写过《静夜思》吗', '他生活在唐朝之前吗']) {
+  for (const q of ['他是唐朝人吗', '他活过六十岁吗', '他写过《静夜思》吗', '他生活在唐朝之前吗', '他是蜀国吗', '魏国吗', '他是不是蜀国的将领']) {
     assert.equal(detectNonBinary(q), null, q);
   }
 });

@@ -39,9 +39,9 @@ export interface NonBinaryHint {
 }
 
 const CHOICE_RE = /(还是|抑或)/;
-const AGE_RE = /(多少岁|几岁|活了多久|享年多少|多大年纪|哪年出生|哪年去世|出生在哪一年|死于哪一年)/;
+const AGE_RE = /(多少岁|几岁|活了多久|享年多少|多大年纪|哪年出生|哪年去世|出生在哪一年|死于哪一年|多少年|哪一年|哪年)/;
 const OPEN_RE =
-  /(哪个朝代|哪一朝|什么朝代|哪个时代|是谁|叫什么|什么名字|哪里人|什么地方人|做什么的|干什么的|多久以前|距离现在)/;
+  /(哪个|哪些|哪国|哪一种|哪种|哪类|哪一位|哪一个|什么阵营|什么国|什么朝代|哪一朝|什么时代|是谁|叫什么|什么名字|哪里人|什么地方人|做什么的|干什么的|多久以前|距离现在|什么样|怎么样|怎样|为什么|为何)/;
 
 export function detectNonBinary(question: string): NonBinaryHint | null {
   const q = String(question ?? '').trim();
@@ -50,19 +50,19 @@ export function detectNonBinary(question: string): NonBinaryHint | null {
   if (CHOICE_RE.test(q)) {
     return {
       kind: 'choice',
-      text: '这是「A 还是 B」的选择问句，我只能回答是或否。拆成两次问就行，比如：他生活在唐朝之前吗？',
+      text: '这个提问方式不对，我只能回答「是」或「否」。「A 还是 B」拆成两次问就行，比如：他生活在唐朝之前吗？',
     };
   }
   if (AGE_RE.test(q)) {
     return {
       kind: 'age',
-      text: '年龄类问法我答不了，换成是 / 否的形式，比如：他活过六十岁吗？',
+      text: '这个提问方式不对，我只能回答「是」或「否」。年龄类换成是 / 否的形式，比如：他活过六十岁吗？',
     };
   }
   if (OPEN_RE.test(q)) {
     return {
       kind: 'open',
-      text: '这类开放问法我不会直接答。换成是 / 否的形式试试，比如：他是唐朝人吗？',
+      text: '这个提问方式不对，我只能回答「是」或「否」。换成是 / 否的形式试试，比如：他是蜀国的人吗？',
     };
   }
   return null;

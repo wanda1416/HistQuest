@@ -123,7 +123,7 @@ test('选择问句：给出改法、不调模型、不算作有效提问', async
   assert.equal(record.verdict, 'unknown');
   assert.equal(record.invalid, 'format');
   assert.equal(record.calls, 0, '问法问题不该消耗模型调用');
-  assert.ok(record.text.includes('是或否'));
+  assert.ok(record.text.includes('只能回答'), record.text);
 });
 
 test('开放问句：同样给改法而不是"无法判断"', async () => {
