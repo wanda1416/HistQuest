@@ -19,6 +19,8 @@ export type ViewName =
   | 'history'
   /** 我的题库（自定义条目） */
   | 'mine'
+  /** 邀请好友 */
+  | 'invite'
   /** 挑战：出题人的链接 */
   | 'challenge'
   /** 对战：大厅 */
@@ -106,6 +108,10 @@ export interface State {
   /** 随机出题表单 */
   rcDifficulty: number;
   rcCategory: 'character' | 'event' | 'item' | 'mixed';
+  /** 注册页预填的邀请码（邀请链接 #/auth/<code>） */
+  authInvite: string;
+  /** 我的邀请码 */
+  myInvites: Array<{ code: string; createdAt: number; usedAt: number | null; usedByName: string | null }> | null;
 
   /* ---------------- 对战（房间） ---------------- */
 
@@ -408,6 +414,8 @@ let state: State = {
   challengePlays: [],
   rcDifficulty: 2,
   rcCategory: 'character',
+  authInvite: '',
+  myInvites: null,
   roomCode: loadRoomCode(),
   room: null,
   roomError: null,

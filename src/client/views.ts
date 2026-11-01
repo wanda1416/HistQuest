@@ -76,6 +76,7 @@ function userMenu(s: State): string {
                </p>
                <button class="menu-item" role="menuitem" data-action="go-setup">我的设置</button>
                <button class="menu-item" role="menuitem" data-action="go-mine">我的题库</button>
+               <button class="menu-item" role="menuitem" data-action="go-invite">邀请好友</button>
                ${
                  admin
                    ? `<a class="menu-item" role="menuitem" href="/admin.html" target="_blank" rel="noopener">
@@ -924,7 +925,7 @@ function authView(s: State): string {
             ? ''
             : `<div class="field">
                  <label class="field-label" for="invite">邀请码</label>
-                 <input class="input" id="invite" name="invite" placeholder="找管理员要；库里的第一个账号可留空" autocomplete="off" />
+                 <input class="input" id="invite" name="invite" placeholder="找管理员要；库里的第一个账号可留空" autocomplete="off" value="${esc(s.authInvite)}" />
                  <p class="field-hint">架设这台服务的人：空库时第一个注册的账号直接成为管理员，不需要邀请码。</p>
                </div>`
         }
@@ -1251,6 +1252,48 @@ function challengeView(s: State): string {
   );
 }
 
+/* ---------------- 邀请好友 ---------------- */
+
+function inviteView(s: State): string {
+  if (!s.meta?.user) {
+    return shell(s, `<section class="panel"><p class="muted">登录后才能生成邀请链接。</p>
+      <div class="actions"><button class="btn btn-primary" data-action="go-auth">去登录</button></div></section>`);
+  }
+  const rows = (s.myInvites ?? [])
+    .map((i) => `
+      <div class="mine-row">
+        <div class="mine-main">
+          <div class="mine-head">
+            <strong><code>${esc(i.code)}</code></strong>
+            <span class="mine-pill ${i.usedAt ? 'is-approved' : ''}">${i.usedAt ? `已被 ${esc(i.usedByName ?? '?')} 使用` : '未使用'}</span>
+          </div>
+          <p class="mine-summary">${i.usedAt ? new Date(i.usedAt).toLocaleString('zh-CN') : `注册链接：${location.origin}/#/auth/${esc(i.code)}`}</p>
+        </div>
+        <div class="actions">
+          ${i.usedAt ? '' : `<button class="btn btn-ghost" data-action="invite-copy" data-code="${esc(i.code)}">复制注册链接</button>`}
+        </div>
+      </div>`)
+    .join('');
+
+  return shell(
+    s,
+    `<section class="history-view">
+       <div class="history-toolbar">
+         <div>
+           <p class="eyebrow">邀请好友</p>
+           <h2>生成注册邀请</h2>
+         </div>
+         <div class="actions">
+           <button class="btn btn-ghost" data-action="invite-reload">刷新</button>
+           <button class="btn btn-primary" data-action="invite-create">生成邀请链接</button>
+         </div>
+       </div>
+       <div class="panel">${rows || '<p class="muted">还没有邀请码。点「生成邀请链接」，把链接发给朋友，对方打开就能注册。</p>'}</div>
+       <p class="footnote">每个邀请码只能注册一个账号；朋友用链接注册后，这里会显示被谁用了。</p>
+     </section>`,
+  );
+}
+
 export function renderApp(s: State): string {
   if (!s.ready) {
     return `<div class="boot"><div class="boot-seal">猜</div><p>正在载入…</p></div>`;
@@ -1270,6 +1313,8 @@ export function renderApp(s: State): string {
       return mineView(s);
     case 'challenge':
       return challengeView(s);
+    case 'invite':
+      return inviteView(s);
     default:
       return gameView(s);
   }

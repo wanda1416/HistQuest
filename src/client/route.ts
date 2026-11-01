@@ -14,12 +14,13 @@
 
 export type Route =
   | { view: 'setup' }
-  | { view: 'auth' }
+  | { view: 'auth'; invite?: string }
   | { view: 'lobby' }
   | { view: 'game'; id: string }
   | { view: 'reveal'; id: string }
   | { view: 'history'; id: string | null }
   | { view: 'mine' }
+  | { view: 'invite' }
   /** 挑战：出题人生成的链接 */
   | { view: 'challenge'; code: string }
   | { view: 'rooms' }
@@ -43,10 +44,14 @@ export function parseRoute(rawHash: string): Route | null {
 
   if (head === 'setup' && parts.length === 1) return { view: 'setup' };
   if (head === 'auth' && parts.length === 1) return { view: 'auth' };
+  if (head === 'auth' && parts.length === 2 && tail && /^[A-Za-z0-9]{4,32}$/.test(tail)) {
+    return { view: 'auth', invite: tail };
+  }
   if (head === 'lobby' && parts.length === 1) return { view: 'lobby' };
   if (head === 'rooms' && parts.length === 1) return { view: 'rooms' };
   if (head === 'history' && parts.length === 1) return { view: 'history', id: null };
   if (head === 'mine' && parts.length === 1) return { view: 'mine' };
+  if (head === 'invite' && parts.length === 1) return { view: 'invite' };
   if (head === 'c' && parts.length === 2 && tail && CODE_RE.test(tail)) {
     return { view: 'challenge', code: tail.toUpperCase() };
   }
@@ -76,6 +81,8 @@ export function routeHash(route: Route): string {
       return route.id ? `#/history/${route.id}` : '#/history';
     case 'mine':
       return '#/mine';
+    case 'invite':
+      return '#/invite';
     case 'challenge':
       return `#/c/${route.code}`;
     case 'rooms':
@@ -89,7 +96,7 @@ export function routeHash(route: Route): string {
     case 'setup':
       return '#/setup';
     case 'auth':
-      return '#/auth';
+      return route.invite ? `#/auth/${route.invite}` : '#/auth';
     default:
       return '#/';
   }

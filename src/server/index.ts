@@ -12,6 +12,7 @@ import { SqliteTargetStore, importTargets } from './targets-sqlite.ts';
 import { createAdminRoutes } from './admin.ts';
 import { createCustomTargetStore } from './custom-targets.ts';
 import { createChallengeService } from './challenges.ts';
+import { createInvite, listMyInvites } from './auth.ts';
 import { createAuthRoutes, ensureAdmin, ensureSessionSecret, readUser, takeQuota } from './auth.ts';
 import { integrityCheck, openDatabase, tableCount } from './db.ts';
 import { SqliteHistoryStore } from './history.ts';
@@ -180,6 +181,12 @@ export function createApp(options: AppOptions = {}): CreatedApp {
     quota,
     customTargets,
     challenges: db ? createChallengeService(db) : null,
+    invites: db
+      ? {
+          create: (userId) => createInvite(db, userId),
+          mine: (userId) => listMyInvites(db, userId),
+        }
+      : null,
     createChallengeTarget: async (c) => {
       // 出题副本：retired = 不进公共抽取池，但 index.get 仍可解析（刷新/重启不丢）
       const result = store.create(c);

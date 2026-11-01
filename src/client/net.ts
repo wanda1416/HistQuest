@@ -93,6 +93,11 @@ export const api = {
 
   logout: () => request<{ ok: boolean }>('/api/auth/logout', jsonInit({})),
 
+  /** 邀请好友（用户自助） */
+  myInvites: () => request<{ items: Array<{ code: string; createdAt: number; usedAt: number | null; usedByName: string | null }> }>('/api/invites/mine'),
+
+  createInvite: () => request<{ code: string; url: string }>('/api/invites', jsonInit({})),
+
   testAi: (cfg: AiConfig) =>
     request<AiTestRes>('/api/ai/test', jsonInit({ baseURL: cfg.baseURL, apiKey: cfg.apiKey, model: cfg.model })),
 

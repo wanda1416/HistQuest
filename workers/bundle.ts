@@ -669,6 +669,39 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
     });
   }
 
+  // ---------- 邀请好友（用户自助） ----------
+  if (path === '/invites/mine' && req.method === 'GET') {
+    if (!rt.env.SESSION_SECRET) return fail(503, 'AUTH_DISABLED', '用户系统未启用');
+    const user = await currentUser(rt.env.DB, req, rt.env.SESSION_SECRET);
+    if (!user) return fail(401, 'LOGIN_REQUIRED', '登录后才能生成邀请');
+    const rows = await rt.env.DB.prepare(
+      `SELECT i.code, i.created_at, i.used_at, u.username AS used_by_name
+       FROM invites i LEFT JOIN users u ON u.id = i.used_by
+       WHERE i.created_by = ? ORDER BY i.created_at DESC LIMIT 50`,
+    )
+      .bind(user.id)
+      .all<{ code: string; created_at: number; used_at: number | null; used_by_name: string | null }>();
+    return json(200, {
+      items: (rows.results ?? []).map((r) => ({
+        code: r.code,
+        createdAt: r.created_at,
+        usedAt: r.used_at,
+        usedByName: r.used_by_name,
+      })),
+    });
+  }
+
+  if (path === '/invites' && req.method === 'POST') {
+    if (!rt.env.SESSION_SECRET) return fail(503, 'AUTH_DISABLED', '用户系统未启用');
+    const user = await currentUser(rt.env.DB, req, rt.env.SESSION_SECRET);
+    if (!user) return fail(401, 'LOGIN_REQUIRED', '登录后才能生成邀请');
+    const code = crypto.randomUUID().replace(/-/g, '').slice(0, 10);
+    await rt.env.DB.prepare('INSERT INTO invites (code, created_by, created_at) VALUES (?, ?, ?)')
+      .bind(code, user.id, Date.now())
+      .run();
+    return json(201, { code, url: `/auth/${code}` });
+  }
+
   // ---------- 模型连通测试（BYOK 时代用；服务器持 key 时也保留） ----------
   if (path === '/ai/test' && req.method === 'POST') {
     const cred = readAiConfig(body) ?? serverCred;

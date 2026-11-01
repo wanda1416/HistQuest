@@ -322,6 +322,36 @@ export function createInvites(db: DatabaseSync, count: number, createdBy = 'admi
   return codes;
 }
 
+/** 用户自助邀请：生成一个自己的邀请码（别人拿注册链接来注册） */
+export function createInvite(db: DatabaseSync, createdBy: string): string {
+  const code = randomBytes(5).toString('hex');
+  db.prepare('INSERT INTO invites (code, created_by, created_at) VALUES (?, ?, ?)').run(code, createdBy, Date.now());
+  return code;
+}
+
+/** 我生成的邀请码（含是否已被用） */
+export function listMyInvites(db: DatabaseSync, createdBy: string): InviteAdminRow[] {
+  const rows = db
+    .prepare(
+      `SELECT i.code, i.created_at, i.used_at, u.username AS used_by_name
+         FROM invites i LEFT JOIN users u ON u.id = i.used_by
+        WHERE i.created_by = ?
+        ORDER BY i.created_at DESC LIMIT 50`,
+    )
+    .all(createdBy) as unknown as Array<{
+    code: string;
+    created_at: number;
+    used_at: number | null;
+    used_by_name: string | null;
+  }>;
+  return rows.map((r) => ({
+    code: r.code,
+    createdAt: r.created_at,
+    usedAt: r.used_at,
+    usedByName: r.used_by_name,
+  }));
+}
+
 export async function changePassword(
   db: DatabaseSync,
   userId: string,

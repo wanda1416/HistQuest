@@ -385,6 +385,16 @@ function minePayload(d: MineDraft) {
   };
 }
 
+async function openInvites(): Promise<void> {
+  setState({ view: 'invite' });
+  try {
+    const res = await api.myInvites();
+    setState({ myInvites: res.items });
+  } catch (err) {
+    setState({ myInvites: [], notice: { kind: 'error', text: msg(err) } });
+  }
+}
+
 /* ---------------- 路由：地址栏即事实 ---------------- */
 
 let routing = false;
@@ -523,7 +533,12 @@ async function applyRoute(force = false): Promise<void> {
       }
 
       case 'auth':
-        setState({ view: 'auth' });
+        setState({ view: 'auth', authInvite: route.invite ?? '' });
+        return;
+
+      case 'invite':
+        setState({ view: 'invite' });
+        await openInvites();
         return;
 
       default:
@@ -744,6 +759,31 @@ root.addEventListener('click', async (event) => {
       closeMenu();
       go({ view: 'mine' });
       break;
+    case 'go-invite':
+      closeMenu();
+      go({ view: 'invite' });
+      break;
+    case 'invite-reload':
+      await openInvites();
+      break;
+    case 'invite-create': {
+      try {
+        const res = await api.createInvite();
+        const link = `${location.origin}/#${res.url}`;
+        await copyText(link);
+        await openInvites();
+        setState({ notice: { kind: 'info', text: `邀请链接已复制：${link}` } });
+      } catch (err) {
+        setState({ notice: { kind: 'error', text: msg(err) } });
+      }
+      break;
+    }
+    case 'invite-copy': {
+      const code = String(el.dataset.code ?? '');
+      await copyText(`${location.origin}/#/auth/${code}`);
+      setState({ notice: { kind: 'info', text: '注册链接已复制' } });
+      break;
+    }
     case 'mine-reload':
       void openMine();
       break;

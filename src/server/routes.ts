@@ -77,6 +77,11 @@ export interface RouteDeps {
   createChallengeTarget?: (c: Character) => Promise<void>;
   /** 挑战服务（挑战码登记/解析/出题人额度）；JSON 存储模式为 null */
   challenges?: ChallengeService | null;
+  /** 用户自助邀请码；JSON 存储模式为 null */
+  invites?: {
+    create(userId: string): string;
+    mine(userId: string): Array<{ code: string; createdAt: number; usedAt: number | null; usedByName: string | null }>;
+  } | null;
 }
 
 export function createRoutes(deps: RouteDeps): express.Router {
@@ -616,6 +621,24 @@ export function createRoutes(deps: RouteDeps): express.Router {
       creator: resolved.creatorName ?? '出题人',
       quotaOk: deps.challenges.quotaOk(resolved.code),
     });
+  });
+
+  /* ---------------- 邀请好友（用户自助） ---------------- */
+
+  router.get('/invites/mine', async (req: Request, res: Response) => {
+    if (!deps.invites) return fail(res, 503, 'AUTH_DISABLED', '当前是 JSON 存储模式，邀请不可用');
+    const user = await currentUser(req);
+    if (!user) return fail(res, 401, 'LOGIN_REQUIRED', '登录后才能生成邀请');
+    res.json({ items: deps.invites.mine(user.id) });
+  });
+
+  router.post('/invites', async (req: Request, res: Response) => {
+    if (!deps.invites) return fail(res, 503, 'AUTH_DISABLED', '当前是 JSON 存储模式，邀请不可用');
+    const user = await currentUser(req);
+    if (!user) return fail(res, 401, 'LOGIN_REQUIRED', '登录后才能生成邀请');
+    const code = deps.invites.create(user.id);
+    log('invite.create', { by: user.id });
+    res.status(201).json({ code, url: `/auth/${code}` });
   });
 
   return router;
