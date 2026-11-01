@@ -9,7 +9,7 @@ import { DatabaseSync } from 'node:sqlite';
  * 代价是要求宿主 Node ≥ 23.4（22.x 需 --experimental-sqlite）。
  */
 
-export const SCHEMA_VERSION = 8;
+export const SCHEMA_VERSION = 9;
 
 export interface OpenOptions {
   file: string;
@@ -243,7 +243,30 @@ export function migrate(db: DatabaseSync): void {
     `);
     db.exec(`INSERT INTO schema_migrations (version, applied_at) VALUES (8, ${Date.now()})`);
   }
-}
+
+  if (current < 9) {
+    // v9：自定义题库——用户级条目，不进全局 targets 表。
+    // draft（草稿）/ submitted（待审）/ approved（已复制入全局）/ rejected（驳回）
+    // 审核通过时复制一行到 targets 表，custom_targets 行保留供用户追溯。
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS custom_targets (
+        id          TEXT PRIMARY KEY,
+        user_id     TEXT NOT NULL,
+        category    TEXT NOT NULL DEFAULT 'character',
+        name        TEXT NOT NULL,
+        aliases     TEXT NOT NULL DEFAULT '[]',
+        summary     TEXT NOT NULL,
+        difficulty  INTEGER NOT NULL DEFAULT 2,
+        status      TEXT NOT NULL DEFAULT 'draft',
+        review_note TEXT,
+        created_at  INTEGER NOT NULL,
+        updated_at  INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_custom_user ON custom_targets(user_id, status);
+    `);
+    db.exec(`INSERT INTO schema_migrations (version, applied_at) VALUES (9, ${Date.now()})`);
+  }
+  }
 
 function tableExists(db: DatabaseSync, name: string): boolean {
   const row = db.prepare('SELECT 1 AS x FROM sqlite_master WHERE type = ? AND name = ?').get('table', name) as
