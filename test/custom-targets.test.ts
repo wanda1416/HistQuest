@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { openDatabase } from '../src/server/db.ts';
 import { createCustomTargetStore } from '../src/server/custom-targets.ts';
 import { newGlobalCustomId as newGlobalId, customToCharacter as toCharacter } from '../src/shared/custom-targets.ts';
+import { createChallengeService } from '../src/server/challenges.ts';
 import { validateCharacter } from '../src/core/schema.ts';
 import type { CustomTarget } from '../src/server/custom-targets.ts';
 
@@ -148,6 +149,50 @@ test('自定义题库：出题（挑战链接）', () => {
   store.insert(other);
   assert.equal(store.createChallengeCode(other.id, 'u1'), null);
 });
+
+test('挑战服务：登记 / 解析 / 出题人额度扣减', () => {
+  const db = openDatabase({ file: ':memory:' });
+  const challenges = createChallengeService(db);
+  // 造一个出题人（默认 allow_server_key=1、每日额度 -1）
+  db.prepare(
+    "INSERT INTO users (id, username, password_hash, role, allow_server_key, banned, asks_today, quota_day, daily_quota, created_at, updated_at) VALUES ('u9','出题人','x','user',1,0,0,0,-1,?,?)",
+  ).run(Date.now(), Date.now());
+
+  const code = challenges.registerRandom('u9', { difficulty: 2, category: 'mixed' });
+  assert.equal(code.length, 6);
+
+  const resolved = challenges.resolve(code);
+  assert.equal(resolved!.creatorId, 'u9');
+  assert.equal(resolved!.creatorName, '出题人');
+  assert.equal(resolved!.globalId, null);
+  assert.equal(resolved!.settings.category, 'mixed');
+  assert.equal(challenges.resolve('ZZZZZZ'), null);
+
+  assert.equal(challenges.quotaOk(code), true);
+  assert.deepEqual(challenges.chargeAsk(code), { ok: true });
+
+  // mine：带出被玩局数
+  const mine = challenges.mine('u9');
+  assert.equal(mine.length, 1);
+  assert.equal(mine[0]!.mode, 'random');
+  assert.equal(mine[0]!.plays, 0);
+});
+
+test('挑战服务：额度用完显示截止', () => {
+  const db = openDatabase({ file: ':memory:' });
+  const challenges = createChallengeService(db);
+  db.prepare(
+    "INSERT INTO users (id, username, password_hash, role, allow_server_key, banned, asks_today, quota_day, daily_quota, created_at, updated_at) VALUES ('u9','出题人','x','user',1,0,0,0,2,?,?)",
+  ).run(Date.now(), Date.now());
+  const code = challenges.registerRandom('u9', { difficulty: 1, category: 'character' });
+  assert.deepEqual(challenges.chargeAsk(code), { ok: true });
+  assert.deepEqual(challenges.chargeAsk(code), { ok: true });
+  const third = challenges.chargeAsk(code)!;
+  assert.equal(third.ok, false);
+  assert.match(third.message ?? '', /截止|额度/);
+  assert.equal(challenges.quotaOk(code), false);
+});
+
 
 test('自定义题库：审核通过后可复制为合法全局条目', () => {
 

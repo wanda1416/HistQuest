@@ -98,6 +98,14 @@ export interface State {
   mineBusy: boolean;
   /** 挑战页信息（不含谜底） */
   challenge: ChallengeInfo | null;
+  /** 我的挑战列表（出题记录） */
+  myChallenges: MineChallengeRow[] | null;
+  /** 展开玩家记录的挑战码 */
+  challengePlaysCode: string | null;
+  challengePlays: ChallengePlayRow[];
+  /** 随机出题表单 */
+  rcDifficulty: number;
+  rcCategory: 'character' | 'event' | 'item' | 'mixed';
 
   /* ---------------- 对战（房间） ---------------- */
 
@@ -159,9 +167,33 @@ export interface MineTarget {
 
 export interface ChallengeInfo {
   code: string;
-  category: string;
-  difficulty: number;
+  /** custom = 指定题目；random = 随机抽题 */
+  mode: 'custom' | 'random';
+  category: string | null;
+  difficulty: number | null;
   creator: string;
+  /** 出题人今日额度是否还有（false = 今日截止） */
+  quotaOk: boolean;
+}
+
+export interface MineChallengeRow {
+  code: string;
+  mode: 'custom' | 'random';
+  name: string | null;
+  settings: Record<string, unknown>;
+  plays: number;
+  lastPlayedAt: number | null;
+  createdAt: number;
+}
+
+export interface ChallengePlayRow {
+  id: string;
+  userName: string | null;
+  playerIp: string | null;
+  result: string;
+  asks: number;
+  startedAt: number;
+  endedAt: number | null;
 }
 
 /** 表单态：id 为空 = 新建 */
@@ -371,6 +403,11 @@ let state: State = {
   mineDraft: null,
   mineBusy: false,
   challenge: null,
+  myChallenges: null,
+  challengePlaysCode: null,
+  challengePlays: [],
+  rcDifficulty: 2,
+  rcCategory: 'character',
   roomCode: loadRoomCode(),
   room: null,
   roomError: null,

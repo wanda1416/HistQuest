@@ -954,6 +954,8 @@ const MINE_STATUS: Record<string, string> = {
   rejected: '已驳回',
 };
 
+const DIFF_LABEL: Record<number, string> = { 1: '入门', 2: '进阶', 3: '考据' };
+
 function mineFormView(s: State): string {
   const d = s.mineDraft!;
   const dynasties = s.meta?.dynasties ?? [];
@@ -1116,6 +1118,53 @@ function mineView(s: State): string {
           .join('')
       : '<p class="muted">还没有自定义条目。新建一条，审核通过后就能在开局范围里选到它。</p>';
 
+  // 我的挑战（出题记录）
+  const rcDiffChips = [1, 2, 3]
+    .map((d) => `<button class="chip-select chip-sm ${s.rcDifficulty === d ? 'is-active' : ''}"
+      data-action="pick-rc-difficulty" data-value="${d}">${esc(DIFF_LABEL[d] ?? String(d))}</button>`)
+    .join('');
+  const rcCatChips = [
+    { v: 'character', t: '人物' },
+    { v: 'event', t: '事件' },
+    { v: 'item', t: '物品' },
+    { v: 'mixed', t: '混合' },
+  ]
+    .map((m) => `<button class="chip-select chip-sm ${s.rcCategory === m.v ? 'is-active' : ''}"
+      data-action="pick-rc-category" data-value="${m.v}">${m.t}</button>`)
+    .join('');
+  const challengeRows = (s.myChallenges ?? [])
+    .map((ch) => {
+      const open = s.challengePlaysCode === ch.code;
+      const plays = open
+        ? (s.challengePlays.length
+            ? s.challengePlays
+                .map((p) => {
+                  const who = p.userName ? esc(p.userName) : `游客（IP ${esc(p.playerIp ?? '未知')}）`;
+                  const result = p.result === 'won' ? '猜中' : p.result === 'lost' ? '没猜中' : p.result === 'abandoned' ? '放弃' : '进行中';
+                  return `<li>${who} · ${result} · ${p.asks} 问 · ${new Date(p.startedAt).toLocaleString('zh-CN')}</li>`;
+                })
+                .join('')
+            : '<li class="muted">还没有人玩过</li>')
+          : '';
+      return `
+      <div class="mine-row">
+        <div class="mine-main">
+          <div class="mine-head">
+            <span class="mine-pill">${ch.mode === 'custom' ? '指定题目' : '随机抽题'}</span>
+            <strong>${ch.mode === 'custom' ? esc(ch.name ?? '') : `随机 · ${esc(DIFF_LABEL[Number(ch.settings.difficulty)] ?? String(ch.settings.difficulty ?? ''))}`}</strong>
+            <span class="muted">${ch.plays} 局</span>
+          </div>
+          <p class="mine-summary"><code>${location.origin}/#/c/${esc(ch.code)}</code></p>
+          ${open ? `<ul class="mine-summary">${plays}</ul>` : ''}
+        </div>
+        <div class="actions">
+          <button class="btn btn-ghost" data-action="mine-copy-challenge" data-code="${esc(ch.code)}">复制链接</button>
+          <button class="btn btn-ghost" data-action="mine-plays" data-code="${esc(ch.code)}">${open ? '收起记录' : '玩家记录'}</button>
+        </div>
+      </div>`;
+    })
+    .join('');
+
   return shell(
     s,
     `<section class="history-view">
@@ -1131,7 +1180,38 @@ function mineView(s: State): string {
        </div>
        ${s.mineError ? `<p class="testline fail">${esc(s.mineError)}</p>` : ''}
        <div class="panel">${rows}</div>
-       <p class="footnote">草稿只有自己可见；提交后由管理员审核，通过即进入公共题库。被驳回可看审核意见，删除后重建。</p>
+       <p class="footnote">草稿只有自己可见；提交后由管理员审核，通过即进入公共题库。「出题」不需要审核：生成挑战链接直接给别人玩。</p>
+
+       <div class="history-toolbar" style="margin-top:16px">
+         <div>
+           <p class="eyebrow">随机出题</p>
+           <h2>出一张随机挑战</h2>
+         </div>
+       </div>
+       <div class="panel">
+         <div class="group">
+           <span class="group-label">难度</span>
+           <div class="chips">${rcDiffChips}</div>
+         </div>
+         <div class="group">
+           <span class="group-label">类别</span>
+           <div class="chips">${rcCatChips}</div>
+         </div>
+         <div class="actions">
+           <button class="btn btn-primary" data-action="mine-random-challenge" ${s.mineBusy ? 'disabled' : ''}>
+             ${s.mineBusy ? '生成中…' : '生成随机挑战链接'}
+           </button>
+           <span class="field-hint">打开链接的人无需注册；提问额度记在你的账号上，当天用完自动截止。</span>
+         </div>
+       </div>
+
+       <div class="history-toolbar" style="margin-top:16px">
+         <div>
+           <p class="eyebrow">我的挑战</p>
+           <h2>出题记录与玩家</h2>
+         </div>
+       </div>
+       <div class="panel">${challengeRows || '<p class="muted">还没有出过题。上面出一道，链接发给朋友就能玩。</p>'}</div>
      </section>`,
   );
 }
@@ -1145,20 +1225,23 @@ function challengeView(s: State): string {
   if (!c) {
     return shell(s, `<section class="panel"><p class="muted">正在载入挑战…</p></section>`);
   }
-  const start = s.meta?.user
+  const desc = c.mode === 'custom'
+    ? '像普通单人局一样提问推理，猜中谜底即胜利。'
+    : `由公共题库随机抽谜底（难度 ${c.difficulty ?? 2} · ${CHALLENGE_CAT[c.category ?? 'character'] ?? '人物'}），提问推理，猜中即胜。`;
+  const start = c.quotaOk
     ? `<button class="btn btn-primary" data-action="challenge-start" ${s.pending ? 'disabled' : ''}>
          ${s.pending ? '正在开局…' : '接受挑战'}</button>
-       <p class="field-hint">登录账号后开始；登录后可在「历史」里找回这一局。</p>`
-    : `<button class="btn btn-primary" data-action="challenge-login">先登录，再来挑战</button>
-       <p class="field-hint">挑战需要登录账号（出题人看不到你的作答过程，只看得到结果）。</p>`;
+       <p class="field-hint">无需注册，点「接受挑战」直接开玩；这一局会出现在「历史」里。提问额度由出题人承担。</p>`
+    : `<button class="btn btn-primary" disabled>今日已截止</button>
+       <p class="field-hint">出题人今日的提问额度已用完，挑战今日截止——明天这个链接还能继续玩。</p>`;
   return shell(
     s,
     `<section class="setup">
        <div class="setup-intro">
          <p class="eyebrow">挑战</p>
          <h2>${esc(c.creator)} 给你出了一题</h2>
-         <p class="lede">类别：${CHALLENGE_CAT[c.category] ?? esc(c.category)} · 难度 ${c.difficulty} · 挑战码 <code>${esc(c.code)}</code></p>
-         <p class="lede">像普通单人局一样提问推理，猜中谜底即胜利。</p>
+         <p class="lede">${c.mode === 'custom' ? '指定题目' : '随机抽题'} · 挑战码 <code>${esc(c.code)}</code></p>
+         <p class="lede">${desc}</p>
        </div>
        <div class="panel">
          <div class="actions">${start}</div>

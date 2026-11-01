@@ -130,9 +130,13 @@ async function testAi(): Promise<void> {
 
 async function startGame(challengeCode?: string): Promise<void> {
   const s = getState();
-  // 服务器已配模型（CF 部署）：无需本地 BYOK 即可开局
-  if (!s.config && !s.meta?.serverModelReady) {
+  // 挑战局无需 BYOK：额度由出题人承担（站方模型）；普通局仍要求已配模型
+  if (!challengeCode && !s.config && !s.meta?.serverModelReady) {
     setState({ view: 'setup', notice: { kind: 'error', text: '先配置模型才能开局' } });
+    return;
+  }
+  if (challengeCode && !s.meta?.serverModelReady) {
+    setState({ notice: { kind: 'error', text: '出题人的服务端模型未配置，挑战暂时无法开始' } });
     return;
   }
   setState({ pending: true, notice: null });
@@ -149,7 +153,7 @@ async function startGame(challengeCode?: string): Promise<void> {
       mode: s.mode,
       pronoun: s.pronoun,
       ...(s.turns ? { turns: s.turns } : {}),
-      aiConfig: s.config,
+      aiConfig: challengeCode ? null : s.config,
     });
     saveGameId(session.gameId);
     setState({ session, view: 'game', pending: false, reveal: null, testResult: null });
@@ -296,8 +300,11 @@ async function resumeHistoryGame(id: string): Promise<void> {
 async function openMine(): Promise<void> {
   setState({ view: 'mine', mineDraft: null, mineError: null });
   try {
-    const res = await api.mineList();
-    setState({ mineItems: res.items as never[], mineError: null });
+    const [mine, challenges] = await Promise.all([
+      api.mineList(),
+      api.myChallenges().catch(() => ({ items: [] as unknown[] })),
+    ]);
+    setState({ mineItems: mine.items as never[], myChallenges: challenges.items as never[], mineError: null });
   } catch (err) {
     setState({ mineItems: [], mineError: msg(err) });
   }
@@ -783,6 +790,50 @@ root.addEventListener('click', async (event) => {
         await copyText(link);
         await openMine();
         setState({ view: 'mine', notice: { kind: 'info', text: `挑战链接已复制：${link}` } });
+      } catch (err) {
+        setState({ mineError: msg(err) });
+      }
+      break;
+    }
+    case 'pick-rc-difficulty':
+      setState({ rcDifficulty: Math.min(3, Math.max(1, Number(el.dataset.value) || 2)) });
+      break;
+    case 'pick-rc-category': {
+      const v = el.dataset.value;
+      if (v === 'character' || v === 'event' || v === 'item' || v === 'mixed') {
+        setState({ rcCategory: v });
+      }
+      break;
+    }
+    case 'mine-random-challenge': {
+      const st = getState();
+      setState({ mineBusy: true, mineError: null });
+      try {
+        const res = await api.randomChallenge({ difficulty: st.rcDifficulty, category: st.rcCategory });
+        const link = `${location.origin}/#${res.url}`;
+        await copyText(link);
+        await openMine();
+        setState({ view: 'mine', mineBusy: false, notice: { kind: 'info', text: `随机挑战链接已复制：${link}` } });
+      } catch (err) {
+        setState({ mineBusy: false, mineError: msg(err) });
+      }
+      break;
+    }
+    case 'mine-copy-challenge': {
+      const code = String(el.dataset.code ?? '');
+      await copyText(`${location.origin}/#/c/${code}`);
+      setState({ notice: { kind: 'info', text: '挑战链接已复制' } });
+      break;
+    }
+    case 'mine-plays': {
+      const code = String(el.dataset.code ?? '');
+      if (getState().challengePlaysCode === code) {
+        setState({ challengePlaysCode: null, challengePlays: [] });
+        break;
+      }
+      try {
+        const res = await api.challengePlays(code);
+        setState({ challengePlaysCode: code, challengePlays: res.items as never[] });
       } catch (err) {
         setState({ mineError: msg(err) });
       }

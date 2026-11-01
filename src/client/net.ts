@@ -138,9 +138,20 @@ export const api = {
   mineChallenge: (id: string) =>
     request<{ code: string; url: string }>(`/api/custom-targets/${encodeURIComponent(id)}/challenge`, jsonInit({})),
 
-  /** 挑战页信息（不含谜底） */
+  /** 挑战页信息（不含谜底；quotaOk=false = 出题人今日额度用完） */
   challengeInfo: (code: string) =>
-    request<{ code: string; category: string; difficulty: number; creator: string }>(`/api/challenge/${encodeURIComponent(code)}`),
+    request<{ code: string; mode: 'custom' | 'random'; category: string | null; difficulty: number | null; creator: string; quotaOk: boolean }>(`/api/challenge/${encodeURIComponent(code)}`),
+
+  /** 随机出题：公共题库按范围抽谜底 */
+  randomChallenge: (settings: { difficulty: number; category: string; polity?: string; region?: string; worldEra?: string }) =>
+    request<{ code: string; url: string }>('/api/challenges', jsonInit(settings)),
+
+  /** 我的挑战列表 */
+  myChallenges: () => request<{ items: unknown[] }>('/api/challenges/mine'),
+
+  /** 挑战的玩家记录（仅出题人可见；匿名显示 IP） */
+  challengePlays: (code: string) =>
+    request<{ items: unknown[] }>(`/api/challenge/${encodeURIComponent(code)}/plays`),
 
   /* ---------------- 对战（房间） ---------------- */
 

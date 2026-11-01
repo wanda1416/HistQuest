@@ -63,6 +63,10 @@ export interface CreateInput {
   userName?: string | null;
   /** 「我的题库」开局：全局库里属于该用户的自定义条目 id 列表；非空时只从这个池子里挑谜底 */
   customPoolIds?: string[] | null;
+  /** 挑战局：出题人的挑战码（记账审计 + 提问额度归属出题人） */
+  challengeCode?: string | null;
+  /** 玩家 IP（审计：写进 games 账本，游客局也能追责） */
+  playerIp?: string | null;
   rng?: () => number;
 }
 
@@ -137,6 +141,8 @@ export class SoloStore {
       createdAt: now,
       updatedAt: now,
       ...(input.userId ? { userId: input.userId, userName: input.userName ?? null } : {}),
+      ...(input.challengeCode ? { challengeCode: input.challengeCode } : {}),
+      ...(input.playerIp ? { playerIp: input.playerIp } : {}),
     };
 
     this.sessions.set(session.id, session);

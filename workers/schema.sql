@@ -217,3 +217,17 @@ CREATE TABLE IF NOT EXISTS custom_targets (
 );
 CREATE INDEX IF NOT EXISTS idx_custom_user ON custom_targets(user_id, status);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_custom_share ON custom_targets(share_code);
+
+-- v15：挑战（出题）统一登记表；会话/对局账本记录挑战码与玩家 IP（老库执行 migrations/v15-challenges.sql）
+CREATE TABLE IF NOT EXISTS challenges (
+  code       TEXT PRIMARY KEY,
+  creator_id TEXT NOT NULL,
+  custom_id  TEXT,
+  global_id  TEXT,
+  settings   TEXT NOT NULL DEFAULT '{}',
+  created_at INTEGER NOT NULL
+);
+ALTER TABLE sessions ADD COLUMN challenge_code TEXT;
+ALTER TABLE games ADD COLUMN challenge_code TEXT;
+ALTER TABLE games ADD COLUMN player_ip TEXT;
+CREATE INDEX IF NOT EXISTS idx_games_challenge ON games(challenge_code, started_at DESC);

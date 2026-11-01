@@ -159,6 +159,10 @@ export interface HistorySummary {
   roomId?: string | null;
   /** 对战局才有：结算名次（1 = 赢家） */
   finishRank?: number | null;
+  /** 挑战局才有：出题人的挑战码 */
+  challengeCode?: string | null;
+  /** 游客局才有：玩家 IP（审计；管理员与出题人可见） */
+  playerIp?: string | null;
 }
 
 export interface HistoryDetail extends HistorySummary {

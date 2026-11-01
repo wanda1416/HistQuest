@@ -258,6 +258,10 @@ export interface SoloSession {
   userId?: string | null;
   /** 用户名快照（改名不断联） */
   userName?: string | null;
+  /** 挑战局：出题人的挑战码（提问额度记在出题人头上） */
+  challengeCode?: string | null;
+  /** 玩家 IP（审计用；只在开局时写入 games 账本，不随会话持久化） */
+  playerIp?: string | null;
 }
 
 /** AI 凭据：MVP 只实现 byok；platform 为 Steam 平台代调预留 */

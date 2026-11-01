@@ -5,7 +5,7 @@ import type { AiCredential } from '../shared/domain.ts';
 import { DYNASTIES, REGIONS, REGION_LABELS, isTargetCategory, type Region } from '../shared/domain.ts';
 import type { AiConfig, HistoryDetail, MetaRes } from '../shared/protocol.ts';
 import type { CharacterIndex } from '../core/index.ts';
-import type { Character } from '../shared/domain.ts';
+import type { Character, TargetCategory } from '../shared/domain.ts';
 import { config, serverModelReady } from '../config.ts';
 import type { AuthUser } from './auth.ts';
 import { projectSession } from './dto.ts';
@@ -13,6 +13,7 @@ import type { HistoryStore } from './history.ts';
 import { SoloError, type SoloStore } from './solo.ts';
 import { createCustomTargetStore, type CustomTarget, type CustomTargetStore } from './custom-targets.ts';
 import { customToCharacter, newGlobalCustomId } from '../shared/custom-targets.ts';
+import type { ChallengeService } from './challenges.ts';
 
 /** 语音识别是否可用：模型名配置了就开（端点/密钥留空则复用 LLM 的） */
 function asrReady(): boolean {
@@ -74,6 +75,8 @@ export interface RouteDeps {
   customTargets?: CustomTargetStore | null;
   /** 出题：把条目复制为全局 retired 副本（不进公共抽取池）；JSON 模式为 null */
   createChallengeTarget?: (c: Character) => Promise<void>;
+  /** 挑战服务（挑战码登记/解析/出题人额度）；JSON 存储模式为 null */
+  challenges?: ChallengeService | null;
 }
 
 export function createRoutes(deps: RouteDeps): express.Router {
@@ -164,17 +167,6 @@ export function createRoutes(deps: RouteDeps): express.Router {
 
   router.post('/solo', async (req: Request, res: Response) => {
     // 开局即要求登录：否则会出现无主对局（能开局、能猜、能放弃，一问都没问），
-    // 历史和后台里就会多出归属不明的记录
-    const user = await currentUser(req);
-    if (authEnabled && !user) {
-      return fail(res, 401, 'LOGIN_REQUIRED', '登录后才能开局');
-    }
-
-    const cfg = readAiConfig(req.body);
-    if (!cfg && !serverModelReady()) {
-      return fail(res, 400, 'MODEL_NOT_CONFIGURED', '没有模型配置就无法开局');
-    }
-
     const body = req.body as {
       category?: unknown;
       difficulty?: unknown;
@@ -188,19 +180,39 @@ export function createRoutes(deps: RouteDeps): express.Router {
       targetScope?: unknown;
       challengeCode?: unknown;
     };
-    const difficulty = Math.min(3, Math.max(1, Number(body?.difficulty) || 1));
+
+    // 挑战局：持有挑战码即可开局（免登录；额度记在出题人头上）
+    const challengeCode = typeof body?.challengeCode === 'string' ? body.challengeCode.trim() : '';
+    let challenge: Awaited<ReturnType<NonNullable<RouteDeps['challenges']>['resolve']>> | null = null;
+    if (challengeCode) {
+      if (!deps.challenges) return fail(res, 503, 'CUSTOM_DISABLED', '当前是 JSON 存储模式，挑战不可用');
+      challenge = deps.challenges.resolve(challengeCode);
+      if (!challenge) return fail(res, 404, 'NOT_FOUND', '挑战不存在或已被删除');
+    }
+
+    const user = await currentUser(req);
+    if (authEnabled && !user && !challenge) {
+      return fail(res, 401, 'LOGIN_REQUIRED', '登录后才能开局');
+    }
+
+    const cfg = readAiConfig(req.body);
+    if (!cfg && !serverModelReady()) {
+      return fail(res, 400, 'MODEL_NOT_CONFIGURED', '没有模型配置就无法开局');
+    }
+
+    const difficulty0 = Math.min(3, Math.max(1, Number(body?.difficulty) || 1));
     // 类别：character / event / item / mixed；缺省人物（向后兼容老客户端）
     const rawCategory = body?.category;
-    const category =
+    const category0 =
       rawCategory === 'mixed' || isTargetCategory(rawCategory) ? rawCategory : 'character';
-    const polity = typeof body?.polity === 'string' && body.polity ? body.polity : null;
-    const region =
+    const polity0 = typeof body?.polity === 'string' && body.polity ? body.polity : null;
+    const region0 =
       typeof body?.region === 'string' && body.region
         ? (body.region as (typeof REGIONS)[number])
         : null;
     const share = Number(body?.cnShare);
     const cnShare = Number.isFinite(share) ? Math.min(1, Math.max(0, share)) : 0.5;
-    const worldEra =
+    const worldEra0 =
       typeof body?.worldEra === 'string' && body.worldEra ? body.worldEra : null;
     const mode = body?.mode === 'assist' ? 'assist' : body?.mode === 'guided' ? 'guided' : 'strict';
     const pronoun = body?.pronoun === 'neutral' ? 'neutral' : 'normal';
@@ -210,7 +222,6 @@ export function createRoutes(deps: RouteDeps): express.Router {
     // 「我的题库」：从自己已通过审核的自定义条目里挑谜底（须登录且题库可用）
     let customPoolIds: string[] | null = null;
     if (body?.targetScope === 'mine') {
-      const user = await currentUser(req);
       if (!user) return fail(res, 401, 'LOGIN_REQUIRED', '使用自己的题库需要先登录');
       const store = deps.customTargets;
       if (!store) return fail(res, 503, 'CUSTOM_DISABLED', '当前是 JSON 存储模式，自定义题库不可用');
@@ -220,18 +231,32 @@ export function createRoutes(deps: RouteDeps): express.Router {
       }
     }
 
-    // 挑战开局：挑战码锁定固定谜底（出题人出题给别人玩）
+    // 挑战局参数：指定题目锁定 global_id 副本；随机模式用出题人登记的范围
+    let difficulty = difficulty0;
+    let category: TargetCategory | 'mixed' = category0;
+    let polity = polity0;
+    let region = region0;
+    let worldEra = worldEra0;
     let challengePool: string[] | null = null;
-    const challengeCode = typeof body?.challengeCode === 'string' ? body.challengeCode.trim() : '';
-    if (challengeCode) {
-      const store = deps.customTargets;
-      if (!store) return fail(res, 503, 'CUSTOM_DISABLED', '当前是 JSON 存储模式，挑战不可用');
-      const t = store.getByCode(challengeCode);
-      if (!t?.globalId) return fail(res, 404, 'NOT_FOUND', '挑战不存在或已被删除');
-      challengePool = [t.globalId];
+    if (challenge && deps.challenges) {
+      if (challenge.globalId) {
+        challengePool = [challenge.globalId];
+      } else {
+        const s = challenge.settings ?? {};
+        if ([1, 2, 3].includes(Number(s.difficulty))) {
+          // 随机挑战的难度以出题人设置为准
+          difficulty = Math.min(3, Math.max(1, Number(s.difficulty)));
+        }
+        if (typeof s.category === 'string' && (s.category === 'mixed' || isTargetCategory(s.category))) {
+          category = s.category;
+        }
+        if (typeof s.polity === 'string' && s.polity) polity = s.polity;
+        if (typeof s.region === 'string' && s.region) region = s.region as typeof region;
+        if (typeof s.worldEra === 'string' && s.worldEra) worldEra = s.worldEra;
+      }
     }
 
-    // 归属玩家：未启用账号系统时（JSON 存储模式）可能为空
+    // 归属玩家：未启用账号系统时（JSON 存储模式）可能为空；挑战局允许游客（审计记 IP）
     const session = await deps.solo.create({
       difficulty,
       category,
@@ -243,6 +268,8 @@ export function createRoutes(deps: RouteDeps): express.Router {
       pronoun,
       turns,
       customPoolIds: challengePool ?? customPoolIds,
+      challengeCode: challenge ? challengeCode : null,
+      playerIp: req.ip ?? req.socket.remoteAddress ?? null,
       userId: user?.id ?? null,
       userName: user?.username ?? null,
     });
@@ -270,17 +297,30 @@ export function createRoutes(deps: RouteDeps): express.Router {
     } else if (!serverModelReady()) {
       return fail(res, 400, 'MODEL_NOT_CONFIGURED', '没有模型配置就无法判定');
     } else {
-      // 站方 Key 的规则与 Workers 一致：必须登录、账号允许、且当日额度未用尽
-      const user = await currentUser(req);
-      if (authEnabled && !user) {
-        return fail(res, 401, 'LOGIN_REQUIRED', '未登录只能使用自己的模型（BYOK）；注册/登录后可用站方模型');
+      // 站方 Key 的规则与 Workers 一致：必须登录、账号允许、且当日额度未用尽。
+      // 例外：挑战局游客免登录，提问额度扣在出题人头上（审计记 IP）
+      let session = null;
+      try {
+        session = deps.solo.require(String(req.params.id));
+      } catch {
+        /* 会话不存在：交给 ask 抛 404 */
       }
-      if (user) {
-        if (user.role !== 'admin' && !user.allowServerKey) {
-          return fail(res, 403, 'BYOK_REQUIRED', '管理员为本账号关闭了站方模型，请在设置里填写自己的模型');
+      const chargeCode = session?.challengeCode;
+      const charge = chargeCode && deps.challenges ? deps.challenges.chargeAsk(chargeCode) : undefined;
+      if (charge) {
+        if (!charge.ok) return fail(res, 429, 'QUOTA_EXCEEDED', charge.message ?? '出题人今日额度已用完，挑战今日截止');
+      } else {
+        const user = await currentUser(req);
+        if (authEnabled && !user) {
+          return fail(res, 401, 'LOGIN_REQUIRED', '未登录只能使用自己的模型（BYOK）；注册/登录后可用站方模型');
         }
-        const quota = deps.quota ? deps.quota(user) : { ok: true };
-        if (!quota.ok) return fail(res, 429, 'QUOTA_EXCEEDED', quota.message ?? '今日额度已用完');
+        if (user) {
+          if (user.role !== 'admin' && !user.allowServerKey) {
+            return fail(res, 403, 'BYOK_REQUIRED', '管理员为本账号关闭了站方模型，请在设置里填写自己的模型');
+          }
+          const quota = deps.quota ? deps.quota(user) : { ok: true };
+          if (!quota.ok) return fail(res, 429, 'QUOTA_EXCEEDED', quota.message ?? '今日额度已用完');
+        }
       }
       cred = toCredential(null);
     }
@@ -483,6 +523,7 @@ export function createRoutes(deps: RouteDeps): express.Router {
     const store = requireCustom(res);
     if (!store) return;
     if (!deps.createChallengeTarget) return fail(res, 503, 'CUSTOM_DISABLED', '当前是 JSON 存储模式，出题不可用');
+    if (!deps.challenges) return fail(res, 503, 'CUSTOM_DISABLED', '当前是 JSON 存储模式，出题不可用');
     const user = await currentUser(req);
     if (!user) return fail(res, 401, 'LOGIN_REQUIRED', '登录后才能出题');
     const existing = store.get(String(req.params.id), user.id);
@@ -505,6 +546,13 @@ export function createRoutes(deps: RouteDeps): express.Router {
       const character = customToCharacter(existing, newGlobalCustomId());
       await deps.createChallengeTarget(character);
       store.setGlobalId(existing.id, character.id);
+      deps.challenges.register({
+        code,
+        creatorId: user.id,
+        customId: existing.id,
+        globalId: character.id,
+        settings: { difficulty: existing.difficulty, category: existing.category },
+      });
     } catch (err) {
       return fail(res, 500, 'WRITE_FAILED', (err as Error).message);
     }
@@ -512,17 +560,61 @@ export function createRoutes(deps: RouteDeps): express.Router {
     res.status(201).json({ code, url: `/c/${code}` });
   });
 
-  // 挑战信息（不含谜底）：挑战页展示用
+  // 随机出题：链接打开后由公共题库按出题人指定的范围随机抽谜底
+  router.post('/challenges', async (req: Request, res: Response) => {
+    if (!deps.challenges) return fail(res, 503, 'CUSTOM_DISABLED', '当前是 JSON 存储模式，出题不可用');
+    const user = await currentUser(req);
+    if (!user) return fail(res, 401, 'LOGIN_REQUIRED', '登录后才能出题');
+    const b = (req.body ?? {}) as Record<string, unknown>;
+    const settings: Record<string, unknown> = {
+      difficulty: Math.min(3, Math.max(1, Number(b.difficulty) || 2)),
+      category: b.category === 'event' || b.category === 'item' || b.category === 'mixed' ? b.category : 'character',
+    };
+    if (typeof b.polity === 'string' && b.polity) settings.polity = b.polity;
+    if (typeof b.region === 'string' && b.region) settings.region = b.region;
+    if (typeof b.worldEra === 'string' && b.worldEra) settings.worldEra = b.worldEra;
+    try {
+      const code = deps.challenges.registerRandom(user.id, settings);
+      log('challenge.random', { code, userId: user.id });
+      res.status(201).json({ code, url: `/c/${code}` });
+    } catch (err) {
+      return fail(res, 500, 'WRITE_FAILED', (err as Error).message);
+    }
+  });
+
+  // 我的挑战列表（含每条被玩了几局；额度消耗可审计）
+  router.get('/challenges/mine', async (req: Request, res: Response) => {
+    if (!deps.challenges) return fail(res, 503, 'CUSTOM_DISABLED', '当前是 JSON 存储模式，出题不可用');
+    const user = await currentUser(req);
+    if (!user) return fail(res, 401, 'LOGIN_REQUIRED', '登录后才能查看自己的挑战');
+    res.json({ items: deps.challenges.mine(user.id) });
+  });
+
+  // 某个挑战的玩家记录：登录玩家显示用户名，匿名玩家显示 IP（审计）
+  router.get('/challenge/:code/plays', async (req: Request, res: Response) => {
+    if (!deps.challenges) return fail(res, 503, 'CUSTOM_DISABLED', '当前是 JSON 存储模式，出题不可用');
+    const user = await currentUser(req);
+    if (!user) return fail(res, 401, 'LOGIN_REQUIRED', '登录后才能查看玩家记录');
+    const code = String(req.params.code);
+    const resolved = deps.challenges.resolve(code);
+    if (!resolved || resolved.creatorId !== user.id) {
+      return fail(res, 404, 'NOT_FOUND', '找不到这个挑战');
+    }
+    res.json({ items: deps.challenges.plays(code) });
+  });
+
+  // 挑战信息（不含谜底）：挑战页展示用；quotaOk=false 时前端直接显示今日截止
   router.get('/challenge/:code', async (req: Request, res: Response) => {
-    const store = requireCustom(res);
-    if (!store) return;
-    const t = store.getByCode(String(req.params.code));
-    if (!t) return fail(res, 404, 'NOT_FOUND', '挑战不存在或已被删除');
+    if (!deps.challenges) return fail(res, 503, 'CUSTOM_DISABLED', '当前是 JSON 存储模式，挑战不可用');
+    const resolved = deps.challenges.resolve(String(req.params.code));
+    if (!resolved) return fail(res, 404, 'NOT_FOUND', '挑战不存在或已被删除');
     res.json({
-      code: t.shareCode,
-      category: t.category,
-      difficulty: t.difficulty,
-      creator: store.creatorName(t.userId) ?? '出题人',
+      code: resolved.code,
+      mode: resolved.globalId ? 'custom' : 'random',
+      category: resolved.globalId ? null : (resolved.settings.category ?? 'character'),
+      difficulty: resolved.globalId ? null : (resolved.settings.difficulty ?? 2),
+      creator: resolved.creatorName ?? '出题人',
+      quotaOk: deps.challenges.quotaOk(resolved.code),
     });
   });
 

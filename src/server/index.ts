@@ -11,6 +11,7 @@ import type { TargetStoreLike } from './targets-sqlite.ts';
 import { SqliteTargetStore, importTargets } from './targets-sqlite.ts';
 import { createAdminRoutes } from './admin.ts';
 import { createCustomTargetStore } from './custom-targets.ts';
+import { createChallengeService } from './challenges.ts';
 import { createAuthRoutes, ensureAdmin, ensureSessionSecret, readUser, takeQuota } from './auth.ts';
 import { integrityCheck, openDatabase, tableCount } from './db.ts';
 import { SqliteHistoryStore } from './history.ts';
@@ -162,6 +163,8 @@ export function createApp(options: AppOptions = {}): CreatedApp {
 
   const app = express();
   app.disable('x-powered-by');
+  // 出题审计要记真实玩家 IP：部署在反向代理（Cloudflare）之后，信任 X-Forwarded-For
+  app.set('trust proxy', true);
   app.use(express.json({ limit: '64kb' }));
 
   app.use('/api/auth', db ? createAuthRoutes({ db, secret: sessionSecret }) : (_req, res) => {
@@ -176,6 +179,7 @@ export function createApp(options: AppOptions = {}): CreatedApp {
     getUser,
     quota,
     customTargets,
+    challenges: db ? createChallengeService(db) : null,
     createChallengeTarget: async (c) => {
       // 出题副本：retired = 不进公共抽取池，但 index.get 仍可解析（刷新/重启不丢）
       const result = store.create(c);

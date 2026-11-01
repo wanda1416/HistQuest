@@ -1,16 +1,17 @@
 import { DYNASTIES, REGIONS, REGION_LABELS, isTargetCategory, type Region } from '../src/shared/domain.ts';
-import type { AiCredential, Character } from '../src/shared/domain.ts';
+import type { AiCredential, Character, TargetCategory } from '../src/shared/domain.ts';
 import type { MetaRes } from '../src/shared/protocol.ts';
 import { CharacterIndex } from '../src/core/index.ts';
 import { SoloStore, SoloError } from '../src/server/solo.ts';
 import { projectSession } from '../src/server/dto.ts';
 import { AiError, testConnection } from '../src/ai/client.ts';
 import { D1SessionPersistence, type D1Database } from './d1.ts';
+import type { SoloSession } from '../src/shared/domain.ts';
 import { D1HistoryStore } from './d1-history.ts';
 import { D1TargetStore } from './d1-targets.ts';
 import { handleVault } from './vault.ts';
 import { handleAuth, currentUser, ensureAdmin, type AuthUser } from './auth.ts';
-import { takeUserQuota } from './quota.ts';
+import { takeUserQuota, dailyLimitOf } from './quota.ts';
 import { handleRooms } from './rooms-api.ts';
 import { RoomDo } from './room-do.ts';
 import { handleTranscribe } from './asr.ts';
@@ -268,6 +269,60 @@ function readCustomInput(body: Record<string, unknown>): CustomTargetInput {
 }
 
 
+const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+
+function newChallengeCode(): string {
+  const bytes = new Uint8Array(6);
+  crypto.getRandomValues(bytes);
+  return [...bytes].map((b) => ALPHABET[b % ALPHABET.length]).join('');
+}
+
+/** 挑战局提问：扣出题人的当日额度（免费游玩的成本记在出题人头上，审计可追溯） */
+async function chargeChallengeAsk(db: D1Database, code: string): Promise<{ ok: boolean; message?: string }> {
+  const rows = await db
+    .prepare(
+      `SELECT u.id, u.role, u.allow_server_key, u.banned, u.asks_today, u.quota_day, u.daily_quota
+       FROM challenges ch JOIN users u ON u.id = ch.creator_id
+       WHERE ch.code = ?`,
+    )
+    .bind(code)
+    .first<{ id: string; role: string; allow_server_key: number; banned: number; asks_today: number; quota_day: number; daily_quota: number }>();
+  if (!rows) return { ok: false, message: '出题人账号不存在，挑战已失效' };
+  if (rows.banned) return { ok: false, message: '出题人账号被封禁，挑战已截止' };
+  if (rows.role !== 'admin' && !rows.allow_server_key) {
+    return { ok: false, message: '出题人未开放站方模型，挑战暂时截止' };
+  }
+  const quota = await takeUserQuota(db, {
+    id: rows.id,
+    username: '',
+    role: rows.role === 'admin' ? 'admin' : 'user',
+    allowServerKey: Boolean(rows.allow_server_key),
+    dailyQuota: Number(rows.daily_quota),
+  });
+  if (!quota.ok) return { ok: false, message: '出题人今日额度已用完，挑战今日截止，明天再来' };
+  return { ok: true };
+}
+
+/** 挑战页展示用：出题人今日额度是否还有（不扣减） */
+async function chargeChallengeAskNoop(db: D1Database, code: string): Promise<boolean> {
+  const row = await db
+    .prepare(
+      `SELECT u.role, u.allow_server_key, u.banned, u.asks_today, u.quota_day, u.daily_quota
+       FROM challenges ch JOIN users u ON u.id = ch.creator_id
+       WHERE ch.code = ?`,
+    )
+    .bind(code)
+    .first<{ role: string; allow_server_key: number; banned: number; asks_today: number; quota_day: number; daily_quota: number }>();
+  if (!row) return false;
+  if (row.role === 'admin') return true;
+  if (row.banned || !row.allow_server_key) return false;
+  const d = new Date();
+  const today = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+  const used = Number(row.quota_day) === today ? Number(row.asks_today) : 0;
+  const limit = dailyLimitOf(Number(row.daily_quota));
+  return used < limit;
+}
+
 function errorResponse(err: unknown): Response {
   if (err instanceof SoloError) {
     return fail(err.code === 'NOT_FOUND' ? 404 : 409, err.code, err.message);
@@ -501,26 +556,116 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
       }
     }
     if (!code) return fail(409, 'CHALLENGE_FAILED', '出题失败，请重试');
+    await rt.env.DB.prepare(
+      'INSERT INTO challenges (code, creator_id, custom_id, global_id, settings, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+    )
+      .bind(code, user.id, id, character.id, JSON.stringify({ difficulty: existing.difficulty, category: existing.category }), Date.now())
+      .run();
     return json(201, { code, url: `/c/${code}` });
   }
 
-  // 挑战信息（不含谜底）：挑战页展示用
+  // 随机出题：链接打开后由公共题库按出题人指定的范围随机抽谜底
+  if (path === '/challenges' && req.method === 'POST') {
+    if (!rt.env.SESSION_SECRET) return fail(503, 'CUSTOM_DISABLED', '用户系统未启用');
+    const user = await currentUser(rt.env.DB, req, rt.env.SESSION_SECRET);
+    if (!user) return fail(401, 'LOGIN_REQUIRED', '登录后才能出题');
+    const settings: Record<string, unknown> = {
+      difficulty: Math.min(3, Math.max(1, Number(body.difficulty) || 2)),
+      category: body.category === 'event' || body.category === 'item' || body.category === 'mixed' ? body.category : 'character',
+    };
+    if (typeof body.polity === 'string' && body.polity) settings.polity = body.polity;
+    if (typeof body.region === 'string' && body.region) settings.region = body.region;
+    if (typeof body.worldEra === 'string' && body.worldEra) settings.worldEra = body.worldEra;
+    const code = newChallengeCode();
+    await rt.env.DB.prepare(
+      'INSERT INTO challenges (code, creator_id, custom_id, global_id, settings, created_at) VALUES (?, ?, NULL, NULL, ?, ?)',
+    )
+      .bind(code, user.id, JSON.stringify(settings), Date.now())
+      .run();
+    return json(201, { code, url: `/c/${code}` });
+  }
+
+  // 我的挑战列表（含每条被玩了几局；额度消耗可审计）
+  if (path === '/challenges/mine' && req.method === 'GET') {
+    if (!rt.env.SESSION_SECRET) return fail(503, 'CUSTOM_DISABLED', '用户系统未启用');
+    const user = await currentUser(rt.env.DB, req, rt.env.SESSION_SECRET);
+    if (!user) return fail(401, 'LOGIN_REQUIRED', '登录后才能查看自己的挑战');
+    const rows = await rt.env.DB.prepare(
+      `SELECT ch.code, ch.custom_id, ch.settings, ch.created_at,
+              ct.name AS custom_name,
+              (SELECT COUNT(*) FROM games g WHERE g.challenge_code = ch.code) AS plays,
+              (SELECT MAX(g.started_at) FROM games g WHERE g.challenge_code = ch.code) AS last_played_at
+       FROM challenges ch LEFT JOIN custom_targets ct ON ct.id = ch.custom_id
+       WHERE ch.creator_id = ?
+       ORDER BY ch.created_at DESC LIMIT 200`,
+    )
+      .bind(user.id)
+      .all<{ code: string; custom_id: string | null; settings: string; created_at: number; custom_name: string | null; plays: number; last_played_at: number | null }>();
+    const items = (rows.results ?? []).map((r) => {
+      let settings: Record<string, unknown> = {};
+      try { settings = JSON.parse(r.settings) as Record<string, unknown>; } catch { /* ignore */ }
+      return {
+        code: r.code,
+        mode: r.custom_id ? 'custom' : 'random',
+        name: r.custom_name,
+        settings,
+        plays: Number(r.plays) || 0,
+        lastPlayedAt: r.last_played_at,
+        createdAt: r.created_at,
+      };
+    });
+    return json(200, { items });
+  }
+
+  // 某个挑战的玩家记录：登录玩家显示用户名，匿名玩家显示 IP（审计）
+  const challengePlays = path.match(/^\/challenge\/([A-Z0-9]{4,12})\/plays$/);
+  if (challengePlays && req.method === 'GET') {
+    if (!rt.env.SESSION_SECRET) return fail(503, 'CUSTOM_DISABLED', '用户系统未启用');
+    const user = await currentUser(rt.env.DB, req, rt.env.SESSION_SECRET);
+    if (!user) return fail(401, 'LOGIN_REQUIRED', '登录后才能查看玩家记录');
+    const code = challengePlays[1]!;
+    const own = await rt.env.DB.prepare('SELECT creator_id FROM challenges WHERE code = ?').bind(code).first<{ creator_id: string }>();
+    if (!own || own.creator_id !== user.id) return fail(404, 'NOT_FOUND', '找不到这个挑战');
+    const rows = await rt.env.DB.prepare(
+      `SELECT id, user_name, player_ip, status, turns_left, asks, started_at, ended_at
+       FROM games WHERE challenge_code = ? ORDER BY started_at DESC LIMIT 100`,
+    )
+      .bind(code)
+      .all<{ id: string; user_name: string | null; player_ip: string | null; status: string; turns_left: number; asks: number; started_at: number; ended_at: number | null }>();
+    const items = (rows.results ?? []).map((r) => ({
+      id: r.id,
+      userName: r.user_name,
+      playerIp: r.player_ip,
+      result: r.status === 'won' ? 'won' : r.status === 'revealed' ? (r.turns_left > 0 ? 'abandoned' : 'lost') : 'playing',
+      asks: Number(r.asks) || 0,
+      startedAt: r.started_at,
+      endedAt: r.ended_at,
+    }));
+    return json(200, { items });
+  }
+
+  // 挑战信息（不含谜底）：挑战页展示用；quotaOk=false 时前端直接显示今日截止
   const challengeInfo = path.match(/^\/challenge\/([A-Z0-9]{4,12})$/);
   if (challengeInfo && req.method === 'GET') {
     const rows = await rt.env.DB.prepare(
-      `SELECT c.category, c.difficulty, c.user_id, u.username
-       FROM custom_targets c LEFT JOIN users u ON u.id = c.user_id
-       WHERE c.share_code = ? AND c.status = 'shared'`,
+      `SELECT ch.code, ch.custom_id, ch.global_id, ch.settings, u.username AS creator_name, ch.creator_id
+       FROM challenges ch LEFT JOIN users u ON u.id = ch.creator_id
+       WHERE ch.code = ?`,
     )
       .bind(challengeInfo[1]!)
-      .all<{ category: string; difficulty: number; username: string | null }>();
+      .all<{ code: string; custom_id: string | null; global_id: string | null; settings: string; creator_name: string | null; creator_id: string }>();
     const row = (rows.results ?? [])[0];
     if (!row) return fail(404, 'NOT_FOUND', '挑战不存在或已被删除');
+    let settings: Record<string, unknown> = {};
+    try { settings = JSON.parse(row.settings) as Record<string, unknown>; } catch { /* ignore */ }
+    const charge = await chargeChallengeAskNoop(rt.env.DB, row.code);
     return json(200, {
-      code: challengeInfo[1],
-      category: row.category,
-      difficulty: row.difficulty,
-      creator: row.username ?? '出题人',
+      code: row.code,
+      mode: row.global_id ? 'custom' : 'random',
+      category: row.global_id ? null : (settings.category ?? 'character'),
+      difficulty: row.global_id ? null : (settings.difficulty ?? 2),
+      creator: row.creator_name ?? '出题人',
+      quotaOk: charge,
     });
   }
 
@@ -543,12 +688,12 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
 
   // ---------- 开局 ----------
   if (path === '/solo' && req.method === 'POST') {
-    const difficulty = Math.min(3, Math.max(1, Number(body.difficulty) || 1));
-    const category =
+    const difficulty0 = Math.min(3, Math.max(1, Number(body.difficulty) || 1));
+    const category0 =
       body.category === 'mixed' || isTargetCategory(body.category) ? body.category : 'character';
-    const polity = typeof body.polity === 'string' && body.polity ? body.polity : null;
-    const region = typeof body.region === 'string' && body.region ? (body.region as Region) : null;
-    const worldEra = typeof body.worldEra === 'string' && body.worldEra ? body.worldEra : null;
+    const polity0 = typeof body.polity === 'string' && body.polity ? body.polity : null;
+    const region0 = typeof body.region === 'string' && body.region ? (body.region as Region) : null;
+    const worldEra0 = typeof body.worldEra === 'string' && body.worldEra ? body.worldEra : null;
     const share = Number(body.cnShare);
     const cnShare = Number.isFinite(share) ? Math.min(1, Math.max(0, share)) : 0.5;
     const mode = body.mode === 'assist' ? 'assist' : body.mode === 'guided' ? 'guided' : 'strict';
@@ -558,22 +703,51 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
     const creator = rt.env.SESSION_SECRET
       ? await currentUser(rt.env.DB, req, rt.env.SESSION_SECRET)
       : null;
-    // 开局即要求登录：否则会留下无主对局（能开局、能猜、能放弃，一问都没问）
-    if (rt.env.SESSION_SECRET && !creator) {
-      return fail(401, 'LOGIN_REQUIRED', '登录后才能开局');
-    }
-    // 挑战开局：挑战码锁定固定谜底（出题人出题给别人玩）
-    let challengePool: string[] | null = null;
+
+    // 挑战局：持有挑战码即可开局（免登录；额度记在出题人头上）
     const challengeCode = typeof body.challengeCode === 'string' ? body.challengeCode.trim() : '';
+    let challenge: { creatorId: string; globalId: string | null; settings: Record<string, unknown> } | null = null;
     if (challengeCode) {
       const rows = await rt.env.DB.prepare(
-        "SELECT global_id FROM custom_targets WHERE share_code = ? AND status = 'shared' AND global_id IS NOT NULL",
+        `SELECT ch.creator_id, ch.global_id, ch.settings, u.username AS creator_name
+         FROM challenges ch LEFT JOIN users u ON u.id = ch.creator_id
+         WHERE ch.code = ?`,
       )
         .bind(challengeCode)
-        .all<{ global_id: string }>();
-      const globalId = (rows.results ?? [])[0]?.global_id;
-      if (!globalId) return fail(404, 'NOT_FOUND', '挑战不存在或已被删除');
-      challengePool = [globalId];
+        .all<{ creator_id: string; global_id: string | null; settings: string; creator_name: string | null }>();
+      const row = (rows.results ?? [])[0];
+      if (!row) return fail(404, 'NOT_FOUND', '挑战不存在或已被删除');
+      let settings: Record<string, unknown> = {};
+      try { settings = JSON.parse(row.settings) as Record<string, unknown>; } catch { /* ignore */ }
+      challenge = { creatorId: row.creator_id, globalId: row.global_id, settings };
+    }
+
+    // 开局即要求登录：否则会留下无主对局（挑战局例外，游客可玩，审计记 IP）
+    if (rt.env.SESSION_SECRET && !creator && !challenge) {
+      return fail(401, 'LOGIN_REQUIRED', '登录后才能开局');
+    }
+
+    let difficulty = difficulty0;
+    let category: TargetCategory | 'mixed' = category0;
+    let polity = polity0;
+    let region = region0;
+    let worldEra = worldEra0;
+    let challengePool: string[] | null = null;
+    if (challenge) {
+      if (challenge.globalId) {
+        // 指定题目：锁定谜底副本
+        challengePool = [challenge.globalId];
+      } else {
+        // 随机挑战：用出题人登记的范围
+        const s = challenge.settings;
+        if ([1, 2, 3].includes(Number(s.difficulty))) difficulty = Math.min(3, Math.max(1, Number(s.difficulty)));
+        if (typeof s.category === 'string' && (s.category === 'mixed' || isTargetCategory(s.category))) {
+          category = s.category;
+        }
+        if (typeof s.polity === 'string' && s.polity) polity = s.polity;
+        if (typeof s.region === 'string' && s.region) region = s.region as typeof region;
+        if (typeof s.worldEra === 'string' && s.worldEra) worldEra = s.worldEra;
+      }
     }
     // 「我的题库」：从自己已通过审核的自定义条目里挑谜底
     let customPoolIds: string[] | null = null;
@@ -592,6 +766,8 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
     const session = await rt.solo.create({
       difficulty, category, polity, region, worldEra, cnShare, mode, pronoun, turns,
       customPoolIds: challengePool ?? customPoolIds,
+      challengeCode: challenge ? challengeCode : null,
+      playerIp: req.headers.get('cf-connecting-ip') ?? req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null,
       userId: creator?.id ?? null,
       userName: creator?.username ?? null,
     });
@@ -617,6 +793,7 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
       if (!question) return fail(400, 'EMPTY_QUESTION', '问题不能为空');
 
       // 凭据规则：BYOK 优先（游客也可用）；服务端 Key 仅限登录用户。
+      // 例外：挑战局游客免登录，提问额度扣在出题人头上（审计记 IP）
       const user = rt.env.SESSION_SECRET
         ? await currentUser(rt.env.DB, req, rt.env.SESSION_SECRET)
         : null;
@@ -624,16 +801,28 @@ async function handleApi(req: Request, url: URL, rt: Runtime): Promise<Response>
       let cred: AiCredential | null = byok ?? null;
 
       if (!cred && serverCred) {
-        if (!user) {
-          return fail(401, 'LOGIN_REQUIRED', '未登录只能使用自己的模型（BYOK）；注册/登录后可用站方模型');
+        let session: SoloSession | null = null;
+        try {
+          session = rt.solo.require(id);
+        } catch {
+          /* 会话不存在：交给 ask 抛 404 */
         }
-        if (user.role !== 'admin' && !user.allowServerKey) {
-          return fail(403, 'BYOK_REQUIRED', '管理员为本账号关闭了站方模型，请在设置里填写自己的模型');
-        }
-        // 管理员不限量
-        if (user.role !== 'admin') {
-          const quota = await takeUserQuota(rt.env.DB, user);
-          if (!quota.ok) return fail(429, 'QUOTA_EXCEEDED', quota.message ?? '今日额度已用完');
+        const chargeCode = session?.challengeCode;
+        if (chargeCode) {
+          const charge = await chargeChallengeAsk(rt.env.DB, chargeCode);
+          if (!charge.ok) return fail(429, 'QUOTA_EXCEEDED', charge.message ?? '出题人今日额度已用完，挑战今日截止');
+        } else {
+          if (!user) {
+            return fail(401, 'LOGIN_REQUIRED', '未登录只能使用自己的模型（BYOK）；注册/登录后可用站方模型');
+          }
+          if (user.role !== 'admin' && !user.allowServerKey) {
+            return fail(403, 'BYOK_REQUIRED', '管理员为本账号关闭了站方模型，请在设置里填写自己的模型');
+          }
+          // 管理员不限量
+          if (user.role !== 'admin') {
+            const quota = await takeUserQuota(rt.env.DB, user);
+            if (!quota.ok) return fail(429, 'QUOTA_EXCEEDED', quota.message ?? '今日额度已用完');
+          }
         }
         cred = serverCred;
       }

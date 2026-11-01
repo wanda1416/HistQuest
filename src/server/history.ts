@@ -32,6 +32,8 @@ export interface SqliteLike {
 export interface HistoryQuery {
   /** 精确匹配归属用户；'guest' 表示只看游客局 */
   userId?: string | 'guest';
+  /** 挑战局过滤：只看用这个挑战码玩的局（出题人查看「谁玩了」） */
+  challengeCode?: string;
   /** 用户名模糊匹配（管理员用） */
   userName?: string;
   /** 只看某个结局 */
@@ -98,6 +100,9 @@ export interface GameRow {
   /** 对战局才有（Node v5 / D1 v8 迁移之后的列；老行是 undefined） */
   room_id?: string | null;
   finish_rank?: number | null;
+  /** 挑战局才有（Node v12 / D1 v15 迁移之后的列） */
+  challenge_code?: string | null;
+  player_ip?: string | null;
 }
 
 export interface TurnRow {
@@ -151,6 +156,8 @@ export function rowToSummary(r: GameRow): HistorySummary {
   // 对战局的标记：前端据此显示"对战 · 第 N 名"，而不是让人困惑的"放弃"
   if (r.room_id) summary.roomId = r.room_id;
   if (typeof r.finish_rank === 'number') summary.finishRank = r.finish_rank;
+  if (r.challenge_code) summary.challengeCode = r.challenge_code;
+  if (r.player_ip) summary.playerIp = r.player_ip;
   return summary;
 }
 
@@ -210,13 +217,17 @@ export function gameParams(session: SoloSession, target: TargetSnapshot): unknow
     session.createdAt,
     session.status === 'playing' ? null : session.updatedAt,
     session.updatedAt,
+    // 挑战局审计：挑战码与玩家 IP 只在首次写入，后续 upsert 不覆盖
+    session.challengeCode ?? null,
+    session.playerIp ?? null,
   ];
 }
 
 export const UPSERT_GAME_SQL = `INSERT INTO games (
     id, user_id, user_name, target_id, target_name, target_roles, attribution, category, difficulty, polity, region, world_era,
-    mode, pronoun, turns_total, turns_left, turns_used, asks, status, started_at, ended_at, updated_at
-  ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    mode, pronoun, turns_total, turns_left, turns_used, asks, status, started_at, ended_at, updated_at,
+    challenge_code, player_ip
+  ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
   ON CONFLICT(id) DO UPDATE SET
     user_id    = COALESCE(games.user_id, excluded.user_id),
     user_name  = COALESCE(games.user_name, excluded.user_name),
@@ -275,6 +286,10 @@ export function whereClause(query: HistoryQuery = {}): { sql: string; params: un
   if (query.userName) {
     parts.push("IFNULL(user_name, '') LIKE ?");
     params.push(`%${query.userName}%`);
+  }
+  if (query.challengeCode) {
+    parts.push('challenge_code = ?');
+    params.push(query.challengeCode);
   }
   if (query.result === 'playing') {
     parts.push("status = 'playing'");

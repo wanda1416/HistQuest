@@ -118,8 +118,9 @@ export class SqliteSessionPersistence implements SessionPersistence {
       .prepare(
         `INSERT INTO sessions (
            id, target_id, category, difficulty, polity, region, world_era, cn_share,
-           turns_left, total_turns, mode, pronoun, status, history, created_at, updated_at
-         ) VALUES (?,?,?,?,?,?,?,?,? ,?,?,?,?,?,?,?)
+           turns_left, total_turns, mode, pronoun, status, history, created_at, updated_at,
+           challenge_code
+         ) VALUES (?,?,?,?,?,?,?,?,? ,?,?,?,?,?,?,?,?)
          ON CONFLICT(id) DO UPDATE SET
            turns_left = excluded.turns_left,
            mode = excluded.mode,
@@ -144,6 +145,7 @@ export class SqliteSessionPersistence implements SessionPersistence {
         JSON.stringify(session.history),
         session.createdAt,
         session.updatedAt,
+        session.challengeCode ?? null,
       );
   }
 
@@ -175,6 +177,9 @@ function rowToSession(r: SessionRow): SoloSession {
     history: safeHistory(r.history),
     createdAt: r.created_at,
     updatedAt: r.updated_at,
+    ...((r as unknown as { challenge_code?: string | null }).challenge_code
+      ? { challengeCode: (r as unknown as { challenge_code: string }).challenge_code }
+      : {}),
   };
 }
 
