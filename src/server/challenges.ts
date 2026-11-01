@@ -19,6 +19,8 @@ export interface ChallengeSettings {
   region?: string | null;
   worldEra?: string | null;
   cnShare?: number;
+  mode?: 'strict' | 'guided';
+  turns?: number;
 }
 
 export interface ChallengeResolved {

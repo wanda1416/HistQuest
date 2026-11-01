@@ -880,7 +880,8 @@ root.addEventListener('click', async (event) => {
       break;
     case 'rc-create': {
       const st = getState();
-      const settings: Record<string, unknown> = { difficulty: st.difficulty, category: st.category };
+      const settings: Record<string, unknown> = { difficulty: st.difficulty, category: st.category, mode: st.mode };
+      if (st.turns) settings.turns = st.turns;
       if (st.scope === 'cn') {
         settings.region = 'cn';
         if (st.polity) settings.polity = st.polity;
@@ -952,7 +953,14 @@ root.addEventListener('click', async (event) => {
       break;
     }
     case 'pick-turns': {
-      const t = Number(el.dataset.value);
+      const raw = el.dataset.value ?? '';
+      if (raw === '') {
+        // 「默认」：跟随服务端上限（随机出题页也用它）
+        setState({ turns: null });
+        savePrefs({ turns: 20 });
+        break;
+      }
+      const t = Number(raw);
       if (Number.isFinite(t) && t >= 10) {
         setState({ turns: Math.round(t) });
         savePrefs({ turns: Math.round(t) });

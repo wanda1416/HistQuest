@@ -1275,6 +1275,23 @@ function randomChallengeView(s: State): string {
     })
     .join('');
 
+  const modeChips = [
+    { v: 'strict', t: '精确', d: '是/否判定' },
+    { v: 'guided', t: '解说', d: '判定+解说' },
+  ]
+    .map((m) => `<button class="chip-select ${s.mode === m.v ? 'is-active' : ''}"
+      data-action="pick-mode" data-value="${m.v}"><b>${m.t}</b><span>${m.d}</span></button>`)
+    .join('');
+
+  const turnChips = ['默认', 10, 15, 20, 30, 40, 50]
+    .map((t) => {
+      const value = t === '默认' ? '' : String(t);
+      const active = t === '默认' ? s.turns === null : s.turns === t;
+      return `<button class="chip-select chip-sm ${active ? 'is-active' : ''}"
+        data-action="pick-turns" data-value="${value}">${t === '默认' ? '默认' : `${t} 轮`}</button>`;
+    })
+    .join('');
+
   const challengeRows = (s.myChallenges ?? [])
     .filter((ch) => ch.mode === 'random')
     .map((ch) => {
@@ -1335,6 +1352,16 @@ function randomChallengeView(s: State): string {
          <div class="group">
            <span class="group-label">类别</span>
            <div class="chips">${categoryChips}</div>
+         </div>
+
+         <div class="group">
+           <span class="group-label">回答模式</span>
+           <div class="chips">${modeChips}</div>
+         </div>
+
+         <div class="group">
+           <span class="group-label">每人轮次</span>
+           <div class="chips">${turnChips}</div>
          </div>
 
          <div class="group">

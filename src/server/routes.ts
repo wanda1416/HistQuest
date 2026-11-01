@@ -6,6 +6,7 @@ import { DYNASTIES, REGIONS, REGION_LABELS, isTargetCategory, type Region } from
 import type { AiConfig, HistoryDetail, MetaRes } from '../shared/protocol.ts';
 import type { CharacterIndex } from '../core/index.ts';
 import type { Character, TargetCategory } from '../shared/domain.ts';
+import type { AnswerMode } from '../shared/domain.ts';
 import { config, serverModelReady } from '../config.ts';
 import type { AuthUser } from './auth.ts';
 import { projectSession } from './dto.ts';
@@ -250,10 +251,10 @@ export function createRoutes(deps: RouteDeps): express.Router {
     let cnShare = Number.isFinite(share) ? Math.min(1, Math.max(0, share)) : 0.5;
     const worldEra0 =
       typeof body?.worldEra === 'string' && body.worldEra ? body.worldEra : null;
-    const mode = body?.mode === 'assist' ? 'assist' : body?.mode === 'guided' ? 'guided' : 'strict';
+    const mode0 = body?.mode === 'assist' ? 'assist' : body?.mode === 'guided' ? 'guided' : 'strict';
     const pronoun = body?.pronoun === 'neutral' ? 'neutral' : 'normal';
     const turnsRaw = Number(body?.turns);
-    const turns = Number.isFinite(turnsRaw) && turnsRaw > 0 ? Math.round(turnsRaw) : undefined;
+    let turns = Number.isFinite(turnsRaw) && turnsRaw > 0 ? Math.round(turnsRaw) : undefined;
 
     // 「我的题库」：从自己已通过审核的自定义条目里挑谜底（须登录且题库可用）
     let customPoolIds: string[] | null = null;
@@ -273,6 +274,7 @@ export function createRoutes(deps: RouteDeps): express.Router {
     let polity = polity0;
     let region = region0;
     let worldEra = worldEra0;
+    let mode: AnswerMode = mode0 === 'guided' ? 'guided' : 'strict';
     let challengePool: string[] | null = null;
     if (challenge && deps.challenges) {
       if (challenge.globalId) {
@@ -290,6 +292,8 @@ export function createRoutes(deps: RouteDeps): express.Router {
         if (typeof s.region === 'string' && s.region) region = s.region as typeof region;
         if (typeof s.worldEra === 'string' && s.worldEra) worldEra = s.worldEra;
         if (Number.isFinite(Number(s.cnShare))) cnShare = Math.min(1, Math.max(0, Number(s.cnShare)));
+        if (s.mode === 'guided' || s.mode === 'strict') mode = s.mode;
+        if (Number.isFinite(Number(s.turns)) && Number(s.turns) >= 10) turns = Math.min(50, Math.max(10, Math.round(Number(s.turns))));
       }
     }
 
@@ -608,6 +612,8 @@ export function createRoutes(deps: RouteDeps): express.Router {
     const settings: Record<string, unknown> = {
       difficulty: Math.min(3, Math.max(1, Number(b.difficulty) || 2)),
       category: b.category === 'event' || b.category === 'item' || b.category === 'mixed' ? b.category : 'character',
+      mode: b.mode === 'guided' ? 'guided' : 'strict',
+      turns: Math.min(50, Math.max(10, Math.round(Number(b.turns) || 20))),
     };
     if (typeof b.polity === 'string' && b.polity) settings.polity = b.polity;
     if (typeof b.region === 'string' && b.region) settings.region = b.region;
