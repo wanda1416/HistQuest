@@ -10,6 +10,7 @@ import { TargetStore, readTargets } from './targets.ts';
 import type { TargetStoreLike } from './targets-sqlite.ts';
 import { SqliteTargetStore, importTargets } from './targets-sqlite.ts';
 import { createAdminRoutes } from './admin.ts';
+import { createCustomTargetStore } from './custom-targets.ts';
 import { createAuthRoutes, ensureAdmin, ensureSessionSecret, readUser, takeQuota } from './auth.ts';
 import { integrityCheck, openDatabase, tableCount } from './db.ts';
 import { SqliteHistoryStore } from './history.ts';
@@ -137,6 +138,7 @@ export function createApp(options: AppOptions = {}): CreatedApp {
   }
 
   const history = db ? new SqliteHistoryStore(db) : null;
+  const customTargets = db ? createCustomTargetStore(db) : null;
 
   const solo = new SoloStore(store.index, {
     turns: config.soloTurns,
@@ -165,9 +167,9 @@ export function createApp(options: AppOptions = {}): CreatedApp {
   app.use('/api/auth', db ? createAuthRoutes({ db, secret: sessionSecret }) : (_req, res) => {
     res.status(503).json({ error: 'AUTH_DISABLED', message: 'JSON 存储模式下没有账号系统' });
   });
-  app.use('/api/admin', createAdminRoutes({ store, solo, token: config.admin.token, db, history, getUser }));
+  app.use('/api/admin', createAdminRoutes({ store, solo, token: config.admin.token, db, history, getUser, customTargets }));
   app.use('/api/settings', createSettingsRoutes({ db }));
-  app.use('/api', createRoutes({ getIndex: () => store.index, solo, history, getUser, quota }));
+  app.use('/api', createRoutes({ getIndex: () => store.index, solo, history, getUser, quota, customTargets }));
 
   app.get('/admin', (_req: Request, res: Response) => {
     res.redirect('/admin.html');

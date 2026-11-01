@@ -19,6 +19,7 @@ import {
 } from './auth.ts';
 import type { HistoryStore } from './history.ts';
 import type { SoloStore } from './solo.ts';
+import { newGlobalId, toCharacter, type CustomTargetStore } from './custom-targets.ts';
 import { log } from './util.ts';
 
 /**
@@ -52,6 +53,8 @@ export interface AdminDeps {
   history?: HistoryStore | null;
   /** 解析管理员会话（getUser 由 index.ts 注入，与玩家端共用一套 cookie） */
   getUser?: (req: Request) => Promise<AuthUser | null>;
+  /** 自定义题库审核（SQLite 模式）；JSON 模式为 null */
+  customTargets?: CustomTargetStore | null;
 }
 
 export function isLoopback(address: string | undefined): boolean {
@@ -206,6 +209,47 @@ export function createAdminRoutes(deps: AdminDeps): express.Router {
     deps.solo.reloadIndex(result.index ?? deps.store.index);
     log('admin.character.retire', { id, retired });
     res.json({ character: result.character });
+  });
+
+  /* ---------------- 自定义题库审核 ---------------- */
+
+  router.get('/custom-targets', (_req: Request, res: Response) => {
+    if (!deps.customTargets) return fail(res, 503, 'CUSTOM_DISABLED', '当前是 JSON 存储模式，自定义题库不可用');
+    res.json({ items: deps.customTargets.listSubmitted() });
+  });
+
+  router.post('/custom-targets/:id/review', (req: Request, res: Response) => {
+    if (!deps.customTargets) return fail(res, 503, 'CUSTOM_DISABLED', '当前是 JSON 存储模式，自定义题库不可用');
+    const id = String(req.params.id);
+    const body = (req.body ?? {}) as { action?: unknown; note?: unknown };
+    const action = body.action === 'reject' ? 'reject' : body.action === 'approve' ? 'approve' : null;
+    if (!action) return fail(res, 400, 'BAD_ACTION', 'action 须为 approve / reject');
+    const note = String(body.note ?? '').trim() || null;
+
+    if (action === 'reject') {
+      const t = deps.customTargets.review(id, 'rejected', note);
+      if (!t) return fail(res, 404, 'NOT_FOUND', '找不到待审的自定义条目');
+      log('admin.custom.reject', { id });
+      return res.json({ target: t });
+    }
+
+    // 通过：复制为全局条目（校验不过则留在待审队列并返回问题清单）
+    const t = deps.customTargets.getById(id);
+    if (!t || t.status !== 'submitted') return fail(res, 404, 'NOT_FOUND', '找不到待审的自定义条目');
+    const character = toCharacter(t, newGlobalId());
+    let result;
+    try {
+      result = deps.store.create(character);
+    } catch (err) {
+      return fail(res, 500, 'WRITE_FAILED', (err as Error).message);
+    }
+    if (!result.ok) {
+      return fail(res, 400, 'VALIDATION_FAILED', '复制入全局题库未通过校验，条目保留在待审队列', result.issues);
+    }
+    deps.customTargets.review(id, 'approved', note);
+    deps.solo.reloadIndex(result.index!);
+    log('admin.custom.approve', { id, globalId: character.id });
+    res.json({ target: deps.customTargets.getById(id), character: result.character });
   });
 
   router.post('/validate', (req: Request, res: Response) => {

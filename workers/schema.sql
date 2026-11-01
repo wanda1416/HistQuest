@@ -191,3 +191,26 @@ ALTER TABLE games ADD COLUMN category TEXT NOT NULL DEFAULT 'character';
 -- v9（本地 v6）：谜底类别列（category），新库建表时已含
 -- v10（本地 v7）：表改名 characters → targets，新库建表时已用新名。
 --   老库升级：按顺序执行 migrations/v9-category.sql、v10-rename-targets.sql
+
+-- v12：自定义题库（用户级条目，不进全局 targets 表）；老库执行 migrations/v12-custom-targets.sql
+CREATE TABLE IF NOT EXISTS custom_targets (
+  id          TEXT PRIMARY KEY,
+  user_id     TEXT NOT NULL,
+  category    TEXT NOT NULL DEFAULT 'character',
+  name        TEXT NOT NULL,
+  aliases     TEXT NOT NULL DEFAULT '[]',
+  summary     TEXT NOT NULL,
+  region      TEXT NOT NULL DEFAULT 'cn',
+  polity      TEXT NOT NULL DEFAULT '',
+  world_era   TEXT,
+  gender      TEXT NOT NULL DEFAULT '',
+  birth       INTEGER,
+  death       INTEGER,
+  birthplace  TEXT,
+  difficulty  INTEGER NOT NULL DEFAULT 2,
+  status      TEXT NOT NULL DEFAULT 'draft',
+  review_note TEXT,
+  created_at  INTEGER NOT NULL,
+  updated_at  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_custom_user ON custom_targets(user_id, status);

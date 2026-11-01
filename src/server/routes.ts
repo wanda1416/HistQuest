@@ -10,6 +10,7 @@ import type { AuthUser } from './auth.ts';
 import { projectSession } from './dto.ts';
 import type { HistoryStore } from './history.ts';
 import { SoloError, type SoloStore } from './solo.ts';
+import { createCustomTargetStore, type CustomTarget, type CustomTargetStore } from './custom-targets.ts';
 
 /** 语音识别是否可用：模型名配置了就开（端点/密钥留空则复用 LLM 的） */
 function asrReady(): boolean {
@@ -67,6 +68,8 @@ export interface RouteDeps {
   getUser?: (req: Request) => Promise<AuthUser | null>;
   /** 站方模型每日配额扣减；不传表示不限额 */
   quota?: (user: AuthUser) => { ok: boolean; message?: string };
+  /** 自定义题库（SQLite 模式）；JSON 模式为 null（接口返回 503） */
+  customTargets?: CustomTargetStore | null;
 }
 
 export function createRoutes(deps: RouteDeps): express.Router {
@@ -324,6 +327,123 @@ export function createRoutes(deps: RouteDeps): express.Router {
       return fail(res, 403, 'FORBIDDEN', '这局不属于当前账号');
     }
     res.json(detail);
+  });
+
+  /* ---------------- 自定义题库（用户级 CRUD + 提交审核） ---------------- */
+
+  type CustomStore = ReturnType<typeof createCustomTargetStore>;
+  const requireCustom = (res: Response): CustomStore | null => {
+    if (!deps.customTargets) {
+      fail(res, 503, 'CUSTOM_DISABLED', '当前是 JSON 存储模式，自定义题库不可用');
+      return null;
+    }
+    return deps.customTargets;
+  };
+
+  const readCustomBody = (body: unknown) => {
+    const b = (body ?? {}) as Record<string, unknown>;
+    const str = (k: string) => String(b[k] ?? '').trim();
+    const num = (k: string): number | null => {
+      const v = b[k];
+      if (v === null || v === undefined || v === '') return null;
+      const n = Number(v);
+      return Number.isFinite(n) ? Math.round(n) : null;
+    };
+    const aliases = Array.isArray(b.aliases)
+      ? [...new Set((b.aliases as unknown[]).map((a) => String(a).trim()).filter(Boolean))]
+      : [];
+    return {
+      category: (b.category === 'event' || b.category === 'item' ? b.category : 'character') as CustomTarget['category'],
+      name: str('name'),
+      aliases,
+      summary: str('summary'),
+      region: (str('region') || 'cn') as CustomTarget['region'],
+      polity: str('polity'),
+      worldEra: str('worldEra') || null,
+      gender: str('gender'),
+      birth: num('birth'),
+      death: num('death'),
+      birthplace: str('birthplace') || null,
+      difficulty: Math.min(3, Math.max(1, Number(b.difficulty) || 2)),
+    };
+  };
+
+  router.get('/custom-targets', async (req: Request, res: Response) => {
+    const store = requireCustom(res);
+    if (!store) return;
+    const user = await currentUser(req);
+    if (!user) return fail(res, 401, 'LOGIN_REQUIRED', '登录后才能使用自定义题库');
+    res.json({ items: store.listByUser(user.id) });
+  });
+
+  router.post('/custom-targets', async (req: Request, res: Response) => {
+    const store = requireCustom(res);
+    if (!store) return;
+    const user = await currentUser(req);
+    if (!user) return fail(res, 401, 'LOGIN_REQUIRED', '登录后才能使用自定义题库');
+
+    const input = readCustomBody(req.body);
+    const errs = store.validate(input);
+    if (errs.length) return fail(res, 400, 'VALIDATION_FAILED', errs.join('；'));
+    const now = Date.now();
+    const t: CustomTarget = {
+      id: `c-${now.toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      userId: user.id,
+      ...input,
+      status: 'draft',
+      reviewNote: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    store.insert(t);
+    log('custom.create', { id: t.id, userId: user.id });
+    res.status(201).json({ target: t });
+  });
+
+  router.put('/custom-targets/:id', async (req: Request, res: Response) => {
+    const store = requireCustom(res);
+    if (!store) return;
+    const user = await currentUser(req);
+    if (!user) return fail(res, 401, 'LOGIN_REQUIRED', '登录后才能使用自定义题库');
+    const existing = store.get(String(req.params.id), user.id);
+    if (!existing) return fail(res, 404, 'NOT_FOUND', '找不到这条自定义条目');
+    if (existing.status !== 'draft') {
+      return fail(res, 409, 'NOT_EDITABLE', '只有草稿状态可以编辑；被驳回的条目请删除后重建');
+    }
+    const input = readCustomBody(req.body);
+    const errs = store.validate(input);
+    if (errs.length) return fail(res, 400, 'VALIDATION_FAILED', errs.join('；'));
+    store.updateDraft(existing.id, user.id, input);
+    res.json({ target: store.get(existing.id, user.id) });
+  });
+
+  router.post('/custom-targets/:id/submit', async (req: Request, res: Response) => {
+    const store = requireCustom(res);
+    if (!store) return;
+    const user = await currentUser(req);
+    if (!user) return fail(res, 401, 'LOGIN_REQUIRED', '登录后才能使用自定义题库');
+    const existing = store.get(String(req.params.id), user.id);
+    if (!existing) return fail(res, 404, 'NOT_FOUND', '找不到这条自定义条目');
+    if (existing.status !== 'draft') return fail(res, 409, 'NOT_DRAFT', '只有草稿可以提交审核');
+    const errs = store.validate(existing);
+    if (errs.length) return fail(res, 400, 'VALIDATION_FAILED', errs.join('；'));
+    store.setStatus(existing.id, user.id, 'submitted');
+    log('custom.submit', { id: existing.id, userId: user.id });
+    res.json({ target: store.get(existing.id, user.id) });
+  });
+
+  router.delete('/custom-targets/:id', async (req: Request, res: Response) => {
+    const store = requireCustom(res);
+    if (!store) return;
+    const user = await currentUser(req);
+    if (!user) return fail(res, 401, 'LOGIN_REQUIRED', '登录后才能使用自定义题库');
+    const existing = store.get(String(req.params.id), user.id);
+    if (!existing) return fail(res, 404, 'NOT_FOUND', '找不到这条自定义条目');
+    if (existing.status !== 'draft' && existing.status !== 'rejected') {
+      return fail(res, 409, 'NOT_DELETABLE', '待审/已通过的条目不能删除');
+    }
+    store.remove(existing.id, user.id);
+    res.json({ ok: true });
   });
 
   return router;
