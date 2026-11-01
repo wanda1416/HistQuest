@@ -19,6 +19,8 @@ import {
   setState,
   setStateSilent,
   subscribe,
+  type MineDraft,
+  type MineTarget,
 } from './store.ts';
 import { decodeManagementKey, generateKey, keyFromBase64, keyToBase64 } from './vault.ts';
 import { applyPayload, normalizeEndpoint, pullVault, pushVault } from './sync.ts';
@@ -287,6 +289,93 @@ async function resumeHistoryGame(id: string): Promise<void> {
 }
 
 
+/* ---------------- 我的题库 ---------------- */
+
+async function openMine(): Promise<void> {
+  setState({ view: 'mine', mineDraft: null, mineError: null });
+  try {
+    const res = await api.mineList();
+    setState({ mineItems: res.items as never[], mineError: null });
+  } catch (err) {
+    setState({ mineItems: [], mineError: msg(err) });
+  }
+}
+
+function emptyMineDraft(): MineDraft {
+  return {
+    id: '',
+    category: 'character',
+    name: '',
+    aliases: '',
+    summary: '',
+    region: 'cn',
+    polity: '',
+    worldEra: '',
+    gender: 'male',
+    birth: '',
+    death: '',
+    birthplace: '',
+    difficulty: 2,
+  };
+}
+
+function draftFromTarget(t: MineTarget): MineDraft {
+  return {
+    id: t.id,
+    category: t.category,
+    name: t.name,
+    aliases: t.aliases.join(', '),
+    summary: t.summary,
+    region: t.region,
+    polity: t.polity,
+    worldEra: t.worldEra ?? '',
+    gender: t.gender || 'male',
+    birth: t.birth === null ? '' : String(t.birth),
+    death: t.death === null ? '' : String(t.death),
+    birthplace: t.birthplace ?? '',
+    difficulty: t.difficulty,
+  };
+}
+
+/** 从表单 DOM 收集草稿当前值（下拉/输入框改完不重渲染，保存时统一读） */
+function readMineDraft(form: HTMLFormElement, base: MineDraft): MineDraft {
+  const val = (f: string) => form.querySelector<HTMLInputElement>(`[data-field="${f}"]`)?.value?.trim() ?? '';
+  const category = val('m-category') || base.category;
+  const region = val('m-region') || base.region;
+  return {
+    ...base,
+    category: category as MineDraft['category'],
+    name: val('m-name'),
+    aliases: val('m-aliases'),
+    region,
+    polity: val('m-polity'),
+    worldEra: val('m-era'),
+    gender: val('m-gender') || (category === 'character' ? 'male' : ''),
+    birth: val('m-birth'),
+    death: val('m-death'),
+    birthplace: val('m-birthplace'),
+    summary: val('m-summary'),
+    difficulty: Number(val('m-difficulty')) || 2,
+  };
+}
+
+function minePayload(d: MineDraft) {
+  return {
+    category: d.category,
+    name: d.name,
+    aliases: d.aliases.split(/[,，、]/).map((x) => x.trim()).filter(Boolean),
+    summary: d.summary,
+    region: d.region,
+    polity: d.polity,
+    worldEra: d.region === 'cn' ? null : d.worldEra || null,
+    gender: d.category === 'character' ? d.gender : '',
+    birth: d.birth === '' ? null : Number(d.birth),
+    death: d.death === '' ? null : Number(d.death),
+    birthplace: d.birthplace || null,
+    difficulty: d.difficulty,
+  };
+}
+
 /* ---------------- 路由：地址栏即事实 ---------------- */
 
 let routing = false;
@@ -406,6 +495,11 @@ async function applyRoute(force = false): Promise<void> {
         setState({ view: 'history' });
         if (route.id) await openHistoryGame(route.id);
         else await openHistory();
+        return;
+
+      case 'mine':
+        setState({ view: 'mine' });
+        await openMine();
         return;
 
       case 'auth':
@@ -569,7 +663,7 @@ async function copyTranscript(withTarget: boolean): Promise<void> {
 
 /* ---------------- 事件 ---------------- */
 
-root.addEventListener('click', (event) => {
+root.addEventListener('click', async (event) => {
   const target = event.target as HTMLElement;
 
   const mask = target.closest('[data-mask]');
@@ -582,6 +676,7 @@ root.addEventListener('click', (event) => {
   if (!el) return;
   const action = el.dataset.action;
 
+  try {
   switch (action) {
     case 'auth-toggle':
       setState({ authMode: getState().authMode === 'login' ? 'register' : 'login', authError: null });
@@ -625,6 +720,48 @@ root.addEventListener('click', (event) => {
       closeMenu();
       go({ view: 'history', id: null });
       break;
+    case 'go-mine':
+      closeMenu();
+      go({ view: 'mine' });
+      break;
+    case 'mine-reload':
+      void openMine();
+      break;
+    case 'mine-new':
+      setState({ mineDraft: emptyMineDraft(), mineError: null });
+      break;
+    case 'mine-edit': {
+      const t = (getState().mineItems ?? []).find((x) => x.id === el.dataset.id);
+      if (t) setState({ mineDraft: draftFromTarget(t), mineError: null });
+      break;
+    }
+    case 'mine-cancel':
+      setState({ mineDraft: null, mineError: null });
+      break;
+    case 'mine-submit': {
+      const id = String(el.dataset.id ?? '');
+      if (!window.confirm(`把「${el.dataset.name}」提交审核？提交后不可再编辑。`)) break;
+      setState({ mineBusy: true });
+      try {
+        await api.mineSubmit(id);
+        await openMine();
+        setState({ mineBusy: false, notice: { kind: 'info', text: '已提交审核，通过后会出现在公共题库' } });
+      } catch (err) {
+        setState({ mineBusy: false, mineError: msg(err) });
+      }
+      break;
+    }
+    case 'mine-delete': {
+      const id = String(el.dataset.id ?? '');
+      if (!window.confirm(`删除「${el.dataset.name}」？`)) break;
+      try {
+        await api.mineDelete(id);
+        await openMine();
+      } catch (err) {
+        setState({ mineError: msg(err) });
+      }
+      break;
+    }
     case 'open-history':
       if (el.dataset.id) go({ view: 'history', id: el.dataset.id });
       break;
@@ -784,6 +921,9 @@ root.addEventListener('click', (event) => {
     default:
       break;
   }
+  } catch (err) {
+    setState({ notice: { kind: 'error', text: msg(err) } });
+  }
 });
 
 root.addEventListener('submit', async (event) => {
@@ -823,6 +963,35 @@ root.addEventListener('submit', async (event) => {
       }
     } catch (err) {
       setState({ authBusy: false, authError: msg(err) });
+    }
+    return;
+  }
+
+  if (role === 'mine-form') {
+    const base = getState().mineDraft;
+    if (!base) return;
+    const d = readMineDraft(form, base);
+    if (d.name.length < 2 || d.name.length > 20) {
+      setState({ mineError: '名称需 2–20 字' });
+      return;
+    }
+    if (d.summary.length < 20 || d.summary.length > 200) {
+      setState({ mineError: `事实描述需 20–200 字，当前 ${d.summary.length} 字` });
+      return;
+    }
+    if (d.category === 'character' && d.region === 'cn' && !d.polity) {
+      setState({ mineError: '中国人物必须选择朝代' });
+      return;
+    }
+    setState({ mineBusy: true, mineError: null });
+    try {
+      if (d.id) await api.mineUpdate(d.id, minePayload(d));
+      else await api.mineCreate(minePayload(d));
+      setState({ mineBusy: false, mineDraft: null, notice: { kind: 'info', text: d.id ? '已保存' : '已存为草稿' } });
+      await openMine();
+      setState({ view: 'mine' });
+    } catch (err) {
+      setState({ mineBusy: false, mineError: msg(err) });
     }
     return;
   }

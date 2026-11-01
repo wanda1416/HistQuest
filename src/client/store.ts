@@ -17,6 +17,8 @@ export type ViewName =
   | 'reveal'
   | 'auth'
   | 'history'
+  /** 我的题库（自定义条目） */
+  | 'mine'
   /** 对战：大厅 */
   | 'rooms'
   /** 对战：房间（未开局） */
@@ -82,6 +84,15 @@ export interface State {
   historyDetail: HistoryDetail | null;
   historyError: string | null;
 
+  /* ---------------- 我的题库（自定义条目） ---------------- */
+
+  /** 服务端列表；null = 还没加载 */
+  mineItems: MineTarget[] | null;
+  mineError: string | null;
+  /** 非 null = 表单态（新建时 id 为空） */
+  mineDraft: MineDraft | null;
+  mineBusy: boolean;
+
   /* ---------------- 对战（房间） ---------------- */
 
   /** 当前房间码；地址栏之外的副本，用于"回到上次的房间" */
@@ -114,6 +125,44 @@ export interface State {
   voiceState: 'idle' | 'listening' | 'transcribing' | 'error' | null;
   /** 说话过程中的中间文字（Web Speech 档才有） */
   voiceInterim: string;
+}
+
+/* ---------------- 我的题库 ---------------- */
+
+export interface MineTarget {
+  id: string;
+  category: 'character' | 'event' | 'item';
+  name: string;
+  aliases: string[];
+  summary: string;
+  region: string;
+  polity: string;
+  worldEra: string | null;
+  gender: string;
+  birth: number | null;
+  death: number | null;
+  birthplace: string | null;
+  difficulty: number;
+  status: 'draft' | 'submitted' | 'approved' | 'rejected';
+  reviewNote: string | null;
+  updatedAt: number;
+}
+
+/** 表单态：id 为空 = 新建 */
+export interface MineDraft {
+  id: string;
+  category: 'character' | 'event' | 'item';
+  name: string;
+  aliases: string;
+  summary: string;
+  region: string;
+  polity: string;
+  worldEra: string;
+  gender: string;
+  birth: string;
+  death: string;
+  birthplace: string;
+  difficulty: number;
 }
 
 const CONFIG_KEY = 'hq.aiConfig';
@@ -301,6 +350,10 @@ let state: State = {
   historyTotal: 0,
   historyDetail: null,
   historyError: null,
+  mineItems: null,
+  mineError: null,
+  mineDraft: null,
+  mineBusy: false,
   roomCode: loadRoomCode(),
   room: null,
   roomError: null,

@@ -2402,3 +2402,55 @@ a.btn {
   opacity: 0.45;
   cursor: not-allowed;
 }
+
+/* ---------------- 我的题库（自定义条目） ---------------- */
+
+.mine-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 4px;
+  border-bottom: 1px solid var(--line-2);
+}
+
+.mine-row:last-child { border-bottom: 0; }
+
+.mine-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.mine-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mine-head strong {
+  font-family: var(--font-serif);
+  font-size: 16px;
+}
+
+.mine-pill {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid var(--line-2);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.mine-pill.is-submitted { color: var(--jade); border-color: var(--jade); }
+.mine-pill.is-approved { background: var(--jade); border-color: var(--jade); color: var(--paper); }
+.mine-pill.is-rejected { color: #b0413e; border-color: #b0413e; }
+
+.mine-summary {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-2);
+  line-height: 1.6;
+}

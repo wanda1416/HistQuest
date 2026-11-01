@@ -75,6 +75,7 @@ function userMenu(s: State): string {
                  ${model ? `<small>模型 ${esc(model)}</small>` : ''}
                </p>
                <button class="menu-item" role="menuitem" data-action="go-setup">我的设置</button>
+               <button class="menu-item" role="menuitem" data-action="go-mine">我的题库</button>
                ${
                  admin
                    ? `<a class="menu-item" role="menuitem" href="/admin.html" target="_blank" rel="noopener">
@@ -925,6 +926,193 @@ function authView(s: State): string {
   );
 }
 
+/* ---------------- 我的题库（自定义条目） ---------------- */
+
+const MINE_STATUS: Record<string, string> = {
+  draft: '草稿',
+  submitted: '待审核',
+  approved: '已入库',
+  rejected: '已驳回',
+};
+
+function mineFormView(s: State): string {
+  const d = s.mineDraft!;
+  const dynasties = s.meta?.dynasties ?? [];
+  const isCn = d.region === 'cn';
+  const isChar = d.category === 'character';
+  const years = isChar ? '生年 / 卒年' : d.category === 'event' ? '发生年份 / 结束年份（可选）' : '制造年代 / 流传年代（可选）';
+  return `
+  <section class="history-view">
+    <div class="history-toolbar">
+      <div>
+        <p class="eyebrow">我的题库</p>
+        <h2>${d.id ? '编辑条目' : '新建条目'}</h2>
+      </div>
+      <button class="btn btn-ghost" data-action="mine-cancel">取消</button>
+    </div>
+    <form class="panel" data-role="mine-form">
+      <div class="field">
+        <label class="field-label" for="m-category">类别</label>
+        <select class="input" id="m-category" data-field="m-category" ${d.id ? 'disabled' : ''}>
+          <option value="character" ${d.category === 'character' ? 'selected' : ''}>人物</option>
+          <option value="event" ${d.category === 'event' ? 'selected' : ''}>事件</option>
+          <option value="item" ${d.category === 'item' ? 'selected' : ''}>物品</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-label" for="m-name">名称（2–20 字）</label>
+        <input class="input" id="m-name" data-field="m-name" value="${esc(d.name)}" placeholder="如：祖冲之" />
+      </div>
+      <div class="field">
+        <label class="field-label" for="m-aliases">别名（逗号分隔，可选）</label>
+        <input class="input" id="m-aliases" data-field="m-aliases" value="${esc(d.aliases)}" placeholder="如：文远, 稚圭" />
+      </div>
+      <div class="field">
+        <label class="field-label" for="m-region">文明圈</label>
+        <select class="input" id="m-region" data-field="m-region" ${d.id ? 'disabled' : ''}>
+          <option value="cn" ${isCn ? 'selected' : ''}>中国</option>
+          <option value="europe" ${d.region === 'europe' ? 'selected' : ''}>欧洲</option>
+          <option value="eastasia" ${d.region === 'eastasia' ? 'selected' : ''}>东亚（中之外）</option>
+          <option value="southasia" ${d.region === 'southasia' ? 'selected' : ''}>南亚</option>
+          <option value="middleeast" ${d.region === 'middleeast' ? 'selected' : ''}>中东</option>
+          <option value="africa" ${d.region === 'africa' ? 'selected' : ''}>撒哈拉以南非洲</option>
+          <option value="americas" ${d.region === 'americas' ? 'selected' : ''}>美洲</option>
+          <option value="oceania" ${d.region === 'oceania' ? 'selected' : ''}>大洋洲</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-label" for="m-polity">${isCn ? '朝代' : '所属政权 / 国家'}</label>
+        ${
+          isCn
+            ? `<select class="input" id="m-polity" data-field="m-polity">
+                 <option value="">请选择</option>
+                 ${dynasties.map((x) => `<option value="${esc(x)}" ${d.polity === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}
+               </select>`
+            : `<input class="input" id="m-polity" data-field="m-polity" value="${esc(d.polity)}" placeholder="如：罗马共和国" />`
+        }
+      </div>
+      ${
+        !isCn
+          ? `<div class="field">
+               <label class="field-label" for="m-era">世界时期（可选）</label>
+               <input class="input" id="m-era" data-field="m-era" value="${esc(d.worldEra)}" placeholder="如：古典时代" />
+             </div>`
+          : ''
+      }
+      ${
+        isChar
+          ? `<div class="field">
+               <label class="field-label" for="m-gender">性别</label>
+               <select class="input" id="m-gender" data-field="m-gender">
+                 <option value="male" ${d.gender !== 'female' ? 'selected' : ''}>男</option>
+                 <option value="female" ${d.gender === 'female' ? 'selected' : ''}>女</option>
+               </select>
+             </div>`
+          : ''
+      }
+      <div class="field">
+        <label class="field-label">${years}（公元前用负数，可留空其一）</label>
+        <div style="display:flex;gap:.5rem">
+          <input class="input" data-field="m-birth" type="number" step="1" value="${esc(d.birth)}" placeholder="前 200 → -200" />
+          <input class="input" data-field="m-death" type="number" step="1" value="${esc(d.death)}" placeholder="卒年 / 结束" />
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label" for="m-birthplace">${isChar ? '籍贯（可选）' : d.category === 'item' ? '出土地（可选）' : '发生地（可选）'}</label>
+        <input class="input" id="m-birthplace" data-field="m-birthplace" value="${esc(d.birthplace)}" />
+      </div>
+      <div class="field">
+        <label class="field-label" for="m-summary">事实描述（20–200 字；「是/否」判定的主要依据）</label>
+        <textarea class="input" id="m-summary" data-field="m-summary" rows="4" placeholder="写清楚能被提问验证的事实：朝代、身份、事迹、结局…">${esc(d.summary)}</textarea>
+      </div>
+      <div class="field">
+        <label class="field-label" for="m-difficulty">难度</label>
+        <select class="input" id="m-difficulty" data-field="m-difficulty">
+          <option value="1" ${d.difficulty === 1 ? 'selected' : ''}>入门（家喻户晓）</option>
+          <option value="2" ${d.difficulty === 2 ? 'selected' : ''}>进阶（要一点功底）</option>
+          <option value="3" ${d.difficulty === 3 ? 'selected' : ''}>考据（冷门）</option>
+        </select>
+      </div>
+      <div class="actions">
+        <button type="submit" class="btn btn-primary" ${s.mineBusy ? 'disabled' : ''}>
+          ${s.mineBusy ? '保存中…' : d.id ? '保存修改' : '保存为草稿'}
+        </button>
+        <button type="button" class="btn btn-ghost" data-action="mine-cancel">取消</button>
+      </div>
+    </form>
+  </section>`;
+}
+
+function mineView(s: State): string {
+  if (!s.meta?.user) {
+    return shell(
+      s,
+      `<section class="panel"><p class="muted">登录后才能创建和使用自己的题库。</p>
+       <div class="actions"><button class="btn btn-primary" data-action="back">返回</button></div></section>`,
+    );
+  }
+  if (s.mineDraft) return shell(s, mineFormView(s));
+
+  const list = s.mineItems;
+  const rows = !list
+    ? '<p class="muted">正在载入…</p>'
+    : list.length
+      ? list
+          .map((t) => {
+            const fact = t.region === 'cn' ? esc(t.polity) : esc(t.polity) + (t.worldEra ? `（${esc(t.worldEra)}）` : '');
+            const actions =
+              t.status === 'draft'
+                ? `<button class="btn btn-ghost" data-action="mine-edit" data-id="${esc(t.id)}">编辑</button>
+                   <button class="btn btn-ghost" data-action="mine-submit" data-id="${esc(t.id)}" data-name="${esc(t.name)}">提交审核</button>
+                   <button class="btn btn-ghost" data-action="mine-delete" data-id="${esc(t.id)}" data-name="${esc(t.name)}">删除</button>`
+                : t.status === 'rejected'
+                  ? `<button class="btn btn-ghost" data-action="mine-delete" data-id="${esc(t.id)}" data-name="${esc(t.name)}">删除</button>`
+                  : '';
+            const pillClass =
+              t.status === 'submitted'
+                ? 'is-submitted'
+                : t.status === 'approved'
+                  ? 'is-approved'
+                  : t.status === 'rejected'
+                    ? 'is-rejected'
+                    : '';
+            return `
+        <div class="mine-row">
+          <div class="mine-main">
+            <div class="mine-head">
+              <strong>${esc(t.name)}</strong>
+              <span class="mine-pill ${pillClass}">${MINE_STATUS[t.status] ?? t.status}</span>
+              <span class="muted">${fact} · 难度 ${t.difficulty}</span>
+            </div>
+            ${t.reviewNote ? `<p class="mine-summary">审核意见：${esc(t.reviewNote)}</p>` : ''}
+            <p class="mine-summary">${esc(t.summary)}</p>
+          </div>
+          <div class="actions">${actions}</div>
+        </div>`;
+          })
+          .join('')
+      : '<p class="muted">还没有自定义条目。新建一条，审核通过后就能在开局范围里选到它。</p>';
+
+  return shell(
+    s,
+    `<section class="history-view">
+       <div class="history-toolbar">
+         <div>
+           <p class="eyebrow">我的题库</p>
+           <h2>自定义条目</h2>
+         </div>
+         <div class="actions">
+           <button class="btn btn-ghost" data-action="mine-reload">刷新</button>
+           <button class="btn btn-primary" data-action="mine-new">新建条目</button>
+         </div>
+       </div>
+       ${s.mineError ? `<p class="testline fail">${esc(s.mineError)}</p>` : ''}
+       <div class="panel">${rows}</div>
+       <p class="footnote">草稿只有自己可见；提交后由管理员审核，通过即进入公共题库。被驳回可看审核意见，删除后重建。</p>
+     </section>`,
+  );
+}
+
 export function renderApp(s: State): string {
   if (!s.ready) {
     return `<div class="boot"><div class="boot-seal">猜</div><p>正在载入…</p></div>`;
@@ -940,6 +1128,8 @@ export function renderApp(s: State): string {
       return revealView(s);
     case 'history':
       return historyView(s);
+    case 'mine':
+      return mineView(s);
     default:
       return gameView(s);
   }

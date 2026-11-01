@@ -107,6 +107,7 @@ function adminStateWithUsers(): AdminState {
   listPageSize: 100,
   historyPage: 1,
   historyPageSize: 100,
+  customItems: [],
   };
 }
 

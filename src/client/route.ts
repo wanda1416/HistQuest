@@ -19,6 +19,7 @@ export type Route =
   | { view: 'game'; id: string }
   | { view: 'reveal'; id: string }
   | { view: 'history'; id: string | null }
+  | { view: 'mine' }
   | { view: 'rooms' }
   | { view: 'room'; code: string }
   | { view: 'race'; code: string }
@@ -43,6 +44,7 @@ export function parseRoute(rawHash: string): Route | null {
   if (head === 'lobby' && parts.length === 1) return { view: 'lobby' };
   if (head === 'rooms' && parts.length === 1) return { view: 'rooms' };
   if (head === 'history' && parts.length === 1) return { view: 'history', id: null };
+  if (head === 'mine' && parts.length === 1) return { view: 'mine' };
   if (head === 'history' && parts.length === 2 && tail && ID_RE.test(tail)) {
     return { view: 'history', id: tail };
   }
@@ -67,6 +69,8 @@ export function routeHash(route: Route): string {
       return `#/reveal/${route.id}`;
     case 'history':
       return route.id ? `#/history/${route.id}` : '#/history';
+    case 'mine':
+      return '#/mine';
     case 'rooms':
       return '#/rooms';
     case 'room':

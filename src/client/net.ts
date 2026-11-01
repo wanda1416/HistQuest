@@ -115,6 +115,25 @@ export const api = {
   historyGame: (id: string) =>
     request<HistoryDetail>(`/api/history/mine/${encodeURIComponent(id)}`),
 
+  /* ---------------- 我的题库（自定义条目） ---------------- */
+
+  mineList: () => request<{ items: unknown[] }>('/api/custom-targets'),
+
+  mineCreate: (body: unknown) => request<{ target: unknown }>('/api/custom-targets', jsonInit(body)),
+
+  mineUpdate: (id: string, body: unknown) =>
+    request<{ target: unknown }>(`/api/custom-targets/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
+
+  mineSubmit: (id: string) =>
+    request<{ target: unknown }>(`/api/custom-targets/${encodeURIComponent(id)}/submit`, jsonInit({})),
+
+  mineDelete: (id: string) =>
+    request<{ ok: boolean }>(`/api/custom-targets/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+
   /* ---------------- 对战（房间） ---------------- */
 
   rooms: () => request<RoomListRes>('/api/rooms'),

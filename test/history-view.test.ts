@@ -158,6 +158,7 @@ const adminBase: AdminState = {
   listPageSize: 100,
   historyPage: 1,
   historyPageSize: 100,
+  customItems: [],
 };
 
 test('后台历史列表：游客局标「游客」，进行中的局不显示目标', () => {
